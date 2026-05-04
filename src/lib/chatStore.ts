@@ -200,13 +200,12 @@ export function createChatStore(opts: ChatStoreOptsT = {}): ChatStoreT {
     const provider = untrack(() => opts.provider?.());
 
     try {
-      await streamChat(
-        turns,
-        (chunk) => {
-          applyChunk(asstId, chunk);
-        },
-        { signal: abortCtrl.signal, provider },
-      );
+      for await (const chunk of streamChat(turns, {
+        signal: abortCtrl.signal,
+        provider,
+      })) {
+        applyChunk(asstId, chunk);
+      }
     } catch (error) {
       const msg = errorMessage(error);
       // Aborts are user-driven — surface anything else as a stream error.

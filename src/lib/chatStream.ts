@@ -33,21 +33,25 @@ function parseEvent(evt: string): ChatChunkT | null {
 }
 
 /**
- * POST /chat/stream — Server-Sent Events over fetch (POST is required, so
- * EventSource is not an option). Yields parsed ChatChunk events one by one
- * to `onChunk` until the stream finishes (`done` or `error`) or the signal
- * aborts.
+ * POST /chat/stream — Server-Sent Events over fetch.
+ *
+ * EventSource isn't an option (we need POST), so we read the response body
+ * by hand. Yields parsed `ChatChunk` events one by one until the stream
+ * finishes (`done` or `error`) or the `signal` aborts.
+ *
+ * Usage:
+ *   for await (const chunk of streamChat(turns, { signal })) { ... }
  */
-export async function streamChat(
+export async function* streamChat(
   messages: ChatTurnT[],
-  onChunk: (chunk: ChatChunkT) => void,
   opts: StreamOptionsT = {},
-): Promise<void> {
+): AsyncGenerator<ChatChunkT, void, undefined> {
   const base = opts.baseUrl ?? "";
   const url = `${base}/chat/stream`;
 
   const res = await fetch(url, {
     method: "POST",
+    credentials: "include",
     headers: {
       "content-type": "application/json",
       "x-request-id": crypto.randomUUID(),
@@ -64,16 +68,22 @@ export async function streamChat(
 
   const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
   let buf = "";
-  for (;;) {
-    const { value, done } = await reader.read();
-    if (done) return;
-    buf += value;
-    // SSE event boundary is "\n\n"
-    const events = buf.split("\n\n");
-    buf = events.pop() ?? "";
-    for (const evt of events) {
-      const chunk = parseEvent(evt);
-      if (chunk) onChunk(chunk);
+  try {
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) return;
+      buf += value;
+      // SSE event boundary is "\n\n"
+      const events = buf.split("\n\n");
+      buf = events.pop() ?? "";
+      for (const evt of events) {
+        const chunk = parseEvent(evt);
+        if (chunk) yield chunk;
+      }
     }
+  } finally {
+    // Releases the underlying lock so an aborted/cancelled stream doesn't
+    // pin the response body.
+    reader.releaseLock();
   }
 }

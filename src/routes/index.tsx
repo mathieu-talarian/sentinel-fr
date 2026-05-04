@@ -20,12 +20,17 @@ import { useTweaks } from "~/lib/tweaks";
 import { ChatTopbar } from "./-chat/ChatTopbar";
 
 export const Route = createFileRoute("/")({
-  beforeLoad: async ({ context }) => {
+  beforeLoad: async ({ context, location }) => {
     const session = await context.queryClient.ensureQueryData(meQueryOptions());
     if (!session) {
       // `throw: true` makes redirect() throw internally — keeps the signal
       // intact for TanStack Router without a bare `throw` at the call site.
-      redirect({ to: "/login", throw: true });
+      // `next` lets the login form bounce the user back where they came from.
+      redirect({
+        to: "/login",
+        search: { next: location.pathname + location.searchStr },
+        throw: true,
+      });
     }
   },
   component: ChatPage,

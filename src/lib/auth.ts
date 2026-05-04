@@ -7,9 +7,8 @@ import { z } from "zod";
  * envelopes and outgoing form submissions). Caching + invalidation lives in
  * `~/lib/queries.ts`; the route guards consume that via TanStack Query.
  *
- * The HttpOnly `sentinel_session` cookie is the source of truth — we never
- * read it from JS. The optional localStorage hint just lets the first paint
- * pick the right route before `/auth/me` returns.
+ * The HttpOnly `sentinel_session` cookie is the source of truth — JS never
+ * reads it. We re-ask the server via `/auth/me` on every cold load.
  */
 
 export const SessionSchema = z.object({
@@ -26,28 +25,6 @@ export const SignInSchema = z.object({
   rememberMe: z.boolean(),
 });
 export type SignInArgsT = z.infer<typeof SignInSchema>;
-
-const HINT_KEY = "sentinel.session.hint.v1";
-
-export function loadSessionHint(): SessionT | null {
-  if (typeof localStorage === "undefined") return null;
-  try {
-    const raw = localStorage.getItem(HINT_KEY);
-    if (!raw) return null;
-    return SessionSchema.parse(JSON.parse(raw));
-  } catch {
-    return null;
-  }
-}
-
-export function persistSessionHint(s: SessionT | null) {
-  try {
-    if (s) localStorage.setItem(HINT_KEY, JSON.stringify(s));
-    else localStorage.removeItem(HINT_KEY);
-  } catch {
-    // localStorage may be unavailable (private mode) — non-fatal.
-  }
-}
 
 const buildHeaders = () => ({
   "content-type": "application/json",
@@ -81,10 +58,43 @@ export async function signIn(args: SignInArgsT): Promise<SessionT> {
   return SessionEnvelopeSchema.parse(await r.json()).session;
 }
 
-/** Server-side OAuth flow — backend handles everything, lands the user on `/`. */
-export function signInWithGoogle(): void {
-  globalThis.location.href = "/auth/google/start";
+/**
+ * Server-side OAuth flow.
+ *
+ * Top-level navigation (NOT fetch) — Google's consent screen blocks iframes,
+ * and `SameSite=Lax` cookies only land on the same browsing context the user
+ * clicked from. The backend sanitises `return_to` to a same-origin path, so
+ * passing `location.pathname + location.search` is safe even if a query
+ * string slipped in. Defaults to `/` for the cold-start case (login page).
+ *
+ * Codes for `?error=<…>` on the callback's redirect to `/login` are documented
+ * in `FRONTEND_GOOGLE_AUTH.md` §7 and surfaced by `OAUTH_ERROR_COPY`.
+ */
+export function signInWithGoogle(returnTo?: string): void {
+  const fromLocation =
+    globalThis.location.pathname + globalThis.location.search;
+  const candidate = returnTo ?? fromLocation;
+  // Avoid bouncing the user back to `/login` after a successful sign-in.
+  const safe =
+    candidate.startsWith("/") && !candidate.startsWith("/login")
+      ? candidate
+      : "/";
+  globalThis.location.href = `/auth/google/start?return_to=${encodeURIComponent(safe)}`;
 }
+
+export const OAUTH_ERROR_COPY: Record<string, string> = {
+  state_mismatch: "Sign-in expired. Please try again.",
+  google_denied: "Sign-in cancelled. Try again whenever you're ready.",
+  email_unverified:
+    "Your Google account doesn't have a verified email. Verify it with Google and try again.",
+  provider_unavailable:
+    "Google is unavailable right now. Please try again in a minute.",
+};
+
+export const oauthErrorMessage = (code: string | undefined): string | null => {
+  if (!code) return null;
+  return OAUTH_ERROR_COPY[code] ?? "Sign-in failed. Please try again.";
+};
 
 export async function signOut(): Promise<void> {
   await fetch("/auth/sign-out", {

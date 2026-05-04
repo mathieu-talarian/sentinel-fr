@@ -1,9 +1,8 @@
-import type { SessionT } from "./auth";
 import type { AlertItemT } from "./types";
 
 import { queryOptions } from "@tanstack/solid-query";
 
-import { fetchMe, loadSessionHint, persistSessionHint } from "./auth";
+import { fetchMe } from "./auth";
 
 export interface PriorConvoT {
   id: string;
@@ -72,12 +71,12 @@ export const ME_QUERY_KEY = ["auth", "me"] as const;
 export const meQueryOptions = () =>
   queryOptions({
     queryKey: ME_QUERY_KEY,
-    queryFn: async (): Promise<SessionT | null> => {
-      const session = await fetchMe();
-      persistSessionHint(session);
-      return session;
-    },
-    initialData: () => loadSessionHint(),
+    queryFn: fetchMe,
+    // No `initialData`. TanStack's `ensureQueryData` only fetches when the
+    // cached value is `undefined` — providing initialData (even `null`) makes
+    // it short-circuit and return the cached value without ever hitting
+    // `/auth/me`. The HttpOnly cookie is the source of truth, so we always
+    // ask the server on cold load.
     staleTime: 5 * 60_000,
     gcTime: Infinity,
     retry: false,

@@ -29,6 +29,7 @@ const fieldErrorMessage = (errors: readonly unknown[]): string | null => {
 
 interface SignInFormPropsT {
   busy: boolean;
+  next?: string;
 }
 
 export function SignInForm(props: Readonly<SignInFormPropsT>) {
@@ -42,8 +43,13 @@ export function SignInForm(props: Readonly<SignInFormPropsT>) {
       queryClient.setQueryData<SessionT | null>(ME_QUERY_KEY, session);
       setSuccess(true);
       // Brief dwell on the success state before navigating, matching the
-      // design's "Welcome back → redirect" transition.
-      setTimeout(() => void navigate({ to: "/" }), 700);
+      // design's "Welcome back → redirect" transition. Only honour `next`
+      // if it points back into the app — otherwise default to `/`.
+      const target =
+        props.next && props.next.startsWith("/") && !props.next.startsWith("/login")
+          ? props.next
+          : "/";
+      setTimeout(() => void navigate({ to: target }), 700);
     },
   }));
 

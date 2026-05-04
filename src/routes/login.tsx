@@ -1,20 +1,36 @@
 import * as stylex from "@stylexjs/stylex";
 import { createFileRoute, redirect } from "@tanstack/solid-router";
 import { Show, createSignal } from "solid-js";
+import { z } from "zod";
 
-import { signInWithGoogle } from "~/lib/auth";
+import { oauthErrorMessage, signInWithGoogle } from "~/lib/auth";
 import { meQueryOptions } from "~/lib/queries";
 import { sx } from "~/lib/sx";
 import { borders, colors, fonts, radii, shadows } from "~/lib/tokens.stylex";
 
+import { ErrorBanner } from "./-login/ErrorBanner";
 import { SignInForm } from "./-login/SignInForm";
 import { Spinner } from "./-login/Spinner";
 import { GoogleLogo } from "./-login/icons";
 
+/**
+ * Search params for `/login`. The `error` code lands here from
+ * `/auth/google/callback` on failure (see FRONTEND_GOOGLE_AUTH.md §7).
+ * `next` lets the password form remember where the user was headed.
+ */
+const LoginSearchSchema = z.object({
+  error: z.string().optional(),
+  next: z.string().optional(),
+});
+
 export const Route = createFileRoute("/login")({
-  beforeLoad: async ({ context }) => {
+  validateSearch: LoginSearchSchema,
+  beforeLoad: async ({ context, search }) => {
     const session = await context.queryClient.ensureQueryData(meQueryOptions());
-    if (session) {
+    // If a callback error came back, always show the login page so the user
+    // sees the banner — never bounce them to `/` even if a stale hint says
+    // they're signed in.
+    if (session && !search.error) {
       // `throw: true` lets redirect() throw internally, satisfying
       // typescript-eslint/only-throw-error at the call site.
       redirect({ to: "/", throw: true });
@@ -24,12 +40,15 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
+  const search = Route.useSearch();
   const [googleSubmitting, setGoogleSubmitting] = createSignal(false);
 
   const handleGoogle = () => {
     setGoogleSubmitting(true);
-    signInWithGoogle();
+    signInWithGoogle(search().next);
   };
+
+  const errorMsg = () => oauthErrorMessage(search().error);
 
   return (
     <div {...sx(s.shell)}>
@@ -45,6 +64,10 @@ function LoginPage() {
           </h1>
           <p {...sx(s.sub)}>Sign in to continue.</p>
         </div>
+
+        <Show when={errorMsg()}>
+          {(msg) => <ErrorBanner message={msg()} />}
+        </Show>
 
         <button
           type="button"
@@ -70,7 +93,7 @@ function LoginPage() {
           or
         </div>
 
-        <SignInForm busy={googleSubmitting()} />
+        <SignInForm busy={googleSubmitting()} next={search().next} />
 
         <p {...sx(s.signupLine)}>
           New to Sentinel?{" "}

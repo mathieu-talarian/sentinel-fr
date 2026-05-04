@@ -18,6 +18,15 @@ export default defineConfig(({ mode }) => {
         "~": srcDir,
       },
     },
+    optimizeDeps: {
+      // `solid-markdown` pulls in CJS deps (`debug`, `vfile`, `unified`, …)
+      // through `remark-parse` / `remark-rehype`. Vite's dep crawler doesn't
+      // always discover them in dev, which surfaces as
+      //   "/node_modules/debug/src/browser.js does not provide an export named 'default'"
+      // when the ESM consumer imports `debug` as default. Listing the
+      // entry-point package here forces Vite to prebundle the whole tree.
+      include: ["micromark", "unified"],
+    },
     server: {
       port: 3000,
       proxy: {
