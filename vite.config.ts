@@ -1,38 +1,46 @@
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath } from "node:url";
 
-import { defineConfig, loadEnv } from 'vite'
-import solidPlugin from 'vite-plugin-solid'
-import { tanstackRouter } from '@tanstack/router-plugin/vite'
-import stylexPlugin from '@stylexjs/unplugin'
-import mkcert from 'vite-plugin-mkcert'
+import stylexPlugin from "@stylexjs/unplugin/vite";
+import { tanstackRouter } from "@tanstack/router-plugin/vite";
+import { defineConfig, loadEnv } from "vite";
+import mkcert from "vite-plugin-mkcert";
+import solidPlugin from "vite-plugin-solid";
+
+const srcDir = fileURLToPath(new URL("src", import.meta.url));
 
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, '.', '')
-  const apiTarget = env.VITE_SENTINEL_API_BASE || 'https://127.0.0.1:8888'
+  const env = loadEnv(mode, ".", "");
+  const apiTarget = env.VITE_SENTINEL_API_BASE || "https://127.0.0.1:8888";
 
   return {
     resolve: {
       alias: {
-        '~': fileURLToPath(new URL('./src', import.meta.url)),
+        "~": srcDir,
       },
     },
     server: {
       port: 3000,
       proxy: {
-        '/chat': { target: apiTarget, changeOrigin: true, secure: false, ws: false },
-        '/classify': { target: apiTarget, changeOrigin: true, secure: false },
-        '/auth': { target: apiTarget, changeOrigin: true, secure: false },
-        '/api-doc': { target: apiTarget, changeOrigin: true, secure: false },
+        "/chat": {
+          target: apiTarget,
+          changeOrigin: true,
+          secure: false,
+          ws: false,
+        },
+        "/classify": { target: apiTarget, changeOrigin: true, secure: false },
+        "/auth": { target: apiTarget, changeOrigin: true, secure: false },
+        "/api-doc": { target: apiTarget, changeOrigin: true, secure: false },
       },
     },
     plugins: [
       mkcert(),
-      tanstackRouter({ target: 'solid', autoCodeSplitting: true }),
+      tanstackRouter({ target: "solid", autoCodeSplitting: true }),
       solidPlugin(),
-      stylexPlugin.vite({
+      stylexPlugin({
         useCSSLayers: true,
-        unstable_moduleResolution: { type: 'commonJS' },
+        unstable_moduleResolution: { type: "commonJS" },
+        aliases: { "~/*": [`${srcDir}/*`] },
       }),
     ],
-  }
-})
+  };
+});

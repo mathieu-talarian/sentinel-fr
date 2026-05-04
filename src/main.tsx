@@ -1,10 +1,10 @@
 /* @refresh reload */
-import { render } from 'solid-js/web'
-import { RouterProvider } from '@tanstack/solid-router'
-import { QueryClient, QueryClientProvider } from '@tanstack/solid-query'
+import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
+import { RouterProvider } from "@tanstack/solid-router";
+import { render } from "solid-js/web";
 
-import { getRouter } from './router'
-import './styles.css'
+import { getRouter } from "./router";
+import "./styles.css";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -13,11 +13,11 @@ const queryClient = new QueryClient({
       refetchOnWindowFocus: false,
     },
   },
-})
-const router = getRouter(queryClient)
+});
+const router = getRouter(queryClient);
 
-const root = document.getElementById('root')
-if (!root) throw new Error('Missing #root mount node')
+const root = document.querySelector("#root");
+if (!root) throw new Error("Missing #root mount node");
 
 render(
   () => (
@@ -26,4 +26,4 @@ render(
     </QueryClientProvider>
   ),
   root,
-)
+);

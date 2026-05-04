@@ -1,52 +1,67 @@
-import { Show, createEffect } from 'solid-js'
-import * as stylex from '@stylexjs/stylex'
+import * as stylex from "@stylexjs/stylex";
+import { Show, createEffect, createSignal, on } from "solid-js";
 
-import { Icon } from './Icons'
-import { sx } from '~/lib/sx'
+import { sx } from "~/lib/sx";
+import { borders, colors, fonts, radii, shadows } from "~/lib/tokens.stylex";
 
-interface ComposerProps {
-  value: string
-  setValue: (v: string) => void
-  onSend: (text: string) => void
-  onStop: () => void
-  running: boolean
+import { Icon } from "./Icons";
+
+interface ComposerPropsT {
+  value: string;
+  setValue: (v: string) => void;
+  onSend: (text: string) => void;
+  onStop: () => void;
+  running: boolean;
 }
 
-export function Composer(props: ComposerProps) {
-  let ta!: HTMLTextAreaElement
+const MAX_HEIGHT = 160;
 
-  // Grow textarea up to 160px as content arrives.
-  createEffect(() => {
-    void props.value
-    ta.style.height = 'auto'
-    ta.style.height = `${Math.min(160, ta.scrollHeight)}px`
-  })
+export function Composer(props: Readonly<ComposerPropsT>) {
+  const [ta, setTa] = createSignal<HTMLTextAreaElement>();
+
+  // Grow textarea up to MAX_HEIGHT as content arrives.
+  createEffect(
+    on(
+      () => props.value,
+      () => {
+        const el = ta();
+        if (!el) return;
+        el.style.height = "auto";
+        el.style.height = `${String(Math.min(MAX_HEIGHT, el.scrollHeight))}px`;
+      },
+    ),
+  );
 
   const submit = () => {
-    const v = props.value.trim()
-    if (!v || props.running) return
-    props.onSend(v)
-    props.setValue('')
-  }
+    const v = props.value.trim();
+    if (!v || props.running) return;
+    props.onSend(v);
+    props.setValue("");
+  };
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      submit();
+      return;
+    }
+    if (e.key === "Escape" && props.running) {
+      e.preventDefault();
+      props.onStop();
+    }
+  };
 
   return (
     <div {...sx(s.wrap)}>
       <div {...sx(s.shell)}>
         <textarea
-          ref={ta}
+          ref={setTa}
           {...sx(s.textarea)}
           value={props.value}
-          onInput={(e) => props.setValue(e.currentTarget.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault()
-              submit()
-            }
-            if (e.key === 'Escape' && props.running) {
-              e.preventDefault()
-              props.onStop()
-            }
+          onInput={(e) => {
+            props.setValue(e.currentTarget.value);
           }}
+          onKeyDown={handleKeyDown}
           placeholder="Describe your product, ask for a landed cost, or set up a tariff alert…"
           rows={1}
         />
@@ -57,7 +72,9 @@ export function Composer(props: ComposerProps) {
           <button type="button" {...sx(s.tool)} title="Tools">
             <Icon.Hash />
           </button>
-          <span {...sx(s.hint)}>Enter to send · Shift+Enter newline · Esc to stop</span>
+          <span {...sx(s.hint)}>
+            Enter to send · Shift+Enter newline · Esc to stop
+          </span>
           <Show
             when={props.running}
             fallback={
@@ -75,7 +92,7 @@ export function Composer(props: ComposerProps) {
             <button
               type="button"
               {...sx(s.send, s.sendStop)}
-              onClick={props.onStop}
+              onClick={() => { props.onStop(); }}
               title="Stop"
             >
               <Icon.Stop />
@@ -91,86 +108,105 @@ export function Composer(props: ComposerProps) {
         Section 301/232 not modelled
       </div>
     </div>
-  )
+  );
 }
 
 const s = stylex.create({
   wrap: {
-    padding: '12px 28px 18px',
-    background: 'linear-gradient(to bottom, transparent, var(--paper) 30%)',
+    background: colors.paper,
+    padding: "12px 28px 18px",
     flexShrink: 0,
   },
   shell: {
-    maxWidth: 760,
-    margin: '0 auto',
-    border: '1px solid var(--line-strong)',
-    borderRadius: 'var(--radius-lg)',
-    background: 'var(--paper)',
-    boxShadow: 'var(--shadow)',
-    transition: 'border-color 140ms, box-shadow 140ms',
-    ':focus-within': {
-      borderColor: 'var(--ink-3)',
-      boxShadow: 'var(--shadow-lg)',
+    background: colors.paper,
+    margin: "0 auto",
+    borderColor: {
+      default: colors.lineStrong,
+      ":focus-within": colors.ink3,
     },
+    borderRadius: radii.lg,
+    borderStyle: borders.solid,
+    borderWidth: borders.thin,
+    transition: "border-color 140ms, box-shadow 140ms",
+    boxShadow: {
+      default: shadows.md,
+      ":focus-within": shadows.lg,
+    },
+    maxWidth: 760,
   },
   textarea: {
-    width: '100%',
-    border: 0,
-    background: 'transparent',
-    resize: 'none',
-    padding: '12px 14px 4px',
-    fontFamily: 'var(--sans)',
+    background: "transparent",
+    padding: "12px 14px 4px",
+    borderStyle: "none",
+    borderWidth: 0,
+    outline: "none",
+    color: colors.ink,
+    fontFamily: fonts.sans,
     fontSize: 14,
     lineHeight: 1.55,
-    color: 'var(--ink)',
-    outline: 'none',
-    minHeight: 28,
+    resize: "none",
     maxHeight: 160,
-    '::placeholder': { color: 'var(--ink-4)' },
+    minHeight: 28,
+    width: "100%",
+    "::placeholder": { color: colors.ink4 },
   },
   foot: {
-    display: 'flex',
-    alignItems: 'center',
+    padding: "4px 8px 8px",
     gap: 6,
-    padding: '4px 8px 8px',
+    alignItems: "center",
+    display: "flex",
   },
   tool: {
-    width: 30,
+    background: {
+      default: "transparent",
+      ":hover": colors.paper3,
+    },
+    borderRadius: radii.sm,
+    borderStyle: "none",
+    borderWidth: 0,
+    placeItems: "center",
+    color: {
+      default: colors.ink4,
+      ":hover": colors.ink2,
+    },
+    display: "grid",
     height: 30,
-    display: 'grid',
-    placeItems: 'center',
-    border: 0,
-    background: 'transparent',
-    borderRadius: 'var(--radius-sm)',
-    color: 'var(--ink-4)',
-    ':hover': { background: 'var(--paper-3)', color: 'var(--ink-2)' },
+    width: 30,
   },
   hint: {
-    marginLeft: 'auto',
+    color: colors.ink4,
+    fontFamily: fonts.mono,
     fontSize: 11,
-    color: 'var(--ink-4)',
-    fontFamily: 'var(--mono)',
-    letterSpacing: '0.02em',
+    letterSpacing: "0.02em",
+    marginLeft: "auto",
   },
   send: {
-    width: 30,
+    background: colors.ink,
+    borderRadius: radii.sm,
+    borderStyle: "none",
+    borderWidth: 0,
+    placeItems: "center",
+    transition: "opacity 140ms",
+    color: colors.paper,
+    cursor: {
+      default: "pointer",
+      ":disabled": "not-allowed",
+    },
+    display: "grid",
+    opacity: {
+      default: 1,
+      ":disabled": 0.3,
+    },
     height: 30,
-    display: 'grid',
-    placeItems: 'center',
-    border: 0,
-    borderRadius: 'var(--radius-sm)',
-    background: 'var(--ink)',
-    color: 'var(--paper)',
-    transition: 'opacity 140ms',
-    ':disabled': { opacity: 0.3, cursor: 'not-allowed' },
+    width: 30,
   },
-  sendStop: { background: 'var(--err)' },
+  sendStop: { background: colors.err },
   disclaimer: {
-    maxWidth: 760,
-    margin: '8px auto 0',
-    textAlign: 'center',
+    margin: "8px auto 0",
+    color: colors.ink4,
     fontSize: 11,
-    color: 'var(--ink-4)',
+    textAlign: "center",
+    maxWidth: 760,
   },
-  dot: { color: 'var(--ink-5)', margin: '0 6px' },
-})
+  dot: { margin: "0 6px", color: colors.ink5 },
+});

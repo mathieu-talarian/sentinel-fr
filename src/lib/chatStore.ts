@@ -1,233 +1,247 @@
-import { batch, createSignal } from 'solid-js'
-import { createStore, produce } from 'solid-js/store'
-
-import { streamChat } from './chatStream'
+import type { ProviderT } from "./tweaks";
 import type {
-  AssistantMessageData,
-  ChatTurn,
-  Message,
-  ToolCall,
-  UserMessageData,
-} from './types'
-import type { Provider } from './tweaks'
+  AssistantMessageDataT,
+  ChatChunkT,
+  ChatTurnT,
+  MessageT,
+  ToolCallT,
+  UserMessageDataT,
+} from "./types";
 
-interface SendArgs {
-  text: string
+import { batch, createSignal, untrack } from "solid-js";
+import { createStore, produce } from "solid-js/store";
+
+import { streamChat } from "./chatStream";
+
+interface SendArgsT {
+  text: string;
 }
 
-const newId = (prefix: string) =>
-  `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
+const newId = (prefix: string) => `${prefix}_${crypto.randomUUID()}`;
 
-const blankAssistant = (id: string): AssistantMessageData => ({
+const blankAssistant = (id: string): AssistantMessageDataT => ({
   id,
-  role: 'assistant',
-  thinking: '',
+  role: "assistant",
+  thinking: "",
   thinkingActive: true,
   thinkingMs: undefined,
   thinkingStartedAt: Date.now(),
   calls: [],
-  reply: '',
+  reply: "",
   streaming: true,
   caveats: undefined,
   done: false,
-})
+});
 
-export interface ChatStore {
-  messages: ReadonlyArray<Message>
-  running: () => boolean
-  focusedCallId: () => string | null
-  inspectorOpen: () => boolean
-  send: (args: SendArgs) => Promise<void>
-  abort: () => void
-  reset: () => void
-  setFocusedCall: (id: string | null) => void
-  setInspectorOpen: (open: boolean) => void
+export interface ChatStoreT {
+  messages: readonly MessageT[];
+  running: () => boolean;
+  focusedCallId: () => string | null;
+  inspectorOpen: () => boolean;
+  send: (args: SendArgsT) => Promise<void>;
+  abort: () => void;
+  reset: () => void;
+  setFocusedCall: (id: string | null) => void;
+  setInspectorOpen: (open: boolean) => void;
 }
 
-interface ChatStoreOpts {
+interface ChatStoreOptsT {
   /** Auto-open the inspector + focus the first tool result that arrives. */
-  autoOpenInspector?: () => boolean
+  autoOpenInspector?: () => boolean;
   /** Provider to send with each request — read at send-time so it stays live. */
-  provider?: () => Provider
+  provider?: () => ProviderT;
 }
 
-export function createChatStore(opts: ChatStoreOpts = {}): ChatStore {
-  const [messages, setMessages] = createStore<Array<Message>>([])
-  const [running, setRunning] = createSignal(false)
-  const [focusedCallId, setFocusedCallId] = createSignal<string | null>(null)
-  const [inspectorOpen, setInspectorOpen] = createSignal(false)
-  let abortCtrl: AbortController | null = null
+const closeThinking = (m: AssistantMessageDataT) => {
+  if (m.thinkingActive && m.thinkingStartedAt != null) {
+    m.thinkingMs = Date.now() - m.thinkingStartedAt;
+    m.thinkingActive = false;
+  }
+};
+
+const errorMessage = (error: unknown): string => {
+  if (error instanceof Error) return error.message;
+  return typeof error === "string" ? error : "Unknown error";
+};
+
+export function createChatStore(opts: ChatStoreOptsT = {}): ChatStoreT {
+  const [messages, setMessages] = createStore<MessageT[]>([]);
+  const [running, setRunning] = createSignal(false);
+  const [focusedCallId, setFocusedCallId] = createSignal<string | null>(null);
+  const [inspectorOpen, setInspectorOpen] = createSignal(false);
+  let abortCtrl: AbortController | null = null;
 
   const updateAssistant = (
     id: string,
-    fn: (m: AssistantMessageData) => void,
+    fn: (m: AssistantMessageDataT) => void,
   ) => {
     setMessages(
       produce((arr) => {
-        const idx = arr.findIndex((m) => m.id === id)
-        if (idx === -1) return
-        const m = arr[idx]
-        if (m.role !== 'assistant') return
-        fn(m)
+        const idx = arr.findIndex((m) => m.id === id);
+        if (idx === -1) return;
+        const m = arr[idx];
+        if (m.role !== "assistant") return;
+        fn(m);
       }),
-    )
-  }
+    );
+  };
 
-  const send = async ({ text }: SendArgs) => {
-    if (running()) return
+  const applyChunk = (asstId: string, chunk: ChatChunkT) => {
+    switch (chunk.type) {
+      case "reasoning": {
+        updateAssistant(asstId, (m) => {
+          m.thinking = chunk.text;
+          m.thinkingActive = true;
+          m.thinkingStartedAt ??= Date.now();
+        });
+        return;
+      }
+      case "reasoning_delta": {
+        updateAssistant(asstId, (m) => {
+          m.thinking = m.thinking + chunk.text;
+          m.thinkingActive = true;
+          m.thinkingStartedAt ??= Date.now();
+        });
+        return;
+      }
+      case "tool_call": {
+        updateAssistant(asstId, (m) => {
+          closeThinking(m);
+          const call: ToolCallT = {
+            id: chunk.call_id,
+            tool: chunk.name,
+            args: chunk.args,
+            status: "in-flight",
+            startedAt: Date.now(),
+          };
+          m.calls.push(call);
+        });
+        return;
+      }
+      case "tool_result": {
+        updateAssistant(asstId, (m) => {
+          const call = m.calls.find((c) => c.id === chunk.call_id);
+          if (!call) return;
+          call.status = "complete";
+          call.result = chunk.content;
+          call.durationMs = Date.now() - call.startedAt;
+          const c = chunk.content as { caveats?: string[] } | undefined;
+          if (c?.caveats?.length) m.caveats = c.caveats;
+        });
+        const shouldOpen = untrack(() => opts.autoOpenInspector?.() ?? true);
+        if (shouldOpen) {
+          batch(() => {
+            setInspectorOpen(true);
+            if (untrack(focusedCallId) == null) setFocusedCallId(chunk.call_id);
+          });
+        }
+        return;
+      }
+      case "delta": {
+        updateAssistant(asstId, (m) => {
+          closeThinking(m);
+          m.reply = m.reply + chunk.text;
+        });
+        return;
+      }
+      case "turn_end": {
+        updateAssistant(asstId, (m) => {
+          m.usage = chunk.usage;
+        });
+        return;
+      }
+      case "error": {
+        updateAssistant(asstId, (m) => {
+          m.error = chunk.message;
+          m.streaming = false;
+          m.thinkingActive = false;
+          m.done = true;
+        });
+        return;
+      }
+      case "done": {
+        updateAssistant(asstId, (m) => {
+          m.streaming = false;
+          m.thinkingActive = false;
+          m.done = true;
+          if (chunk.usage) m.usage = chunk.usage;
+        });
+        return;
+      }
+    }
+  };
+
+  const send = async ({ text }: SendArgsT) => {
+    if (running()) return;
 
     // Snapshot history BEFORE mutating, otherwise the new user/assistant rows
     // would land in `turns` and the backend would see the user message twice
     // plus an empty assistant turn.
-    const turns: Array<ChatTurn> = messages
-      .filter((m) => m.role === 'user' || m.reply)
+    const turns: ChatTurnT[] = messages
+      .filter((m) => m.role === "user" || m.reply)
       .map((m) =>
-        m.role === 'user'
-          ? { role: 'user' as const, content: m.text }
-          : { role: 'assistant' as const, content: m.reply },
-      )
-    turns.push({ role: 'user', content: text })
+        m.role === "user"
+          ? { role: "user" as const, content: m.text }
+          : { role: "assistant" as const, content: m.reply },
+      );
+    turns.push({ role: "user", content: text });
 
-    const userMsg: UserMessageData = { id: newId('u'), role: 'user', text }
-    const asstId = newId('a')
-    const asstMsg = blankAssistant(asstId)
+    const userMsg: UserMessageDataT = { id: newId("u"), role: "user", text };
+    const asstId = newId("a");
+    const asstMsg = blankAssistant(asstId);
 
     batch(() => {
-      setMessages([...messages, userMsg, asstMsg])
-      setFocusedCallId(null)
-      setRunning(true)
-    })
+      setMessages([...messages, userMsg, asstMsg]);
+      setFocusedCallId(null);
+      setRunning(true);
+    });
 
-    abortCtrl = new AbortController()
+    abortCtrl = new AbortController();
+    const provider = untrack(() => opts.provider?.());
 
     try {
       await streamChat(
         turns,
         (chunk) => {
-          // chunk-handler is a closure on the active assistant id — switch:
-          switch (chunk.type) {
-            case 'reasoning':
-              updateAssistant(asstId, (m) => {
-                m.thinking = chunk.text
-                m.thinkingActive = true
-                if (m.thinkingStartedAt == null) m.thinkingStartedAt = Date.now()
-              })
-              break
-            case 'reasoning_delta':
-              updateAssistant(asstId, (m) => {
-                m.thinking = m.thinking + chunk.text
-                m.thinkingActive = true
-                if (m.thinkingStartedAt == null) m.thinkingStartedAt = Date.now()
-              })
-              break
-            case 'tool_call': {
-              // First non-reasoning event closes the thinking window.
-              updateAssistant(asstId, (m) => {
-                if (m.thinkingActive && m.thinkingStartedAt != null) {
-                  m.thinkingMs = Date.now() - m.thinkingStartedAt
-                  m.thinkingActive = false
-                }
-                const call: ToolCall = {
-                  id: chunk.call_id,
-                  tool: chunk.name,
-                  args: chunk.args,
-                  status: 'in-flight',
-                  startedAt: Date.now(),
-                }
-                m.calls.push(call)
-              })
-              break
-            }
-            case 'tool_result': {
-              updateAssistant(asstId, (m) => {
-                const call = m.calls.find((c) => c.id === chunk.call_id)
-                if (!call) return
-                call.status = 'complete'
-                call.result = chunk.content
-                call.durationMs = Date.now() - call.startedAt
-                // Heuristic: surface caveats from any landed-cost result.
-                const c = chunk.content as
-                  | { caveats?: Array<string> }
-                  | undefined
-                if (c?.caveats?.length) m.caveats = c.caveats
-              })
-              if (opts.autoOpenInspector?.() ?? true) {
-                batch(() => {
-                  setInspectorOpen(true)
-                  if (focusedCallId() == null) setFocusedCallId(chunk.call_id)
-                })
-              }
-              break
-            }
-            case 'delta':
-              updateAssistant(asstId, (m) => {
-                if (m.thinkingActive && m.thinkingStartedAt != null) {
-                  m.thinkingMs = Date.now() - m.thinkingStartedAt
-                  m.thinkingActive = false
-                }
-                m.reply = m.reply + chunk.text
-              })
-              break
-            case 'turn_end':
-              updateAssistant(asstId, (m) => {
-                m.usage = chunk.usage
-              })
-              break
-            case 'error':
-              updateAssistant(asstId, (m) => {
-                m.error = chunk.message
-                m.streaming = false
-                m.thinkingActive = false
-                m.done = true
-              })
-              break
-            case 'done':
-              updateAssistant(asstId, (m) => {
-                m.streaming = false
-                m.thinkingActive = false
-                m.done = true
-                if (chunk.usage) m.usage = chunk.usage
-              })
-              break
-          }
+          applyChunk(asstId, chunk);
         },
-        { signal: abortCtrl.signal, provider: opts.provider?.() },
-      )
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
+        { signal: abortCtrl.signal, provider },
+      );
+    } catch (error) {
+      const msg = errorMessage(error);
       // Aborts are user-driven — surface anything else as a stream error.
-      if (msg !== 'AbortError' && !msg.includes('aborted')) {
+      if (msg !== "AbortError" && !msg.includes("aborted")) {
         updateAssistant(asstId, (m) => {
-          m.error = msg
-        })
+          m.error = msg;
+        });
       }
       updateAssistant(asstId, (m) => {
-        m.streaming = false
-        m.thinkingActive = false
-        m.done = true
-      })
+        m.streaming = false;
+        m.thinkingActive = false;
+        m.done = true;
+      });
     } finally {
-      abortCtrl = null
-      setRunning(false)
+      abortCtrl = null;
+      setRunning(false);
     }
-  }
+  };
 
   const abort = () => {
-    abortCtrl?.abort()
-  }
+    abortCtrl?.abort();
+  };
 
   const reset = () => {
-    if (running()) abort()
+    if (running()) abort();
     batch(() => {
-      setMessages([])
-      setFocusedCallId(null)
-      setInspectorOpen(false)
-    })
-  }
+      setMessages([]);
+      setFocusedCallId(null);
+      setInspectorOpen(false);
+    });
+  };
 
   return {
     get messages() {
-      return messages
+      return messages;
     },
     running,
     focusedCallId,
@@ -237,5 +251,5 @@ export function createChatStore(opts: ChatStoreOpts = {}): ChatStore {
     reset,
     setFocusedCall: setFocusedCallId,
     setInspectorOpen,
-  }
+  };
 }

@@ -1,9 +1,35 @@
-import type { ChatChunk, ChatTurn } from './types'
+import type { ChatChunkT, ChatTurnT } from "./types";
 
-interface StreamOptions {
-  provider?: 'anthropic' | 'openai'
-  signal?: AbortSignal
-  baseUrl?: string
+interface StreamOptionsT {
+  provider?: "anthropic" | "openai";
+  signal?: AbortSignal;
+  baseUrl?: string;
+}
+
+interface ProblemT {
+  title?: string;
+  detail?: string;
+}
+
+async function readProblem(res: Response): Promise<string> {
+  try {
+    const problem = (await res.json()) as ProblemT;
+    const head = problem.title ?? res.statusText;
+    const tail = problem.detail;
+    return tail ? `${head}: ${tail}` : head;
+  } catch {
+    return res.statusText;
+  }
+}
+
+function parseEvent(evt: string): ChatChunkT | null {
+  const line = evt.split("\n").find((l) => l.startsWith("data: "));
+  if (!line) return null;
+  try {
+    return JSON.parse(line.slice(6)) as ChatChunkT;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -13,57 +39,41 @@ interface StreamOptions {
  * aborts.
  */
 export async function streamChat(
-  messages: Array<ChatTurn>,
-  onChunk: (chunk: ChatChunk) => void,
-  opts: StreamOptions = {},
+  messages: ChatTurnT[],
+  onChunk: (chunk: ChatChunkT) => void,
+  opts: StreamOptionsT = {},
 ): Promise<void> {
-  const base = opts.baseUrl ?? ''
-  const url = `${base}/chat/stream`
+  const base = opts.baseUrl ?? "";
+  const url = `${base}/chat/stream`;
 
   const res = await fetch(url, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'content-type': 'application/json',
-      'x-request-id': crypto.randomUUID(),
+      "content-type": "application/json",
+      "x-request-id": crypto.randomUUID(),
     },
     body: JSON.stringify({
       messages,
       provider: opts.provider,
     }),
     signal: opts.signal,
-  })
+  });
 
-  if (!res.ok) {
-    let detail = res.statusText
-    try {
-      const problem = (await res.json()) as { title?: string; detail?: string }
-      detail = `${problem.title ?? res.statusText}${problem.detail ? `: ${problem.detail}` : ''}`
-    } catch {
-      // body wasn't JSON — keep the status text
-    }
-    throw new Error(detail)
-  }
+  if (!res.ok) throw new Error(await readProblem(res));
+  if (!res.body) throw new Error("Empty response body from /chat/stream");
 
-  if (!res.body) throw new Error('Empty response body from /chat/stream')
-
-  const reader = res.body.pipeThrough(new TextDecoderStream()).getReader()
-  let buf = ''
-  while (true) {
-    const { value, done } = await reader.read()
-    if (done) return
-    buf += value
+  const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+  let buf = "";
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) return;
+    buf += value;
     // SSE event boundary is "\n\n"
-    const events = buf.split('\n\n')
-    buf = events.pop() ?? ''
+    const events = buf.split("\n\n");
+    buf = events.pop() ?? "";
     for (const evt of events) {
-      const line = evt.split('\n').find((l) => l.startsWith('data: '))
-      if (!line) continue
-      try {
-        const chunk = JSON.parse(line.slice(6)) as ChatChunk
-        onChunk(chunk)
-      } catch {
-        // ignore unparseable line — protocol allows future event types
-      }
+      const chunk = parseEvent(evt);
+      if (chunk) onChunk(chunk);
     }
   }
 }

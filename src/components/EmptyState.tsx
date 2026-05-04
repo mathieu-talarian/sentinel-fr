@@ -1,19 +1,22 @@
-import { For, Show } from 'solid-js'
-import * as stylex from '@stylexjs/stylex'
-import { createQuery } from '@tanstack/solid-query'
+import type { SuggestionT } from "~/lib/suggestions";
 
-import { Icon } from './Icons'
-import { sx } from '~/lib/sx'
-import { SUGGESTIONS  } from '~/lib/suggestions'
-import type {Suggestion} from '~/lib/suggestions';
-import { catalogStatsQuery } from '~/lib/queries'
+import * as stylex from "@stylexjs/stylex";
+import { createQuery } from "@tanstack/solid-query";
+import { For, Show } from "solid-js";
 
-interface EmptyStateProps {
-  onPick: (suggestion: Suggestion) => void
+import { catalogStatsQuery } from "~/lib/queries";
+import { SUGGESTIONS } from "~/lib/suggestions";
+import { sx } from "~/lib/sx";
+import { borders, colors, fonts, radii, shadows } from "~/lib/tokens.stylex";
+
+import { Icon } from "./Icons";
+
+interface EmptyStatePropsT {
+  onPick: (suggestion: SuggestionT) => void;
 }
 
-export function EmptyState(props: EmptyStateProps) {
-  const stats = createQuery(() => catalogStatsQuery())
+export function EmptyState(props: Readonly<EmptyStatePropsT>) {
+  const stats = createQuery(() => catalogStatsQuery());
 
   return (
     <div {...sx(s.root)}>
@@ -24,8 +27,8 @@ export function EmptyState(props: EmptyStateProps) {
         </h1>
         <p {...sx(s.sub)}>
           Describe your product in plain language. I'll search the HTS catalog,
-          check prior CBP rulings, and give you the right 10-digit code with
-          the all-in landed cost.
+          check prior CBP rulings, and give you the right 10-digit code with the
+          all-in landed cost.
         </p>
 
         <div {...sx(s.grid)}>
@@ -34,7 +37,9 @@ export function EmptyState(props: EmptyStateProps) {
               <button
                 type="button"
                 {...sx(s.card)}
-                onClick={() => props.onPick(suggestion)}
+                onClick={() => {
+                  props.onPick(suggestion);
+                }}
               >
                 <span {...sx(s.tag)}>
                   <span {...sx(s.dot, dotStyleFor(suggestion.id))} />
@@ -53,10 +58,12 @@ export function EmptyState(props: EmptyStateProps) {
           {(d) => (
             <div {...sx(s.meta)}>
               <span {...sx(s.metaItem)}>
-                <Icon.Customs /> {d().hts_codes_indexed.toLocaleString('en-US')} HTS codes indexed
+                <Icon.Customs /> {d().hts_codes_indexed.toLocaleString("en-US")}{" "}
+                HTS codes indexed
               </span>
               <span {...sx(s.metaItem)}>
-                <Icon.Scroll /> CBP CROSS rulings since {d().cross_rulings_since}
+                <Icon.Scroll /> CBP CROSS rulings since{" "}
+                {d().cross_rulings_since}
               </span>
               <span {...sx(s.metaItem)}>
                 <Icon.Bell /> {d().active_alerts} active alerts
@@ -66,125 +73,135 @@ export function EmptyState(props: EmptyStateProps) {
         </Show>
       </div>
     </div>
-  )
+  );
 }
 
-function dotStyleFor(id: Suggestion['id']) {
-  if (id === 'cost') return s.dotCost
-  if (id === 'alert') return s.dotAlert
-  return s.dotClassify
+function dotStyleFor(id: SuggestionT["id"]) {
+  if (id === "cost") return s.dotCost;
+  if (id === "alert") return s.dotAlert;
+  return s.dotClassify;
 }
 
 const s = stylex.create({
   root: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'center',
-    padding: '24px 28px',
+    padding: "24px 28px",
+    flex: "1",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
   },
-  inner: { maxWidth: 720, margin: '0 auto', width: '100%' },
+  inner: { margin: "0 auto", maxWidth: 720, width: "100%" },
   eyebrow: {
-    fontFamily: 'var(--mono)',
-    fontSize: 11,
-    textTransform: 'uppercase',
-    letterSpacing: '0.08em',
-    color: 'var(--gold-deep)',
-    marginBottom: 12,
-    display: 'flex',
-    alignItems: 'center',
     gap: 8,
-    '::before': {
+    alignItems: "center",
+    color: colors.goldDeep,
+    display: "flex",
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    letterSpacing: "0.08em",
+    textTransform: "uppercase",
+    marginBottom: 12,
+    "::before": {
+      background: colors.gold,
       content: '""',
-      width: 18,
       height: 1,
-      background: 'var(--gold)',
+      width: 18,
     },
   },
   title: {
-    fontFamily: 'var(--serif)',
+    margin: "0 0 8px",
+    color: colors.ink,
+    fontFamily: fonts.serif,
     fontSize: 32,
     fontWeight: 400,
-    letterSpacing: '-0.02em',
+    letterSpacing: "-0.02em",
     lineHeight: 1.15,
-    color: 'var(--ink)',
-    margin: '0 0 8px',
   },
-  titleEm: { fontStyle: 'italic', color: 'var(--gold-deep)' },
+  titleEm: { color: colors.goldDeep, fontStyle: "italic" },
   sub: {
+    margin: "0 0 28px",
+    color: colors.ink3,
     fontSize: 14,
-    color: 'var(--ink-3)',
-    margin: '0 0 28px',
     maxWidth: 540,
   },
   grid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
     gap: 10,
+    display: "grid",
+    gridTemplateColumns: "repeat(3, 1fr)",
   },
   card: {
-    textAlign: 'left',
-    background: 'var(--paper-2)',
-    border: '1px solid var(--line)',
-    borderRadius: 'var(--radius)',
-    padding: '14px 14px 12px',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 8,
-    transition: 'all 160ms',
-    minHeight: 132,
-    cursor: 'pointer',
-    color: 'var(--ink)',
-    ':hover': {
-      background: 'var(--paper)',
-      borderColor: 'var(--line-strong)',
-      transform: 'translateY(-1px)',
-      boxShadow: 'var(--shadow)',
+    background: {
+      default: colors.paper2,
+      ":hover": colors.paper,
     },
+    padding: "14px 14px 12px",
+    borderColor: {
+      default: colors.line,
+      ":hover": colors.lineStrong,
+    },
+    borderRadius: radii.md,
+    borderStyle: borders.solid,
+    borderWidth: borders.thin,
+    gap: 8,
+    transition: "all 160ms",
+    boxShadow: {
+      default: "none",
+      ":hover": shadows.md,
+    },
+    color: colors.ink,
+    cursor: "pointer",
+    display: "flex",
+    flexDirection: "column",
+    textAlign: "left",
+    transform: {
+      default: "translateY(0)",
+      ":hover": "translateY(-1px)",
+    },
+    minHeight: 132,
   },
   tag: {
-    display: 'inline-flex',
-    alignItems: 'center',
     gap: 5,
-    alignSelf: 'flex-start',
-    fontFamily: 'var(--mono)',
+    alignItems: "center",
+    alignSelf: "flex-start",
+    color: colors.ink4,
+    display: "inline-flex",
+    fontFamily: fonts.mono,
     fontSize: 10,
-    letterSpacing: '0.06em',
-    textTransform: 'uppercase',
-    color: 'var(--ink-4)',
+    letterSpacing: "0.06em",
+    textTransform: "uppercase",
   },
   dot: {
-    width: 6,
+    background: colors.gold,
+    borderRadius: "50%",
     height: 6,
-    borderRadius: '50%',
-    background: 'var(--gold)',
+    width: 6,
   },
-  dotClassify: { background: 'var(--gold)' },
-  dotCost: { background: 'var(--ok)' },
-  dotAlert: { background: 'oklch(0.65 0.12 280)' },
+  dotClassify: { background: colors.gold },
+  dotCost: { background: colors.ok },
+  dotAlert: { background: "oklch(0.65 0.12 280)" },
   text: {
+    color: colors.ink,
     fontSize: 13.5,
     lineHeight: 1.45,
-    color: 'var(--ink)',
   },
   arrow: {
-    marginTop: 'auto',
-    alignSelf: 'flex-end',
-    color: 'var(--ink-4)',
-    transition: 'transform 160ms, color 160ms',
+    transition: "transform 160ms, color 160ms",
+    alignSelf: "flex-end",
+    color: colors.ink4,
+    marginTop: "auto",
   },
   meta: {
-    marginTop: 24,
-    display: 'flex',
     gap: 18,
+    color: colors.ink4,
+    display: "flex",
+    fontFamily: fonts.mono,
     fontSize: 11.5,
-    color: 'var(--ink-4)',
-    fontFamily: 'var(--mono)',
-    letterSpacing: '0.02em',
+    letterSpacing: "0.02em",
+    marginTop: 24,
   },
   metaItem: {
-    display: 'flex',
-    alignItems: 'center',
     gap: 6,
+    alignItems: "center",
+    display: "flex",
   },
-})
+});

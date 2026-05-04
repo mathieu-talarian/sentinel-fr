@@ -1,24 +1,26 @@
-import { createRouter as createTanStackRouter } from '@tanstack/solid-router'
-import type { QueryClient } from '@tanstack/solid-query'
+import type { QueryClient } from "@tanstack/solid-query";
 
-import { routeTree } from './routeTree.gen'
+import { createRouter as createTanStackRouter } from "@tanstack/solid-router";
 
-export interface RouterContext {
-  queryClient: QueryClient
+import { routeTree } from "./routeTree.gen";
+
+export interface RouterContextT {
+  queryClient: QueryClient;
 }
 
 export function getRouter(queryClient: QueryClient) {
   return createTanStackRouter({
     routeTree,
-    context: { queryClient } satisfies RouterContext,
+    context: { queryClient } satisfies RouterContextT,
     scrollRestoration: true,
-    defaultPreload: 'intent',
+    defaultPreload: "intent",
     defaultPreloadStaleTime: 0,
-  })
+  });
 }
 
-declare module '@tanstack/solid-router' {
+declare module "@tanstack/solid-router" {
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   interface Register {
-    router: ReturnType<typeof getRouter>
+    router: ReturnType<typeof getRouter>;
   }
 }

@@ -1,8 +1,16 @@
-//  @ts-check
+import globals from "globals";
+import {
+  base,
+  noBarrelFiles,
+  tanstackRouter,
+  solid,
+  stylex,
+  rules,
+  strictTsConfigTypeChecked,
+} from "@mathieu-talarian/eslint-config";
+import { defineConfig, globalIgnores } from "eslint/config";
 
-import { tanstackConfig } from "@tanstack/eslint-config";
-
-export default [
+export default defineConfig([
   {
     ignores: [
       ".claude/**",
@@ -17,20 +25,30 @@ export default [
       "prettier.config.js",
     ],
   },
-  ...tanstackConfig,
+  base,
+  strictTsConfigTypeChecked,
+  solid,
+  tanstackRouter,
+  noBarrelFiles,
+  stylex,
   {
-    rules: {
-      "import/no-cycle": "off",
-      "import/order": "off",
-      "sort-imports": "off",
-      "@typescript-eslint/array-type": "off",
-      "@typescript-eslint/require-await": "off",
-      "pnpm/json-enforce-catalog": "off",
-      // SSE reader is an unbounded read loop — needs a constant `while (true)`.
-      "@typescript-eslint/no-unnecessary-condition": [
-        "error",
-        { allowConstantLoopConditions: "always" },
-      ],
+    rules,
+    languageOptions: {
+      ecmaVersion: 2020,
+      globals: globals.browser,
+      parserOptions: {
+        tsconfigRootDir: new URL(".", import.meta.url).pathname,
+        projectService: {
+          allowDefaultProject: ["eslint.config.js"],
+        },
+      },
     },
   },
-];
+  globalIgnores([
+    "dist",
+    "eslint.config.js",
+    "src/**/*.js",
+    "src/**/*.d.ts",
+    "src/lib/api/generated/**",
+  ]),
+]);

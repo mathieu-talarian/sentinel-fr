@@ -1,18 +1,20 @@
-import { For, Show, Suspense } from 'solid-js'
-import * as stylex from '@stylexjs/stylex'
-import { createQuery } from '@tanstack/solid-query'
+import * as stylex from "@stylexjs/stylex";
+import { createQuery } from "@tanstack/solid-query";
+import { For, Show, Suspense } from "solid-js";
 
-import { Icon } from './Icons'
-import { sx } from '~/lib/sx'
-import { priorConvosQuery } from '~/lib/queries'
+import { priorConvosQuery } from "~/lib/queries";
+import { sx } from "~/lib/sx";
+import { borders, colors, fonts, radii } from "~/lib/tokens.stylex";
 
-interface RailProps {
-  onNewChat: () => void
-  onOpenSettings: () => void
+import { Icon } from "./Icons";
+
+interface RailPropsT {
+  onNewChat: () => void;
+  onOpenSettings: () => void;
 }
 
-export function Rail(props: RailProps) {
-  const convos = createQuery(() => priorConvosQuery())
+export function Rail(props: Readonly<RailPropsT>) {
+  const convos = createQuery(() => priorConvosQuery());
 
   return (
     <aside {...sx(s.rail)}>
@@ -24,7 +26,11 @@ export function Rail(props: RailProps) {
         <span {...sx(s.brandTag)}>v1.4</span>
       </div>
 
-      <button type="button" {...sx(s.newChat)} onClick={props.onNewChat}>
+      <button
+        type="button"
+        {...sx(s.newChat)}
+        onClick={() => { props.onNewChat(); }}
+      >
         <Icon.Plus /> New chat
       </button>
 
@@ -58,169 +64,189 @@ export function Rail(props: RailProps) {
         <button
           type="button"
           {...sx(s.iconBtn)}
-          onClick={props.onOpenSettings}
+          onClick={() => { props.onOpenSettings(); }}
           title="Settings"
         >
           <Icon.Settings />
         </button>
       </div>
     </aside>
-  )
+  );
 }
 
 const s = stylex.create({
   rail: {
-    background: 'var(--paper-2)',
-    borderRight: '1px solid var(--line)',
-    display: 'flex',
-    flexDirection: 'column',
+    background: colors.paper2,
+    display: "flex",
+    flexDirection: "column",
+    flexShrink: 0,
+    borderRightColor: colors.line,
+    borderRightStyle: borders.solid,
+    borderRightWidth: borders.thin,
     minWidth: 0,
     width: 240,
-    flexShrink: 0,
   },
   head: {
-    padding: '16px 14px 10px',
-    display: 'flex',
-    alignItems: 'center',
+    padding: "16px 14px 10px",
     gap: 8,
+    alignItems: "center",
+    display: "flex",
   },
   brand: {
-    display: 'flex',
-    alignItems: 'center',
     gap: 8,
-    fontFamily: 'var(--serif)',
+    alignItems: "center",
+    color: colors.ink,
+    display: "flex",
+    fontFamily: fonts.serif,
     fontSize: 17,
     fontWeight: 600,
-    letterSpacing: '-0.01em',
-    color: 'var(--ink)',
+    letterSpacing: "-0.01em",
   },
   brandMark: {
-    width: 22,
-    height: 22,
+    background: colors.ink,
     borderRadius: 5,
-    background: 'var(--ink)',
-    color: 'var(--paper)',
-    display: 'grid',
-    placeItems: 'center',
-    fontFamily: 'var(--serif)',
+    placeItems: "center",
+    color: colors.paper,
+    display: "grid",
+    fontFamily: fonts.serif,
     fontSize: 13,
+    fontStyle: "italic",
     fontWeight: 600,
-    fontStyle: 'italic',
+    height: 22,
+    width: 22,
   },
   brandTag: {
-    marginLeft: 'auto',
-    fontFamily: 'var(--mono)',
+    color: colors.ink4,
+    fontFamily: fonts.mono,
     fontSize: 10,
-    color: 'var(--ink-4)',
-    letterSpacing: '0.04em',
-    textTransform: 'uppercase',
+    letterSpacing: "0.04em",
+    textTransform: "uppercase",
+    marginLeft: "auto",
   },
   newChat: {
-    margin: '4px 10px 8px',
-    padding: '8px 10px',
-    display: 'flex',
-    alignItems: 'center',
+    background: {
+      default: colors.paper,
+      ":hover": colors.paper3,
+    },
+    margin: "4px 10px 8px",
+    padding: "8px 10px",
+    borderColor: {
+      default: colors.line,
+      ":hover": colors.lineStrong,
+    },
+    borderRadius: radii.md,
+    borderStyle: borders.solid,
+    borderWidth: borders.thin,
     gap: 8,
-    background: 'var(--paper)',
-    border: '1px solid var(--line)',
-    borderRadius: 'var(--radius)',
-    color: 'var(--ink)',
+    transition: "background 120ms, border-color 120ms",
+    alignItems: "center",
+    color: colors.ink,
+    display: "flex",
     fontSize: 13,
     fontWeight: 500,
-    transition: 'background 120ms, border-color 120ms',
-    ':hover': {
-      background: 'var(--paper-3)',
-      borderColor: 'var(--line-strong)',
-    },
   },
   section: {
-    padding: '14px 14px 4px',
+    padding: "14px 14px 4px",
+    color: colors.ink4,
     fontSize: 11,
     fontWeight: 500,
-    letterSpacing: '0.06em',
-    textTransform: 'uppercase',
-    color: 'var(--ink-4)',
+    letterSpacing: "0.06em",
+    textTransform: "uppercase",
   },
   list: {
-    flex: 1,
-    overflowY: 'auto',
-    padding: '0 6px 12px',
-    display: 'flex',
-    flexDirection: 'column',
+    padding: "0 6px 12px",
+    flex: "1",
     gap: 1,
+    display: "flex",
+    flexDirection: "column",
+    overflowY: "auto",
   },
   convo: {
-    padding: '8px 10px',
-    borderRadius: 'var(--radius-sm)',
-    cursor: 'pointer',
-    display: 'flex',
-    flexDirection: 'column',
+    background: {
+      default: "transparent",
+      ":hover": colors.paper3,
+    },
+    padding: "8px 10px",
+    borderColor: "transparent",
+    borderRadius: radii.sm,
+    borderStyle: borders.solid,
+    borderWidth: borders.thin,
     gap: 2,
-    border: '1px solid transparent',
-    ':hover': { background: 'var(--paper-3)' },
+    cursor: "pointer",
+    display: "flex",
+    flexDirection: "column",
   },
   convoActive: {
-    background: 'var(--paper-3)',
-    borderColor: 'var(--line)',
+    background: colors.paper3,
+    borderColor: colors.line,
   },
   convoTitle: {
+    overflow: "hidden",
+    color: colors.ink2,
     fontSize: 13,
-    color: 'var(--ink-2)',
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
   },
   convoTitleActive: {
-    color: 'var(--ink)',
+    color: colors.ink,
     fontWeight: 500,
   },
   convoMeta: {
+    color: colors.ink4,
     fontSize: 11,
-    color: 'var(--ink-4)',
-    fontVariantNumeric: 'tabular-nums',
+    fontVariantNumeric: "tabular-nums",
   },
   error: {
-    padding: '8px 10px',
+    padding: "8px 10px",
+    color: colors.err,
+    fontFamily: fonts.mono,
     fontSize: 12,
-    color: 'var(--err)',
-    fontFamily: 'var(--mono)',
   },
   foot: {
     padding: 10,
-    borderTop: '1px solid var(--line)',
-    display: 'flex',
-    alignItems: 'center',
     gap: 10,
+    alignItems: "center",
+    display: "flex",
+    borderTopColor: colors.line,
+    borderTopStyle: borders.solid,
+    borderTopWidth: borders.thin,
   },
   avatar: {
-    width: 28,
-    height: 28,
-    borderRadius: '50%',
-    background: 'var(--gold-soft)',
-    color: 'var(--gold-deep)',
-    display: 'grid',
-    placeItems: 'center',
-    fontWeight: 600,
+    background: colors.goldSoft,
+    borderRadius: "50%",
+    placeItems: "center",
+    color: colors.goldDeep,
+    display: "grid",
     fontSize: 12,
+    fontWeight: 600,
+    height: 28,
+    width: 28,
   },
   userMeta: {
-    display: 'flex',
-    flexDirection: 'column',
+    display: "flex",
+    flexDirection: "column",
     lineHeight: 1.2,
     minWidth: 0,
   },
-  userName: { fontSize: 13, fontWeight: 500, color: 'var(--ink)' },
-  userOrg: { fontSize: 11, color: 'var(--ink-4)' },
+  userName: { color: colors.ink, fontSize: 13, fontWeight: 500 },
+  userOrg: { color: colors.ink4, fontSize: 11 },
   iconBtn: {
-    marginLeft: 'auto',
-    width: 28,
+    background: {
+      default: "transparent",
+      ":hover": colors.paper3,
+    },
+    borderColor: "transparent",
+    borderRadius: radii.sm,
+    borderStyle: borders.solid,
+    borderWidth: borders.thin,
+    placeItems: "center",
+    color: {
+      default: colors.ink3,
+      ":hover": colors.ink,
+    },
+    display: "grid",
     height: 28,
-    display: 'grid',
-    placeItems: 'center',
-    border: '1px solid transparent',
-    borderRadius: 'var(--radius-sm)',
-    background: 'transparent',
-    color: 'var(--ink-3)',
-    ':hover': { background: 'var(--paper-3)', color: 'var(--ink)' },
+    marginLeft: "auto",
+    width: 28,
   },
-})
+});
