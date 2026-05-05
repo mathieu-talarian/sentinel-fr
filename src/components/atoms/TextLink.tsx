@@ -4,7 +4,7 @@ import type { JSX } from "solid-js";
 import * as stylex from "@stylexjs/stylex";
 import { splitProps } from "solid-js";
 
-import { cn, sx } from "~/lib/styles/sx";
+import { sx } from "~/lib/styles/sx";
 import { colors } from "~/lib/styles/tokens.stylex";
 
 export type TextLinkToneT = "default" | "accent";
@@ -22,15 +22,8 @@ const preventDefault = (e: MouseEvent) => {
 };
 
 export function TextLink(props: Readonly<TextLinkPropsT>) {
-  const [own, rest] = splitProps(props, [
-    "tone",
-    "style",
-    "href",
-    "onClick",
-    "class",
-  ]);
+  const [own, rest] = splitProps(props, ["tone", "style", "href", "onClick"]);
   const tone = () => (own.tone === "accent" ? s.accent : s.def);
-  const styled = () => sx(s.link, tone(), own.style);
   const href = () => own.href ?? "#";
 
   const handleClick: JSX.EventHandler<HTMLAnchorElement, MouseEvent> = (e) => {
@@ -43,8 +36,7 @@ export function TextLink(props: Readonly<TextLinkPropsT>) {
     <a
       {...rest}
       href={href()}
-      class={cn(styled().class, own.class)}
-      style={styled().style}
+      {...sx(s.link, tone(), own.style)}
       onClick={handleClick}
     />
   );

@@ -4,7 +4,7 @@ import type { JSX } from "solid-js";
 import * as stylex from "@stylexjs/stylex";
 import { splitProps } from "solid-js";
 
-import { cn, sx } from "~/lib/styles/sx";
+import { sx } from "~/lib/styles/sx";
 import { colors } from "~/lib/styles/tokens.stylex";
 
 interface DisclaimerPropsT extends Omit<
@@ -15,16 +15,9 @@ interface DisclaimerPropsT extends Omit<
 }
 
 export function Disclaimer(props: Readonly<DisclaimerPropsT>) {
-  const [own, rest] = splitProps(props, ["style", "class"]);
-  const styled = () => sx(s.text, own.style);
+  const [own, rest] = splitProps(props, ["style"]);
 
-  return (
-    <div
-      {...rest}
-      class={cn(styled().class, own.class)}
-      style={styled().style}
-    />
-  );
+  return <div {...rest} {...sx(s.text, own.style)} />;
 }
 
 const s = stylex.create({

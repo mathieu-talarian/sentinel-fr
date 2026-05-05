@@ -6,7 +6,7 @@ import * as stylex from "@stylexjs/stylex";
 import { splitProps } from "solid-js";
 
 
-import { cn, sx } from "~/lib/styles/sx";
+import { sx } from "~/lib/styles/sx";
 import { colors } from "~/lib/styles/tokens.stylex";
 
 interface CheckboxPropsT extends Omit<
@@ -24,10 +24,7 @@ export function Checkbox(props: Readonly<CheckboxPropsT>) {
     "style",
     "onCheckedChange",
     "onChange",
-    "class",
   ]);
-
-  const styled = () => sx(s.box, STATES[own.state ?? "default"], own.style);
 
   const handleChange: JSX.ChangeEventHandler<HTMLInputElement, Event> = (e) => {
     own.onCheckedChange?.(e.currentTarget.checked);
@@ -39,8 +36,7 @@ export function Checkbox(props: Readonly<CheckboxPropsT>) {
     <input
       type="checkbox"
       {...rest}
-      class={cn(styled().class, own.class)}
-      style={styled().style}
+      {...sx(s.box, STATES[own.state ?? "default"], own.style)}
       onChange={handleChange}
     />
   );

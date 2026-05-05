@@ -5,7 +5,7 @@ import * as stylex from "@stylexjs/stylex";
 import { splitProps } from "solid-js";
 import { Dynamic } from "solid-js/web";
 
-import { cn, sx } from "~/lib/styles/sx";
+import { sx } from "~/lib/styles/sx";
 import { colors, fonts } from "~/lib/styles/tokens.stylex";
 
 export type HeadingLevelT = "h1" | "h2" | "h3";
@@ -23,28 +23,18 @@ interface HeadingPropsT extends Omit<
 }
 
 export function Heading(props: Readonly<HeadingPropsT>) {
-  const [own, rest] = splitProps(props, [
-    "level",
-    "size",
-    "align",
-    "style",
-    "class",
-  ]);
-
-  const styled = () =>
-    sx(
-      s.heading,
-      SIZES[own.size ?? "md"],
-      own.align === "center" ? s.center : undefined,
-      own.style,
-    );
+  const [own, rest] = splitProps(props, ["level", "size", "align", "style"]);
 
   return (
     <Dynamic
       component={own.level ?? "h1"}
       {...rest}
-      class={cn(styled().class, own.class)}
-      style={styled().style}
+      {...sx(
+        s.heading,
+        SIZES[own.size ?? "md"],
+        own.align === "center" ? s.center : undefined,
+        own.style,
+      )}
     />
   );
 }

@@ -4,7 +4,7 @@ import type { JSX } from "solid-js";
 import * as stylex from "@stylexjs/stylex";
 import { splitProps } from "solid-js";
 
-import { cn, sx } from "~/lib/styles/sx";
+import { sx } from "~/lib/styles/sx";
 import { colors } from "~/lib/styles/tokens.stylex";
 
 export type AvatarToneT = "gold" | "ink";
@@ -20,25 +20,17 @@ interface AvatarPropsT extends Omit<
 }
 
 export function Avatar(props: Readonly<AvatarPropsT>) {
-  const [own, rest] = splitProps(props, [
-    "initial",
-    "size",
-    "tone",
-    "style",
-    "class",
-  ]);
-
-  const styled = () => sx(s.avatar, TONES[own.tone ?? "gold"], own.style);
-  const size = () => own.size ?? 28;
+  const [own, rest] = splitProps(props, ["initial", "size", "tone", "style"]);
 
   return (
     <div
       {...rest}
-      class={cn(styled().class, own.class)}
-      style={{
-        height: `${String(size())}px`,
-        width: `${String(size())}px`,
-      }}
+      {...sx(
+        s.avatar,
+        TONES[own.tone ?? "gold"],
+        s.sized(own.size ?? 28),
+        own.style,
+      )}
     >
       {own.initial}
     </div>
@@ -53,6 +45,10 @@ const s = stylex.create({
     fontSize: 12,
     fontWeight: 600,
   },
+  sized: (size: number) => ({
+    height: size,
+    width: size,
+  }),
 });
 
 const TONES = stylex.create({

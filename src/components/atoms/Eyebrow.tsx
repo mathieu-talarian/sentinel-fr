@@ -4,7 +4,7 @@ import type { JSX } from "solid-js";
 import * as stylex from "@stylexjs/stylex";
 import { splitProps } from "solid-js";
 
-import { cn, sx } from "~/lib/styles/sx";
+import { sx } from "~/lib/styles/sx";
 import { colors, fonts } from "~/lib/styles/tokens.stylex";
 
 export type EyebrowToneT = "default" | "accent";
@@ -19,15 +19,13 @@ interface EyebrowPropsT extends Omit<
 }
 
 export function Eyebrow(props: Readonly<EyebrowPropsT>) {
-  const [own, rest] = splitProps(props, ["rule", "tone", "style", "class"]);
+  const [own, rest] = splitProps(props, ["rule", "tone", "style"]);
   const tone = () => (own.tone === "accent" ? s.accent : s.def);
-  const styled = () => sx(s.eyebrow, tone(), own.rule && s.withRule, own.style);
 
   return (
     <div
       {...rest}
-      class={cn(styled().class, own.class)}
-      style={styled().style}
+      {...sx(s.eyebrow, tone(), own.rule && s.withRule, own.style)}
     />
   );
 }

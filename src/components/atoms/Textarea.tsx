@@ -6,7 +6,7 @@ import * as stylex from "@stylexjs/stylex";
 import { splitProps } from "solid-js";
 
 
-import { cn, sx } from "~/lib/styles/sx";
+import { sx } from "~/lib/styles/sx";
 import { colors, fonts } from "~/lib/styles/tokens.stylex";
 
 interface TextareaPropsT extends Omit<
@@ -26,11 +26,7 @@ export function Textarea(props: Readonly<TextareaPropsT>) {
     "style",
     "onValueChange",
     "onInput",
-    "class",
   ]);
-
-  const styled = () =>
-    sx(s.textarea, STATES[own.state ?? "default"], own.style);
 
   const handleInput: JSX.InputEventHandler<HTMLTextAreaElement, InputEvent> = (
     e,
@@ -44,8 +40,12 @@ export function Textarea(props: Readonly<TextareaPropsT>) {
     <textarea
       rows={1}
       {...rest}
-      class={cn(styled().class, own.class)}
-      style={{ "max-height": `${String(own.maxHeight ?? 160)}px` }}
+      {...sx(
+        s.textarea,
+        STATES[own.state ?? "default"],
+        s.dynamic(own.maxHeight ?? 160),
+        own.style,
+      )}
       onInput={handleInput}
     />
   );
@@ -67,6 +67,9 @@ const s = stylex.create({
     width: "100%",
     "::placeholder": { color: colors.ink4 },
   },
+  dynamic: (maxHeight: number) => ({
+    maxHeight,
+  }),
 });
 
 const STATES = stylex.create({

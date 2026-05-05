@@ -15,18 +15,3 @@ import * as stylex from "@stylexjs/stylex";
 export function sx(...args: unknown[]) {
   return stylex.attrs(...(args as never[]));
 }
-
-/**
- * Merge a StyleX-produced class with a consumer-provided one.
- *
- * Atoms extend `JSX.*HTMLAttributes` so callers can pass `class` through; we
- * still need StyleX styles to win on collisions, but consumer classes should
- * compose. Returns `undefined` when both are empty so the attribute is dropped.
- */
-export function cn(
-  styled: string | undefined,
-  passthrough: string | undefined,
-): string | undefined {
-  if (styled && passthrough) return `${styled} ${passthrough}`;
-  return styled ?? passthrough;
-}

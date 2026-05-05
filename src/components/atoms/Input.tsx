@@ -4,7 +4,7 @@ import type { JSX } from "solid-js";
 import * as stylex from "@stylexjs/stylex";
 import { splitProps } from "solid-js";
 
-import { cn, sx } from "~/lib/styles/sx";
+import { sx } from "~/lib/styles/sx";
 import { borders, colors, fonts, radii } from "~/lib/styles/tokens.stylex";
 
 export type InputStateT = "default" | "error" | "warning" | "success";
@@ -27,16 +27,7 @@ export function Input(props: Readonly<InputPropsT>) {
     "style",
     "onValueChange",
     "onInput",
-    "class",
   ]);
-
-  const styled = () =>
-    sx(
-      s.input,
-      STATES[own.state ?? "default"],
-      own.paddedRight && s.padRight,
-      own.style,
-    );
 
   const handleInput: JSX.InputEventHandler<HTMLInputElement, InputEvent> = (
     e,
@@ -50,8 +41,12 @@ export function Input(props: Readonly<InputPropsT>) {
     <input
       type="text"
       {...rest}
-      class={cn(styled().class, own.class)}
-      style={styled().style}
+      {...sx(
+        s.input,
+        STATES[own.state ?? "default"],
+        own.paddedRight && s.padRight,
+        own.style,
+      )}
       onInput={handleInput}
     />
   );

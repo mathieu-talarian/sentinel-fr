@@ -4,7 +4,7 @@ import type { JSX } from "solid-js";
 import * as stylex from "@stylexjs/stylex";
 import { splitProps } from "solid-js";
 
-import { cn, sx } from "~/lib/styles/sx";
+import { sx } from "~/lib/styles/sx";
 import { borders, colors, fonts, radii } from "~/lib/styles/tokens.stylex";
 
 export type ButtonVariantT = "primary" | "secondary" | "danger";
@@ -24,23 +24,18 @@ export function Button(props: Readonly<ButtonPropsT>) {
     "fullWidth",
     "style",
     "type",
-    "class",
   ]);
-
-  const styled = () =>
-    sx(
-      s.btn,
-      VARIANTS[own.variant ?? "primary"],
-      own.fullWidth && s.full,
-      own.style,
-    );
 
   return (
     <button
       type={own.type ?? "button"}
       {...rest}
-      class={cn(styled().class, own.class)}
-      style={styled().style}
+      {...sx(
+        s.btn,
+        VARIANTS[own.variant ?? "primary"],
+        own.fullWidth && s.full,
+        own.style,
+      )}
     />
   );
 }

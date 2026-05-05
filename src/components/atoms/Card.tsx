@@ -4,7 +4,7 @@ import type { JSX } from "solid-js";
 import * as stylex from "@stylexjs/stylex";
 import { splitProps } from "solid-js";
 
-import { cn, sx } from "~/lib/styles/sx";
+import { sx } from "~/lib/styles/sx";
 import { borders, colors, radii, shadows } from "~/lib/styles/tokens.stylex";
 
 export type CardElevationT = "none" | "md" | "lg";
@@ -27,24 +27,20 @@ export function Card(props: Readonly<CardPropsT>) {
     "gap",
     "width",
     "style",
-    "class",
   ]);
-
-  const styled = () =>
-    sx(
-      s.card,
-      ELEVATIONS[own.elevation ?? "none"],
-      GAPS[own.gap ?? "none"],
-      own.bordered !== false && s.bordered,
-      own.padded && s.padded,
-      own.style,
-    );
 
   return (
     <div
       {...rest}
-      class={cn(styled().class, own.class)}
-      style={own.width ? { "max-width": `${String(own.width)}px` } : undefined}
+      {...sx(
+        s.card,
+        ELEVATIONS[own.elevation ?? "none"],
+        GAPS[own.gap ?? "none"],
+        own.bordered !== false && s.bordered,
+        own.padded && s.padded,
+        own.width != null && s.maxW(own.width),
+        own.style,
+      )}
     />
   );
 }
@@ -64,6 +60,9 @@ const s = stylex.create({
     borderWidth: borders.thin,
   },
   padded: { padding: "32px 28px" },
+  maxW: (width: number) => ({
+    maxWidth: width,
+  }),
 });
 
 const ELEVATIONS = stylex.create({

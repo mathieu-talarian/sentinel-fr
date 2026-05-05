@@ -4,7 +4,7 @@ import type { JSX } from "solid-js";
 import * as stylex from "@stylexjs/stylex";
 import { splitProps } from "solid-js";
 
-import { cn, sx } from "~/lib/styles/sx";
+import { sx } from "~/lib/styles/sx";
 import { borders, colors, radii } from "~/lib/styles/tokens.stylex";
 
 export type IconButtonSizeT = "sm" | "md" | "lg";
@@ -31,24 +31,19 @@ export function IconButton(props: Readonly<IconButtonPropsT>) {
     "bordered",
     "style",
     "type",
-    "class",
   ]);
-
-  const styled = () =>
-    sx(
-      s.btn,
-      SIZES[own.size ?? "md"],
-      VARIANTS[own.variant ?? "ghost"],
-      own.bordered && s.bordered,
-      own.style,
-    );
 
   return (
     <button
       type={own.type ?? "button"}
       {...rest}
-      class={cn(styled().class, own.class)}
-      style={styled().style}
+      {...sx(
+        s.btn,
+        SIZES[own.size ?? "md"],
+        VARIANTS[own.variant ?? "ghost"],
+        own.bordered && s.bordered,
+        own.style,
+      )}
     />
   );
 }
