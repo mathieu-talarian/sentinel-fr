@@ -13,12 +13,12 @@ export function MessageError(props: Readonly<MessageErrorPropsT>) {
 
 const s = stylex.create({
   error: {
-    background: colors.errSoft,
     padding: "8px 12px",
     borderColor: colors.err,
     borderRadius: radii.sm,
     borderStyle: borders.solid,
     borderWidth: borders.thin,
+    backgroundColor: colors.errSoft,
     color: colors.err,
     fontFamily: fonts.mono,
     fontSize: 12,

@@ -52,13 +52,13 @@ const s = stylex.create({
     display: "flex",
   },
   btn: {
-    background: {
-      default: "transparent",
-      ':is([aria-checked="true"])': colors.paper3,
-    },
     padding: "4px 10px",
     borderStyle: "none",
     borderWidth: 0,
+    backgroundColor: {
+      default: "transparent",
+      ':is([aria-checked="true"])': colors.paper3,
+    },
     color: {
       default: colors.ink4,
       ":hover:not(:disabled)": colors.ink2,

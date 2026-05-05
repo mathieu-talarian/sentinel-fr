@@ -171,8 +171,8 @@ function ChatPage() {
 
 const s = stylex.create({
   center: {
-    background: colors.paper,
     flex: "1",
+    backgroundColor: colors.paper,
     display: "flex",
     flexDirection: "column",
     minWidth: 0,

@@ -10,20 +10,20 @@ export function Pulse() {
 
 const s = stylex.create({
   dot: {
-    background: colors.gold,
     borderRadius: "50%",
+    backgroundColor: colors.gold,
     flexShrink: 0,
     position: "relative",
     height: 8,
     width: 8,
     "::before": {
-      background: colors.gold,
       inset: -3,
       borderRadius: "50%",
       animationDuration: "1.6s",
       animationIterationCount: "infinite",
       animationName: animations.pulse,
       animationTimingFunction: "ease-out",
+      backgroundColor: colors.gold,
       content: '""',
       opacity: 0.35,
       position: "absolute",

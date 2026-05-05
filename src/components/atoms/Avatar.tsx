@@ -43,6 +43,6 @@ const s = stylex.create({
 });
 
 const TONES = stylex.create({
-  gold: { background: colors.goldSoft, color: colors.goldDeep },
-  ink: { background: colors.ink, color: colors.paper },
+  gold: { backgroundColor: colors.goldSoft, color: colors.goldDeep },
+  ink: { backgroundColor: colors.ink, color: colors.paper },
 });

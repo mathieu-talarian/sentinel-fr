@@ -51,9 +51,9 @@ const s = stylex.create({
     fontWeight: 500,
   },
   tag: {
-    background: colors.goldSoft,
     padding: "2px 6px",
     borderRadius: 3,
+    backgroundColor: colors.goldSoft,
     color: colors.goldDeep,
     fontFamily: fonts.mono,
     fontSize: 10,

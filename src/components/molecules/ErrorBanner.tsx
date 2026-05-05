@@ -19,7 +19,6 @@ export function ErrorBanner(props: Readonly<ErrorBannerPropsT>) {
 
 const s = stylex.create({
   banner: {
-    background: colors.errSoft,
     padding: "8px 12px",
     borderColor: colors.err,
     borderRadius: radii.sm,
@@ -27,6 +26,7 @@ const s = stylex.create({
     borderWidth: borders.thin,
     gap: 8,
     alignItems: "center",
+    backgroundColor: colors.errSoft,
     color: colors.err,
     display: "flex",
     fontSize: 12.5,

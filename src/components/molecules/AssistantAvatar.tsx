@@ -9,9 +9,9 @@ export function AssistantAvatar() {
 
 const s = stylex.create({
   icon: {
-    background: colors.ink,
     borderRadius: 6,
     placeItems: "center",
+    backgroundColor: colors.ink,
     color: colors.paper,
     display: "grid",
     flexShrink: 0,

@@ -22,14 +22,14 @@ const s = stylex.create({
     letterSpacing: "0.08em",
     textTransform: "uppercase",
     "::after": {
-      background: colors.line,
       flex: "1",
+      backgroundColor: colors.line,
       content: '""',
       height: 1,
     },
     "::before": {
-      background: colors.line,
       flex: "1",
+      backgroundColor: colors.line,
       content: '""',
       height: 1,
     },

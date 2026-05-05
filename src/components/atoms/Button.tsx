@@ -52,35 +52,35 @@ const s = stylex.create({
 
 const VARIANTS = stylex.create({
   primary: {
-    background: {
+    borderStyle: "none",
+    borderWidth: 0,
+    backgroundColor: {
       default: colors.ink,
       ":hover:not(:disabled)": colors.ink2,
     },
-    borderStyle: "none",
-    borderWidth: 0,
     color: colors.paper,
   },
   secondary: {
-    background: {
-      default: colors.paper,
-      ":hover:not(:disabled)": colors.paper3,
-    },
     borderColor: {
       default: colors.lineStrong,
       ":hover:not(:disabled)": colors.ink4,
     },
     borderStyle: borders.solid,
     borderWidth: borders.thin,
+    backgroundColor: {
+      default: colors.paper,
+      ":hover:not(:disabled)": colors.paper3,
+    },
     color: colors.ink,
   },
   danger: {
-    background: {
-      default: "transparent",
-      ":hover:not(:disabled)": colors.errSoft,
-    },
     borderColor: colors.err,
     borderStyle: borders.solid,
     borderWidth: borders.thin,
+    backgroundColor: {
+      default: "transparent",
+      ":hover:not(:disabled)": colors.errSoft,
+    },
     color: colors.err,
   },
 });

@@ -46,10 +46,6 @@ export function SuggestionCard(props: Readonly<SuggestionCardPropsT>) {
 
 const s = stylex.create({
   card: {
-    background: {
-      default: colors.paper2,
-      ":hover": colors.paper,
-    },
     padding: "14px 14px 12px",
     borderColor: {
       default: colors.line,
@@ -60,6 +56,10 @@ const s = stylex.create({
     borderWidth: borders.thin,
     gap: 8,
     transition: "all 160ms",
+    backgroundColor: {
+      default: colors.paper2,
+      ":hover": colors.paper,
+    },
     boxShadow: {
       default: "none",
       ":hover": shadows.md,
@@ -87,14 +87,14 @@ const s = stylex.create({
     textTransform: "uppercase",
   },
   dot: {
-    background: colors.gold,
     borderRadius: "50%",
+    backgroundColor: colors.gold,
     height: 6,
     width: 6,
   },
-  dotClassify: { background: colors.gold },
-  dotCost: { background: colors.ok },
-  dotAlert: { background: "oklch(0.65 0.12 280)" },
+  dotClassify: { backgroundColor: colors.gold },
+  dotCost: { backgroundColor: colors.ok },
+  dotAlert: { backgroundColor: "oklch(0.65 0.12 280)" },
   text: {
     color: colors.ink,
     fontSize: 13.5,

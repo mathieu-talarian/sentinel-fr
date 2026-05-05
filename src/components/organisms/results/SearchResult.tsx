@@ -76,9 +76,9 @@ const r = stylex.create({
     fontWeight: 600,
   },
   codeBest: {
-    background: colors.goldSoft,
     padding: "1px 5px",
     borderRadius: 3,
+    backgroundColor: colors.goldSoft,
     color: colors.goldDeep,
   },
   score: {
@@ -88,12 +88,12 @@ const r = stylex.create({
     marginLeft: "auto",
   },
   bar: {
-    background: colors.paper3,
     borderRadius: 2,
     overflow: "hidden",
+    backgroundColor: colors.paper3,
     height: 3,
   },
-  barFill: { background: colors.ink3, borderRadius: 2, height: "100%" },
-  barFillBest: { background: colors.gold },
+  barFill: { borderRadius: 2, backgroundColor: colors.ink3, height: "100%" },
+  barFillBest: { backgroundColor: colors.gold },
   desc: { color: colors.ink3, fontSize: 12, lineHeight: 1.45 },
 });

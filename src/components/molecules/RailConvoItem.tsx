@@ -20,23 +20,23 @@ export function RailConvoItem(props: Readonly<RailConvoItemPropsT>) {
 
 const s = stylex.create({
   convo: {
-    background: {
-      default: "transparent",
-      ":hover": colors.paper3,
-    },
     padding: "8px 10px",
     borderColor: "transparent",
     borderRadius: radii.sm,
     borderStyle: borders.solid,
     borderWidth: borders.thin,
     gap: 2,
+    backgroundColor: {
+      default: "transparent",
+      ":hover": colors.paper3,
+    },
     cursor: "pointer",
     display: "flex",
     flexDirection: "column",
   },
   convoActive: {
-    background: colors.paper3,
     borderColor: colors.line,
+    backgroundColor: colors.paper3,
   },
   title: {
     overflow: "hidden",

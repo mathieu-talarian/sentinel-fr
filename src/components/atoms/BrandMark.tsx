@@ -21,8 +21,8 @@ export function BrandMark(props: Readonly<BrandMarkPropsT>) {
 
 const s = stylex.create({
   mark: {
-    background: colors.ink,
     placeItems: "center",
+    backgroundColor: colors.ink,
     color: colors.paper,
     display: "grid",
     fontFamily: fonts.serif,

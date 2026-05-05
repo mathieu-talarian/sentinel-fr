@@ -35,23 +35,23 @@ const s = stylex.create({
   },
   rowLabel: { color: colors.ink2, fontSize: 12.5, fontWeight: 500 },
   switchRoot: {
-    background: {
-      default: colors.lineStrong,
-      ':is([data-state="checked"])': colors.ok,
-    },
     borderRadius: 999,
     borderStyle: "none",
     borderWidth: 0,
     transition: "background 140ms",
+    backgroundColor: {
+      default: colors.lineStrong,
+      ':is([data-state="checked"])': colors.ok,
+    },
     cursor: "pointer",
     position: "relative",
     height: 18,
     width: 32,
   },
   switchThumb: {
-    background: colors.paper,
     borderRadius: "50%",
     transition: "transform 140ms",
+    backgroundColor: colors.paper,
     boxShadow: "0 1px 2px oklch(0 0 0 / 0.25)",
     display: "block",
     transform: {

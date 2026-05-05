@@ -39,9 +39,9 @@ export function Card(props: Readonly<CardPropsT>) {
 
 const s = stylex.create({
   card: {
-    background: colors.paper,
     borderRadius: radii.lg,
     overflow: "hidden",
+    backgroundColor: colors.paper,
     display: "flex",
     flexDirection: "column",
     width: "100%",

@@ -39,15 +39,16 @@ export function Textarea(props: Readonly<TextareaPropsT>) {
 
 const s = stylex.create({
   textarea: {
-    background: "transparent",
     padding: "12px 14px 4px",
     borderStyle: "none",
     borderWidth: 0,
-    outline: "none",
+    backgroundColor: "transparent",
     color: colors.ink,
     fontFamily: fonts.sans,
     fontSize: 14,
     lineHeight: 1.55,
+    outlineStyle: "none",
+    outlineWidth: 0,
     resize: "none",
     minHeight: 28,
     width: "100%",

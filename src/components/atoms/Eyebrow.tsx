@@ -45,7 +45,7 @@ const s = stylex.create({
   accent: { color: colors.goldDeep },
   withRule: {
     "::before": {
-      background: colors.gold,
+      backgroundColor: colors.gold,
       content: '""',
       height: 1,
       width: 18,

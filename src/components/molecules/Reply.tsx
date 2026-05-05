@@ -11,6 +11,7 @@ interface ReplyPropsT {
 }
 
 export function Reply(props: Readonly<ReplyPropsT>) {
+  console.log(props.text);
   return (
     <div {...sx(s.reply)}>
       <Markdown>{props.text}</Markdown>

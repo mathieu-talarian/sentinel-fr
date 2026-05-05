@@ -62,14 +62,14 @@ export const rl = stylex.create({
   subj: { color: colors.ink2, fontSize: 12.5, lineHeight: 1.4 },
   codes: { gap: 4, display: "flex", flexWrap: "wrap", marginTop: 2 },
   code: {
-    background: colors.paper3,
     padding: "1px 5px",
     borderRadius: 3,
+    backgroundColor: colors.paper3,
     color: colors.ink2,
     fontFamily: fonts.serif,
     fontSize: 10.5,
     fontWeight: 600,
   },
-  codeOk: { background: colors.okSoft, color: colors.ok },
-  codeWarn: { background: colors.warnSoft, color: colors.warn },
+  codeOk: { backgroundColor: colors.okSoft, color: colors.ok },
+  codeWarn: { backgroundColor: colors.warnSoft, color: colors.warn },
 });

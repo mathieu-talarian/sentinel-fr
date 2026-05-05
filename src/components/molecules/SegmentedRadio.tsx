@@ -39,16 +39,12 @@ const s = stylex.create({
   row: { gap: 6, display: "flex", flexDirection: "column" },
   rowLabel: { color: colors.ink2, fontSize: 12.5, fontWeight: 500 },
   seg: {
-    background: colors.paper3,
     padding: 2,
     borderRadius: 8,
+    backgroundColor: colors.paper3,
     display: "flex",
   },
   segItem: {
-    background: {
-      default: "transparent",
-      ':is([data-state="checked"])': colors.paper,
-    },
     padding: "5px 8px",
     borderRadius: 6,
     borderStyle: "none",
@@ -56,6 +52,10 @@ const s = stylex.create({
     flex: "1",
     transition: "background 140ms, color 140ms, box-shadow 140ms",
     alignItems: "center",
+    backgroundColor: {
+      default: "transparent",
+      ':is([data-state="checked"])': colors.paper,
+    },
     boxShadow: {
       default: "none",
       ':is([data-state="checked"])': "0 1px 2px oklch(0.24 0.04 255 / 0.08)",

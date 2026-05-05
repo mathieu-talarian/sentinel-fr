@@ -41,12 +41,12 @@ export function Input(props: Readonly<InputPropsT>) {
 
 const s = stylex.create({
   input: {
-    background: colors.paper,
     padding: "10px 12px",
     borderRadius: radii.md,
     borderStyle: borders.solid,
     borderWidth: borders.thin,
     transition: "border-color 140ms, outline-width 140ms",
+    backgroundColor: colors.paper,
     color: colors.ink,
     fontFamily: fonts.sans,
     fontSize: 14,

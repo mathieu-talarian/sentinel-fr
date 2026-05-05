@@ -81,12 +81,12 @@ export function ResultCard(props: Readonly<ResultCardPropsT>) {
 
 const c = stylex.create({
   card: {
-    background: colors.paper,
     borderColor: colors.line,
     borderRadius: radii.md,
     borderStyle: borders.solid,
     borderWidth: borders.thin,
     overflow: "hidden",
+    backgroundColor: colors.paper,
   },
   cardHighlight: {
     outlineColor: colors.gold,
@@ -95,10 +95,10 @@ const c = stylex.create({
     outlineWidth: borders.bold,
   },
   head: {
-    background: colors.paper2,
     padding: "8px 12px",
     gap: 8,
     alignItems: "center",
+    backgroundColor: colors.paper2,
     display: "flex",
     borderBottomColor: colors.line,
     borderBottomStyle: borders.solid,

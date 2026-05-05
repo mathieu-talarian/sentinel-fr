@@ -74,12 +74,12 @@ export function ThinkingPanel(props: Readonly<ThinkingPanelPropsT>) {
 
 const t = stylex.create({
   root: {
-    background: colors.paper2,
     borderColor: colors.line,
     borderRadius: radii.md,
     borderStyle: borders.solid,
     borderWidth: borders.thin,
     overflow: "hidden",
+    backgroundColor: colors.paper2,
     fontSize: 13,
   },
   head: {
@@ -110,8 +110,8 @@ const t = stylex.create({
     marginLeft: "auto",
   },
   body: {
-    background: colors.paper,
     padding: "12px 14px",
+    backgroundColor: colors.paper,
     color: colors.ink3,
     fontFamily: fonts.mono,
     fontSize: 12,

@@ -24,8 +24,8 @@ export function MessageCaveats(props: Readonly<MessageCaveatsPropsT>) {
 
 const s = stylex.create({
   caveats: {
-    background: colors.paper2,
     padding: "8px 12px",
+    backgroundColor: colors.paper2,
     borderBottomLeftRadius: 0,
     borderBottomRightRadius: radii.sm,
     borderLeftColor: colors.lineStrong,

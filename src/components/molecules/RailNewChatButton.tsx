@@ -24,10 +24,6 @@ export function RailNewChatButton(props: Readonly<RailNewChatButtonPropsT>) {
 
 const s = stylex.create({
   btn: {
-    background: {
-      default: colors.paper,
-      ":hover": colors.paper3,
-    },
     margin: "4px 10px 8px",
     padding: "8px 10px",
     borderColor: {
@@ -40,6 +36,10 @@ const s = stylex.create({
     gap: 8,
     transition: "background 120ms, border-color 120ms",
     alignItems: "center",
+    backgroundColor: {
+      default: colors.paper,
+      ":hover": colors.paper3,
+    },
     color: colors.ink,
     display: "flex",
     fontSize: 13,

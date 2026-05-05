@@ -51,9 +51,9 @@ export function Inspector(props: Readonly<InspectorPropsT>) {
 
 const s = stylex.create({
   aside: {
-    background: colors.paper2,
     overflow: "hidden",
     transition: "width 220ms cubic-bezier(0.4, 0, 0.2, 1), opacity 220ms",
+    backgroundColor: colors.paper2,
     display: "flex",
     flexDirection: "column",
     flexShrink: 0,

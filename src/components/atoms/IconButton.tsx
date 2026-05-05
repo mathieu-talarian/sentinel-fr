@@ -74,7 +74,7 @@ const SIZES = stylex.create({
 
 const VARIANTS = stylex.create({
   ghost: {
-    background: {
+    backgroundColor: {
       default: "transparent",
       ":hover": colors.paper3,
     },
@@ -84,7 +84,7 @@ const VARIANTS = stylex.create({
     },
   },
   "ghost-subtle": {
-    background: {
+    backgroundColor: {
       default: "transparent",
       ":hover": colors.paper3,
     },
@@ -94,11 +94,11 @@ const VARIANTS = stylex.create({
     },
   },
   primary: {
-    background: colors.ink,
+    backgroundColor: colors.ink,
     color: colors.paper,
   },
   danger: {
-    background: colors.err,
+    backgroundColor: colors.err,
     color: colors.paper,
   },
 });

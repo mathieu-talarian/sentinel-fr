@@ -108,10 +108,6 @@ export function ToolPill(props: Readonly<ToolPillPropsT>) {
 
 const p = stylex.create({
   pill: {
-    background: {
-      default: colors.paper2,
-      ":hover": colors.paper3,
-    },
     padding: "4px 10px 4px 8px",
     borderColor: {
       default: colors.line,
@@ -123,6 +119,10 @@ const p = stylex.create({
     gap: 6,
     transition: "all 140ms",
     alignItems: "center",
+    backgroundColor: {
+      default: colors.paper2,
+      ":hover": colors.paper3,
+    },
     color: colors.ink2,
     cursor: "pointer",
     display: "inline-flex",
@@ -132,13 +132,13 @@ const p = stylex.create({
     whiteSpace: "nowrap",
   },
   active: {
-    background: colors.goldSoft,
     borderColor: colors.gold,
+    backgroundColor: colors.goldSoft,
     color: colors.ink,
   },
   failed: {
-    background: colors.errSoft,
     borderColor: colors.err,
+    backgroundColor: colors.errSoft,
     color: colors.err,
   },
   body: { gap: 4, alignItems: "center", display: "inline-flex" },

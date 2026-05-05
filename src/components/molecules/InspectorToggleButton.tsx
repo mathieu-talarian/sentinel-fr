@@ -29,10 +29,6 @@ export function InspectorToggleButton(
 
 const s = stylex.create({
   btn: {
-    background: {
-      default: colors.paper,
-      ":hover": colors.paper3,
-    },
     padding: "5px 10px",
     borderColor: colors.line,
     borderRadius: radii.sm,
@@ -40,6 +36,10 @@ const s = stylex.create({
     borderWidth: borders.thin,
     gap: 6,
     alignItems: "center",
+    backgroundColor: {
+      default: colors.paper,
+      ":hover": colors.paper3,
+    },
     color: colors.ink2,
     cursor: {
       default: "pointer",
@@ -53,8 +53,8 @@ const s = stylex.create({
     },
   },
   btnOn: {
-    background: colors.ink,
     borderColor: colors.ink,
+    backgroundColor: colors.ink,
     color: colors.paper,
   },
 });

@@ -31,7 +31,7 @@ export function Rail(props: Readonly<RailPropsT>) {
 
 const s = stylex.create({
   rail: {
-    background: colors.paper2,
+    backgroundColor: colors.paper2,
     display: "flex",
     flexDirection: "column",
     flexShrink: 0,

@@ -20,11 +20,11 @@ export function Cursor(
 
 const s = stylex.create({
   cursor: {
-    background: colors.ink,
     animationDuration: "1s",
     animationIterationCount: "infinite",
     animationName: animations.blink,
     animationTimingFunction: "step-end",
+    backgroundColor: colors.ink,
     display: "inline-block",
     verticalAlign: "text-bottom",
     height: 14,

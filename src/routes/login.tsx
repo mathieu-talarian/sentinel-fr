@@ -87,10 +87,10 @@ function LoginPage() {
 
 const s = stylex.create({
   shell: {
-    background: colors.paper2,
     padding: "32px 20px",
     gap: 28,
     alignItems: "center",
+    backgroundColor: colors.paper2,
     display: "flex",
     flexDirection: "column",
     justifyContent: "center",

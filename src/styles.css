@@ -1,10 +1,14 @@
-/* ============================================
-   SENTINEL — global resets only
-   ============================================
-   Component theming (light/dark) lives in StyleX:
-     - tokens:  src/lib/tokens.stylex.ts   (defineVars / defineConsts)
-     - dark:    src/lib/themes.ts          (createTheme)
-     - applied: src/routes/__root.tsx      (sx(s.app, isDark && darkTheme)) */
+/* SENTINEL — global resets only.
+ *
+ * Background, foreground, theme-token-bound rules live in StyleX:
+ *   - tokens:  src/lib/styles/tokens.stylex.ts (defineVars / defineConsts)
+ *   - dark:    src/lib/styles/themes.ts        (createTheme)
+ *   - applied: src/routes/__root.tsx           (useEffect → html.classList)
+ *
+ * What stays here is what StyleX can't easily express: the universal
+ * box-sizing reset, html/body/#root height/margin, font defaults, and
+ * pseudo-element styling for the scrollbar and focus ring.
+ */
 
 * {
   box-sizing: border-box;
@@ -20,8 +24,9 @@ html,
 body {
   margin: 0;
   padding: 0;
-  background: oklch(0.965 0.008 80);
-  color: oklch(0.24 0.04 255);
+}
+
+body {
   font-family:
     "Inter Tight",
     -apple-system,
@@ -46,7 +51,6 @@ textarea:focus-visible,
   outline-offset: 2px;
 }
 
-/* Scrollbars — no theming, hardcoded */
 *::-webkit-scrollbar {
   width: 8px;
 }
@@ -58,7 +62,6 @@ textarea:focus-visible,
   background: transparent;
 }
 
-/* Density — used by [data-density] root attribute */
 [data-density="compact"] {
   font-size: 13.5px;
 }

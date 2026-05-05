@@ -36,10 +36,6 @@ export function ReplaySection(props: Readonly<ReplaySectionPropsT>) {
 
 const s = stylex.create({
   btn: {
-    background: {
-      default: colors.paper2,
-      ":hover": colors.paper3,
-    },
     padding: "8px 10px",
     borderColor: {
       default: colors.line,
@@ -48,6 +44,10 @@ const s = stylex.create({
     borderRadius: radii.sm,
     borderStyle: borders.solid,
     borderWidth: borders.thin,
+    backgroundColor: {
+      default: colors.paper2,
+      ":hover": colors.paper3,
+    },
     color: {
       default: colors.ink2,
       ":hover": colors.ink,

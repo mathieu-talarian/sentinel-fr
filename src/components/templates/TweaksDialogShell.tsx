@@ -41,21 +41,21 @@ export function TweaksDialogShell(props: Readonly<TweaksDialogShellPropsT>) {
 
 const s = stylex.create({
   backdrop: {
-    background: "oklch(0 0 0 / 0.36)",
     inset: 0,
     backdropFilter: "blur(2px)",
+    backgroundColor: "oklch(0 0 0 / 0.36)",
     position: "fixed",
     zIndex: 1000,
   },
   content: {
-    // Radix Dialog.Content has no built-in positioning — centre it explicitly
-    // so the dialog sits in the viewport regardless of scroll.
-    background: colors.paper,
     borderColor: colors.lineStrong,
     borderRadius: radii.lg,
     borderStyle: borders.solid,
     borderWidth: borders.thin,
     overflow: "hidden",
+    // Radix Dialog.Content has no built-in positioning — centre it explicitly
+    // so the dialog sits in the viewport regardless of scroll.
+    backgroundColor: colors.paper,
     boxShadow: shadows.lg,
     display: "flex",
     flexDirection: "column",
@@ -85,14 +85,14 @@ const s = stylex.create({
     fontWeight: 600,
   },
   close: {
-    background: {
-      default: "transparent",
-      ":hover": colors.paper3,
-    },
     borderRadius: radii.sm,
     borderStyle: "none",
     borderWidth: 0,
     placeItems: "center",
+    backgroundColor: {
+      default: "transparent",
+      ":hover": colors.paper3,
+    },
     color: {
       default: colors.ink3,
       ":hover": colors.ink,

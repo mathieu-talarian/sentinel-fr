@@ -54,13 +54,13 @@ export function AccountSection(props: Readonly<AccountSectionPropsT>) {
 
 const s = stylex.create({
   row: {
-    background: colors.paper2,
     padding: "6px 10px",
     borderColor: colors.line,
     borderRadius: radii.sm,
     borderStyle: borders.solid,
     borderWidth: borders.thin,
     alignItems: "center",
+    backgroundColor: colors.paper2,
     display: "flex",
   },
   email: {

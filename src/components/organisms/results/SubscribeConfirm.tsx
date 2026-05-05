@@ -50,7 +50,6 @@ export function SubscribeConfirm(
 
 const sb = stylex.create({
   banner: {
-    background: colors.okSoft,
     padding: "10px 12px",
     borderColor: colors.ok,
     borderRadius: radii.md,
@@ -58,6 +57,7 @@ const sb = stylex.create({
     borderWidth: borders.thin,
     gap: 10,
     alignItems: "flex-start",
+    backgroundColor: colors.okSoft,
     color: colors.ok,
     display: "flex",
   },

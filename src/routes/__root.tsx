@@ -26,20 +26,27 @@ export const Route = createRootRouteWithContext<RouterContextT>()({
 function RootComponent() {
   const [tweaks] = useTweaks();
 
-  // Apply the StyleX theme to <html> rather than a single subtree so portaled
-  // descendants (Radix Dialog, etc.) inherit the same CSS-variable values —
-  // CSS custom properties only flow through ancestors, and Radix mounts its
-  // portals into `document.body`, outside any in-tree wrapper. `data-theme`
-  // is still set for the `.reply-html` descendant rules in styles.css that
-  // StyleX can't reach (innerHTML content).
+  // Theme is applied to <html> (not a single subtree) so portaled descendants
+  // — Radix Dialog and any future Tooltip/Popover/Toast — inherit the same
+  // CSS-variable values. CSS custom properties only flow through ancestors,
+  // and Radix mounts its portals into `document.body`, outside any in-tree
+  // wrapper.
+  //
+  // `s.root` carries the themed background/color via stylex; `darkTheme`
+  // re-binds `colors.*` to the dark palette when active. `data-theme` is
+  // also set so the `.reply-html` descendant rules in styles.css (innerHTML
+  // content StyleX can't reach) keep working.
   useEffect(() => {
     document.documentElement.dataset.theme = tweaks.theme;
     document.documentElement.dataset.density = tweaks.density;
     document.documentElement.lang = tweaks.lang;
 
-    const themeClass = sx(tweaks.theme === "dark" && darkTheme).className;
-    if (!themeClass) return;
-    const tokens = themeClass.split(" ").filter(Boolean);
+    const className = sx(
+      s.root,
+      tweaks.theme === "dark" && darkTheme,
+    ).className;
+    if (!className) return;
+    const tokens = className.split(" ").filter(Boolean);
     document.documentElement.classList.add(...tokens);
     return () => {
       document.documentElement.classList.remove(...tokens);
@@ -59,8 +66,14 @@ function RootComponent() {
 }
 
 const s = stylex.create({
+  // Applied to <html> via classList so theme tokens cascade to body and to
+  // every portaled descendant.
+  root: {
+    backgroundColor: colors.paper,
+    color: colors.ink,
+  },
   app: {
-    background: colors.paper,
+    backgroundColor: colors.paper,
     color: colors.ink,
     display: "flex",
     flexDirection: "row",

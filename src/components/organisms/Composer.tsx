@@ -93,12 +93,11 @@ export function Composer(props: Readonly<ComposerPropsT>) {
 
 const s = stylex.create({
   wrap: {
-    background: colors.paper,
     padding: "12px 28px 18px",
+    backgroundColor: colors.paper,
     flexShrink: 0,
   },
   shell: {
-    background: colors.paper,
     margin: "0 auto",
     borderColor: {
       default: colors.lineStrong,
@@ -108,6 +107,7 @@ const s = stylex.create({
     borderStyle: borders.solid,
     borderWidth: borders.thin,
     transition: "border-color 140ms, box-shadow 140ms",
+    backgroundColor: colors.paper,
     boxShadow: {
       default: shadows.md,
       ":focus-within": shadows.lg,

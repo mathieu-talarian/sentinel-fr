@@ -139,8 +139,8 @@ const lc = stylex.create({
     marginTop: 1,
   },
   caveats: {
-    background: colors.paper2,
     padding: "8px 12px",
+    backgroundColor: colors.paper2,
     borderBottomLeftRadius: 0,
     borderBottomRightRadius: radii.sm,
     borderLeftColor: colors.lineStrong,
