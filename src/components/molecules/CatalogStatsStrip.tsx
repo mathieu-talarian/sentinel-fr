@@ -15,7 +15,7 @@ export function CatalogStatsStrip() {
   return (
     <div {...sx(s.meta)}>
       <span {...sx(s.item)}>
-        <Icon.Customs /> {d.htsCodesIndexed.toLocaleString("en-US")} HTS codes
+        <Icon.Customs /> {d.htsCodesIndexed?.toLocaleString("en-US")} HTS codes
         indexed
       </span>
       <span {...sx(s.item)}>

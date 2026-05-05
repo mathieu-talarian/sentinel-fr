@@ -17,7 +17,7 @@ import { client } from "@/lib/api/generated/client.gen";
  */
 export function configureApiClient() {
   client.setConfig({
-    baseUrl: "",
+    baseUrl: "/api",
     credentials: "include",
     headers: {
       "content-type": "application/json",

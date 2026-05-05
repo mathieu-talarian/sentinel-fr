@@ -34,15 +34,13 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 3000,
       proxy: {
-        "/chat": {
+        "/api": {
           target: apiTarget,
           changeOrigin: true,
           secure: false,
           ws: false,
+          rewrite: (path) => path.replace(/^\/api/, ""),
         },
-        "/classify": { target: apiTarget, changeOrigin: true, secure: false },
-        "/auth": { target: apiTarget, changeOrigin: true, secure: false },
-        "/api-doc": { target: apiTarget, changeOrigin: true, secure: false },
       },
     },
     plugins: [

@@ -51,7 +51,7 @@ export async function* streamChat(
   opts: StreamOptionsT = {},
 ): AsyncGenerator<ChatChunkT, void, undefined> {
   const base = opts.baseUrl ?? "";
-  const url = `${base}/chat/stream`;
+  const url = `${base}/api/chat/stream`;
 
   const res = await fetch(url, {
     method: "POST",
