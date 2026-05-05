@@ -4,23 +4,36 @@
 - Package manager: yarn (`yarn run build`, `yarn run lint`, `yarn run format`, `yarn run check` for read-only prettier); never `npm`
 - `yarn run format` (prettier + eslint `--fix`) auto-renames type identifiers to `T` suffix (e.g. `Suggestion` → `SuggestionT`). When you rename a type, expect import sites to surface as fresh diagnostics until they're fixed too
 - Path alias: `~/` → `src/`. Wired into Vite, TS **and** StyleX babel (`aliases` option in `vite.config.ts`) — use `~/...` everywhere, including `.stylex.ts` imports
-- `sx(...)` helper in `src/lib/sx.ts` wraps `stylex.attrs()` for Solid; spread: `<div {...sx(s.foo, cond && s.bar)} />`. `StyleArg` is typed `unknown` because `Theme<…>` is invariant
+- `sx(...)` and `cn(...)` helpers in `src/lib/styles/sx.ts` wrap `stylex.attrs()` for Solid; spread: `<div {...sx(s.foo, cond && s.bar)} />`. `cn(styled, passthrough)` merges a stylex class with a consumer-provided `class`. `StyleArg` is `unknown` because `Theme<…>` is invariant
 - Type names use `T` suffix: `SessionT`, `SuggestionT`, `ToolCallT`
-- Icons: `src/components/Icons.tsx` is a thin namespace over `lucide-solid` (`Icon.Search`, `Icon.Bell`, etc.). Add new icons by importing from `lucide-solid` and wrapping with `wrap(...)`. Default size is 16
+- Icons: `src/components/atoms/Icons.tsx` is a thin namespace over `lucide-solid` (`Icon.Search`, `Icon.Bell`, etc.). Add new icons by importing from `lucide-solid` and wrapping with `wrap(...)`. Default size is 16. Single-purpose SVGs live in `src/components/atoms/icons/<Name>.tsx`
 
 ## StyleX Conventions
 
 - Colocate `stylex.create` in the component `.tsx` (zero-runtime). Never split into a `.styles.ts`
 - `.stylex.ts` files: ONLY `defineVars` / `defineConsts` — no components, no helpers, no themes
-  - `src/lib/tokens.stylex.ts`: `colors` (defineVars, themed), `fonts`/`radii`/`shadows` (defineConsts, static)
-  - `src/lib/animations.stylex.ts`: `animations.spin`, `animations.pulse` (shared keyframes)
-- `createTheme` returns regular styles → lives in plain `.ts`: `src/lib/themes.ts` exports `darkTheme`. Applied in `__root.tsx` via `sx(s.app, tweaks().theme === 'dark' && darkTheme)`
+  - `src/lib/styles/tokens.stylex.ts`: `colors` (defineVars, themed), `fonts`/`radii`/`shadows` (defineConsts, static)
+  - `src/lib/styles/animations.stylex.ts`: `animations.spin`, `animations.pulse`, `animations.blink`
+- `createTheme` returns regular styles → lives in plain `.ts`: `src/lib/styles/themes.ts` exports `darkTheme`. Applied in `__root.tsx` via `sx(s.app, tweaks().theme === 'dark' && darkTheme)`
 - `data-theme` attribute on `<html>` is still set by `__root.tsx` — only because `.reply-html` (innerHTML) descendant rules in `src/styles.css` can't be reached by StyleX
 - Conditional styles: nest per-property with `default` key, NOT top-level pseudo-class blocks
 - Ark UI / Zag parts expose `data-state="checked|unchecked|open|closed"` on every part — match via `':is([data-state="checked"])'` instead of conditional class merging. Same idea for native `aria-checked`, `aria-hidden`
 - Shorthands StyleX rejects: `border`, `borderTop/Bottom/Left/Right`, `outline`, multi-corner `borderRadius`. Decompose to longhand (`borderTopColor`/`Style`/`Width`, etc.). `flex` numeric values must be strings (`'1'`)
 - For focus rings, prefer `outline-*` longhand over `boxShadow: '0 0 0 Npx <color>'` so the color can come from `colors.*`
 - Avoid compound CSS strings that embed a token — StyleX has no template-literal support. If you need a gradient/shadow with theming, define it as a `defineConsts` constant or add it to `colors` and reference directly
+
+## Component Architecture
+
+- Atomic Design layout: `src/components/{atoms,molecules,organisms,templates}/`. Routes (`src/routes/`) are pages. ESLint `noBarrelFiles` is on — no `index.ts` re-exports; `Foo/index.tsx` is only allowed when it IS the component
+- Lib layout: `src/lib/{api,state,styles,utils}/` — api (auth/queries/chatStream), state (chatStore/tweaks), styles (sx/tokens/animations/themes), utils (format/suggestions). Wire types stay at `src/lib/types.ts`
+- Atom contract: `extends Omit<JSX.*HTMLAttributes<…>, "style">`, add `style?: StyleXStyles` (from `@stylexjs/stylex`), pass `own.style` as the LAST arg to `sx(...)` so callers override. Use `splitProps` for the own/rest split; merge `class` via `cn()`
+- Solid event handlers for value-bearing inputs: `JSX.InputEventHandler<T, E>` for `onInput`, `JSX.ChangeEventHandler<T, E>` for `onChange` — these have `target: T`. The plain `JSX.EventHandler<T, E>` has `target: Element` and won't accept Solid's narrowed events
+
+## Workflow Gotchas
+
+- `yarn run format` (prettier + eslint --fix) auto-resolves import-order, blank-line, and most stylex grouping errors — always run it before manually fixing lint
+- macOS APFS is case-insensitive: renaming a directory `Foo` → `foo` is a no-op. Two-step it: `mv Foo __tmp && mv __tmp foo`
+- Paths starting with `-` (e.g. TanStack Router's `-private` folders) need `--` to disambiguate from flags: `git mv -- src/routes/-login/foo ...`. Without `--`, the command fails silently in an `&&` chain
 
 ---
 

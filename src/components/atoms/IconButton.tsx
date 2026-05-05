@@ -1,0 +1,119 @@
+import type { StyleXStyles } from "@stylexjs/stylex";
+import type { JSX } from "solid-js";
+
+import * as stylex from "@stylexjs/stylex";
+import { splitProps } from "solid-js";
+
+import { cn, sx } from "~/lib/styles/sx";
+import { borders, colors, radii } from "~/lib/styles/tokens.stylex";
+
+export type IconButtonSizeT = "sm" | "md" | "lg";
+export type IconButtonVariantT =
+  | "ghost"
+  | "ghost-subtle"
+  | "primary"
+  | "danger";
+
+interface IconButtonPropsT extends Omit<
+  JSX.ButtonHTMLAttributes<HTMLButtonElement>,
+  "style"
+> {
+  style?: StyleXStyles;
+  size?: IconButtonSizeT;
+  variant?: IconButtonVariantT;
+  bordered?: boolean;
+}
+
+export function IconButton(props: Readonly<IconButtonPropsT>) {
+  const [own, rest] = splitProps(props, [
+    "size",
+    "variant",
+    "bordered",
+    "style",
+    "type",
+    "class",
+  ]);
+
+  const styled = () =>
+    sx(
+      s.btn,
+      SIZES[own.size ?? "md"],
+      VARIANTS[own.variant ?? "ghost"],
+      own.bordered && s.bordered,
+      own.style,
+    );
+
+  return (
+    <button
+      type={own.type ?? "button"}
+      {...rest}
+      class={cn(styled().class, own.class)}
+      style={styled().style}
+    />
+  );
+}
+
+const s = stylex.create({
+  btn: {
+    borderColor: "transparent",
+    borderRadius: radii.sm,
+    borderStyle: "none",
+    borderWidth: 0,
+    placeItems: "center",
+    transition: "opacity 140ms",
+    cursor: {
+      default: "pointer",
+      ":disabled": "not-allowed",
+    },
+    display: "grid",
+    opacity: {
+      default: 1,
+      ":disabled": 0.3,
+    },
+  },
+  bordered: {
+    borderColor: {
+      default: "transparent",
+      ":hover": colors.line,
+    },
+    borderStyle: borders.solid,
+    borderWidth: borders.thin,
+  },
+});
+
+const SIZES = stylex.create({
+  sm: { height: 26, width: 26 },
+  md: { height: 28, width: 28 },
+  lg: { height: 30, width: 30 },
+});
+
+const VARIANTS = stylex.create({
+  ghost: {
+    background: {
+      default: "transparent",
+      ":hover": colors.paper3,
+    },
+    color: {
+      default: colors.ink3,
+      ":hover": colors.ink,
+    },
+  },
+  "ghost-subtle": {
+    background: {
+      default: "transparent",
+      ":hover": colors.paper3,
+    },
+    color: {
+      default: colors.ink4,
+      ":hover": colors.ink2,
+    },
+  },
+  primary: {
+    background: colors.ink,
+    color: colors.paper,
+  },
+  danger: {
+    background: colors.err,
+    color: colors.paper,
+  },
+});

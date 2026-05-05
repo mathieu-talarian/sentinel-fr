@@ -1,23 +1,24 @@
-import type { SuggestionT } from "~/lib/suggestions";
+import type { SuggestionT } from "~/lib/utils/suggestions";
 
 import * as stylex from "@stylexjs/stylex";
 import { createFileRoute, redirect } from "@tanstack/solid-router";
-import { For, Show, createMemo, createSignal, untrack } from "solid-js";
+import { Show, createMemo, createSignal, untrack } from "solid-js";
 
-import { AssistantMessage } from "~/components/AssistantMessage";
-import { Composer } from "~/components/Composer";
-import { EmptyState } from "~/components/EmptyState";
-import { Inspector } from "~/components/Inspector";
-import { Rail } from "~/components/Rail";
-import { TweaksPanel } from "~/components/TweaksPanel";
-import { createChatStore } from "~/lib/chatStore";
-import { meQueryOptions } from "~/lib/queries";
-import { suggestionTitleFor } from "~/lib/suggestions";
-import { sx } from "~/lib/sx";
-import { colors } from "~/lib/tokens.stylex";
-import { useTweaks } from "~/lib/tweaks";
-
-import { ChatTopbar } from "./-chat/ChatTopbar";
+import { UserBubble } from "~/components/molecules/UserBubble";
+import { AssistantMessage } from "~/components/organisms/AssistantMessage";
+import { ChatThread } from "~/components/organisms/ChatThread";
+import { ChatTopbar } from "~/components/organisms/ChatTopbar";
+import { Composer } from "~/components/organisms/Composer";
+import { EmptyState } from "~/components/organisms/EmptyState";
+import { Inspector } from "~/components/organisms/Inspector";
+import { Rail } from "~/components/organisms/Rail";
+import { TweaksPanel } from "~/components/organisms/TweaksPanel";
+import { meQueryOptions } from "~/lib/api/queries";
+import { createChatStore } from "~/lib/state/chatStore";
+import { useTweaks } from "~/lib/state/tweaks";
+import { sx } from "~/lib/styles/sx";
+import { colors } from "~/lib/styles/tokens.stylex";
+import { suggestionTitleFor } from "~/lib/utils/suggestions";
 
 export const Route = createFileRoute("/")({
   beforeLoad: async ({ context, location }) => {
@@ -84,7 +85,9 @@ function ChatPage() {
   return (
     <>
       <Rail
-        onNewChat={() => { chat.reset(); }}
+        onNewChat={() => {
+          chat.reset();
+        }}
         onOpenSettings={() => setTweaksOpen(true)}
       />
 
@@ -96,42 +99,44 @@ function ChatPage() {
           running={chat.running()}
           inspectorOpen={chat.inspectorOpen()}
           inspectorEnabled={hasAnyResults()}
-          onProviderChange={(p) => { setTweaks({ provider: p }); }}
-          onLangChange={(l) => { setTweaks({ lang: l }); }}
-          onToggleInspector={() =>
-            { chat.setInspectorOpen(!chat.inspectorOpen()); }
-          }
+          onProviderChange={(p) => {
+            setTweaks({ provider: p });
+          }}
+          onLangChange={(l) => {
+            setTweaks({ lang: l });
+          }}
+          onToggleInspector={() => {
+            chat.setInspectorOpen(!chat.inspectorOpen());
+          }}
         />
 
         <Show when={!isEmpty()} fallback={<EmptyState onPick={onPick} />}>
-          <div {...sx(s.thread)} ref={setThreadEl}>
-            <div {...sx(s.threadInner)}>
-              <For each={chat.messages}>
-                {(msg) =>
-                  msg.role === "user" ? (
-                    <div {...sx(s.userRow)}>
-                      <div {...sx(s.userBubble)}>{msg.text}</div>
-                    </div>
-                  ) : (
-                    <AssistantMessage
-                      msg={msg}
-                      focusedCallId={chat.focusedCallId()}
-                      onFocusCall={focusCall}
-                      autoCollapseThinking={!tweaks().showThinkingByDefault}
-                      defaultThinkingOpen={tweaks().showThinkingByDefault}
-                    />
-                  )
-                }
-              </For>
-            </div>
-          </div>
+          <ChatThread
+            messages={chat.messages}
+            ref={setThreadEl}
+            renderMessage={(msg) =>
+              msg.role === "user" ? (
+                <UserBubble text={msg.text} />
+              ) : (
+                <AssistantMessage
+                  msg={msg}
+                  focusedCallId={chat.focusedCallId()}
+                  onFocusCall={focusCall}
+                  autoCollapseThinking={!tweaks().showThinkingByDefault}
+                  defaultThinkingOpen={tweaks().showThinkingByDefault}
+                />
+              )
+            }
+          />
         </Show>
 
         <Composer
           value={input()}
           setValue={setInput}
           onSend={send}
-          onStop={() => { chat.abort(); }}
+          onStop={() => {
+            chat.abort();
+          }}
           running={chat.running()}
         />
       </main>
@@ -140,7 +145,9 @@ function ChatPage() {
         open={chat.inspectorOpen()}
         calls={allCalls()}
         focusedCallId={chat.focusedCallId()}
-        onClose={() => { chat.setInspectorOpen(false); }}
+        onClose={() => {
+          chat.setInspectorOpen(false);
+        }}
         onFocusCall={chat.setFocusedCall}
       />
 
@@ -166,28 +173,5 @@ const s = stylex.create({
     display: "flex",
     flexDirection: "column",
     minWidth: 0,
-  },
-  thread: {
-    padding: "24px 0 8px",
-    flex: "1",
-    scrollBehavior: "smooth",
-    overflowY: "auto",
-  },
-  threadInner: {
-    margin: "0 auto",
-    padding: "0 28px",
-    gap: 28,
-    display: "flex",
-    flexDirection: "column",
-    maxWidth: 760,
-  },
-  userRow: { alignSelf: "flex-end", maxWidth: "78%" },
-  userBubble: {
-    background: colors.ink,
-    padding: "10px 14px",
-    borderRadius: "14px 14px 4px 14px",
-    color: colors.paper,
-    fontSize: 14,
-    lineHeight: 1.55,
   },
 });

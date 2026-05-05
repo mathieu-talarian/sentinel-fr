@@ -4,10 +4,10 @@ import * as stylex from "@stylexjs/stylex";
 import { Outlet, createRootRouteWithContext } from "@tanstack/solid-router";
 import { Suspense, createEffect, lazy } from "solid-js";
 
-import { sx } from "~/lib/sx";
-import { darkTheme } from "~/lib/themes";
-import { colors } from "~/lib/tokens.stylex";
-import { useTweaks } from "~/lib/tweaks";
+import { useTweaks } from "~/lib/state/tweaks";
+import { sx } from "~/lib/styles/sx";
+import { darkTheme } from "~/lib/styles/themes";
+import { colors } from "~/lib/styles/tokens.stylex";
 
 const TanStackRouterDevtools = import.meta.env.PROD
   ? () => null
