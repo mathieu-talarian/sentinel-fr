@@ -2,10 +2,9 @@ import { fileURLToPath } from "node:url";
 
 import stylexPlugin from "@stylexjs/unplugin/vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
-import devtools from "solid-devtools/vite";
+import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv } from "vite";
 import mkcert from "vite-plugin-mkcert";
-import solidPlugin from "vite-plugin-solid";
 
 const srcDir = fileURLToPath(new URL("src", import.meta.url));
 
@@ -16,12 +15,8 @@ export default defineConfig(({ mode }) => {
   return {
     resolve: {
       alias: {
-        "~": srcDir,
+        "@": srcDir,
       },
-    },
-    optimizeDeps: {
-      // `solid-markdown` pulls in CJS deps (`debug`, `vfile`, `unified`, …)
-      include: ["micromark", "unified"],
     },
     build: {
       rolldownOptions: {
@@ -51,17 +46,13 @@ export default defineConfig(({ mode }) => {
       },
     },
     plugins: [
-      devtools({
-        /* features options - all disabled by default */
-        autoname: true, // e.g. enable autoname
-      }),
       mkcert(),
-      tanstackRouter({ target: "solid", autoCodeSplitting: true }),
-      solidPlugin(),
+      tanstackRouter({ target: "react", autoCodeSplitting: true }),
+      react(),
       stylexPlugin({
         useCSSLayers: true,
         unstable_moduleResolution: { type: "commonJS" },
-        aliases: { "~/*": [`${srcDir}/*`] },
+        aliases: { "@/*": [`${srcDir}/*`] },
       }),
     ],
   };

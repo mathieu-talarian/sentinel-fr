@@ -1,15 +1,22 @@
+import type { ComponentProps } from "react";
+
 import * as stylex from "@stylexjs/stylex";
 
-import { sx } from "~/lib/styles/sx";
-import { colors, fonts } from "~/lib/styles/tokens.stylex";
+import { sx } from "@/lib/styles/sx";
+import { colors, fonts } from "@/lib/styles/tokens.stylex";
 
-interface BrandMarkPropsT {
+interface BrandMarkPropsT extends ComponentProps<"span"> {
   size?: "sm" | "md";
 }
 
 export function BrandMark(props: Readonly<BrandMarkPropsT>) {
-  const sized = () => (props.size === "md" ? s.md : s.sm);
-  return <span {...sx(s.mark, sized())}>S</span>;
+  const { size, ...rest } = props;
+  const sized = () => (size === "md" ? s.md : s.sm);
+  return (
+    <span {...sx(s.mark, sized())} {...rest}>
+      S
+    </span>
+  );
 }
 
 const s = stylex.create({

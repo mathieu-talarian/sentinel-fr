@@ -1,9 +1,8 @@
-import { RadioGroup } from "@ark-ui/solid";
 import * as stylex from "@stylexjs/stylex";
-import { For } from "solid-js";
+import { RadioGroup } from "radix-ui";
 
-import { sx } from "~/lib/styles/sx";
-import { colors } from "~/lib/styles/tokens.stylex";
+import { sx } from "@/lib/styles/sx";
+import { colors } from "@/lib/styles/tokens.stylex";
 
 interface SegOptionT {
   value: string;
@@ -23,22 +22,14 @@ export function SegmentedRadio(props: Readonly<SegmentedRadioPropsT>) {
       <span {...sx(s.rowLabel)}>{props.label}</span>
       <RadioGroup.Root
         value={props.value}
-        onValueChange={(d) => {
-          if (d.value != null) props.onChange(d.value);
-        }}
+        onValueChange={props.onChange}
         {...sx(s.seg)}
       >
-        <For each={props.options}>
-          {(opt) => (
-            <RadioGroup.Item value={opt.value} {...sx(s.segItem)}>
-              <RadioGroup.ItemControl />
-              <RadioGroup.ItemText {...sx(s.segItemText)}>
-                {opt.label}
-              </RadioGroup.ItemText>
-              <RadioGroup.ItemHiddenInput />
-            </RadioGroup.Item>
-          )}
-        </For>
+        {props.options.map((opt) => (
+          <RadioGroup.Item key={opt.value} value={opt.value} {...sx(s.segItem)}>
+            {opt.label}
+          </RadioGroup.Item>
+        ))}
       </RadioGroup.Root>
     </div>
   );
@@ -54,13 +45,24 @@ const s = stylex.create({
     display: "flex",
   },
   segItem: {
+    background: {
+      default: "transparent",
+      ':is([data-state="checked"])': colors.paper,
+    },
     padding: "5px 8px",
     borderRadius: 6,
+    borderStyle: "none",
+    borderWidth: 0,
     flex: "1",
-    transition: "background 140ms, color 140ms",
+    transition: "background 140ms, color 140ms, box-shadow 140ms",
     alignItems: "center",
+    boxShadow: {
+      default: "none",
+      ':is([data-state="checked"])': "0 1px 2px oklch(0.24 0.04 255 / 0.08)",
+    },
     color: {
       default: colors.ink3,
+      ':is([data-state="checked"])': colors.ink,
       ":hover": colors.ink2,
     },
     cursor: "pointer",
@@ -68,31 +70,5 @@ const s = stylex.create({
     fontSize: 12,
     fontWeight: 500,
     justifyContent: "center",
-  },
-  segItemText: {
-    background: {
-      default: "transparent",
-      ':is([data-state="checked"])': colors.paper,
-    },
-    margin: {
-      default: 0,
-      ':is([data-state="checked"])': "-5px -8px",
-    },
-    padding: {
-      default: 0,
-      ':is([data-state="checked"])': "5px 8px",
-    },
-    borderRadius: {
-      default: 0,
-      ':is([data-state="checked"])': 6,
-    },
-    boxShadow: {
-      default: "none",
-      ':is([data-state="checked"])': "0 1px 2px oklch(0.24 0.04 255 / 0.08)",
-    },
-    color: {
-      default: "inherit",
-      ':is([data-state="checked"])': colors.ink,
-    },
   },
 });

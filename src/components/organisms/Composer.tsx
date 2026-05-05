@@ -1,19 +1,21 @@
-import * as stylex from "@stylexjs/stylex";
-import { createEffect, createSignal, on } from "solid-js";
+import type { KeyboardEvent } from "react";
 
-import { Icon } from "~/components/atoms/Icons";
-import { Textarea } from "~/components/atoms/Textarea";
-import { ComposerDisclaimer } from "~/components/molecules/ComposerDisclaimer";
-import { ComposerSendButton } from "~/components/molecules/ComposerSendButton";
-import { ComposerToolButton } from "~/components/molecules/ComposerToolButton";
-import { sx } from "~/lib/styles/sx";
+import * as stylex from "@stylexjs/stylex";
+import { useEffect, useRef } from "react";
+
+import { Icon } from "@/components/atoms/Icons";
+import { Textarea } from "@/components/atoms/Textarea";
+import { ComposerDisclaimer } from "@/components/molecules/ComposerDisclaimer";
+import { ComposerSendButton } from "@/components/molecules/ComposerSendButton";
+import { ComposerToolButton } from "@/components/molecules/ComposerToolButton";
+import { sx } from "@/lib/styles/sx";
 import {
   borders,
   colors,
   fonts,
   radii,
   shadows,
-} from "~/lib/styles/tokens.stylex";
+} from "@/lib/styles/tokens.stylex";
 
 interface ComposerPropsT {
   value: string;
@@ -26,20 +28,15 @@ interface ComposerPropsT {
 const MAX_HEIGHT = 160;
 
 export function Composer(props: Readonly<ComposerPropsT>) {
-  const [ta, setTa] = createSignal<HTMLTextAreaElement>();
+  const taRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Grow textarea up to MAX_HEIGHT as content arrives.
-  createEffect(
-    on(
-      () => props.value,
-      () => {
-        const el = ta();
-        if (!el) return;
-        el.style.height = "auto";
-        el.style.height = `${String(Math.min(MAX_HEIGHT, el.scrollHeight))}px`;
-      },
-    ),
-  );
+  useEffect(() => {
+    const el = taRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${String(Math.min(MAX_HEIGHT, el.scrollHeight))}px`;
+  }, [props.value]);
 
   const submit = () => {
     const v = props.value.trim();
@@ -48,7 +45,7 @@ export function Composer(props: Readonly<ComposerPropsT>) {
     props.setValue("");
   };
 
-  const handleKeyDown = (e: KeyboardEvent) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       submit();
@@ -64,7 +61,7 @@ export function Composer(props: Readonly<ComposerPropsT>) {
     <div {...sx(s.wrap)}>
       <div {...sx(s.shell)}>
         <Textarea
-          ref={setTa}
+          ref={taRef}
           value={props.value}
           maxHeight={MAX_HEIGHT}
           placeholder="Describe your product, ask for a landed cost, or set up a tariff alert…"

@@ -1,13 +1,12 @@
-import type { SuggestionT } from "~/lib/utils/suggestions";
+import type { SuggestionT } from "@/lib/utils/suggestions";
 
 import * as stylex from "@stylexjs/stylex";
-import { For } from "solid-js";
 
-import { CatalogStatsStrip } from "~/components/molecules/CatalogStatsStrip";
-import { EmptyStateHero } from "~/components/molecules/EmptyStateHero";
-import { SuggestionCard } from "~/components/molecules/SuggestionCard";
-import { sx } from "~/lib/styles/sx";
-import { SUGGESTIONS } from "~/lib/utils/suggestions";
+import { CatalogStatsStrip } from "@/components/molecules/CatalogStatsStrip";
+import { EmptyStateHero } from "@/components/molecules/EmptyStateHero";
+import { SuggestionCard } from "@/components/molecules/SuggestionCard";
+import { sx } from "@/lib/styles/sx";
+import { SUGGESTIONS } from "@/lib/utils/suggestions";
 
 interface EmptyStatePropsT {
   onPick: (suggestion: SuggestionT) => void;
@@ -19,11 +18,13 @@ export function EmptyState(props: Readonly<EmptyStatePropsT>) {
       <div {...sx(s.inner)}>
         <EmptyStateHero />
         <div {...sx(s.grid)}>
-          <For each={SUGGESTIONS}>
-            {(suggestion) => (
-              <SuggestionCard suggestion={suggestion} onPick={props.onPick} />
-            )}
-          </For>
+          {SUGGESTIONS.map((suggestion) => (
+            <SuggestionCard
+              key={suggestion.id}
+              suggestion={suggestion}
+              onPick={props.onPick}
+            />
+          ))}
         </div>
         <CatalogStatsStrip />
       </div>

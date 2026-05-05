@@ -1,8 +1,8 @@
 import * as stylex from "@stylexjs/stylex";
 
-import { BrandLockup } from "~/components/molecules/BrandLockup";
-import { sx } from "~/lib/styles/sx";
-import { colors, fonts } from "~/lib/styles/tokens.stylex";
+import { BrandLockup } from "@/components/molecules/BrandLockup";
+import { sx } from "@/lib/styles/sx";
+import { colors, fonts } from "@/lib/styles/tokens.stylex";
 
 interface RailHeaderPropsT {
   version: string;

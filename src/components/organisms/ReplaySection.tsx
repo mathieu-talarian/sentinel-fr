@@ -1,10 +1,9 @@
 import * as stylex from "@stylexjs/stylex";
-import { For } from "solid-js";
 
-import { Section } from "~/components/molecules/Section";
-import { sx } from "~/lib/styles/sx";
-import { borders, colors, fonts, radii } from "~/lib/styles/tokens.stylex";
-import { SUGGESTIONS } from "~/lib/utils/suggestions";
+import { Section } from "@/components/molecules/Section";
+import { sx } from "@/lib/styles/sx";
+import { borders, colors, fonts, radii } from "@/lib/styles/tokens.stylex";
+import { SUGGESTIONS } from "@/lib/utils/suggestions";
 
 const REPLAY_LABELS = [
   "▶ Replay: leather handbag",
@@ -19,19 +18,18 @@ interface ReplaySectionPropsT {
 export function ReplaySection(props: Readonly<ReplaySectionPropsT>) {
   return (
     <Section label="Replay">
-      <For each={REPLAY_LABELS}>
-        {(label, i) => (
-          <button
-            type="button"
-            {...sx(s.btn)}
-            onClick={() => {
-              props.onReplay(SUGGESTIONS[i()].text);
-            }}
-          >
-            {label}
-          </button>
-        )}
-      </For>
+      {REPLAY_LABELS.map((label, i) => (
+        <button
+          key={label}
+          type="button"
+          {...sx(s.btn)}
+          onClick={() => {
+            props.onReplay(SUGGESTIONS[i].text);
+          }}
+        >
+          {label}
+        </button>
+      ))}
     </Section>
   );
 }

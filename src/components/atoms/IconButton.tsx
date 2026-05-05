@@ -1,11 +1,10 @@
 import type { StyleXStyles } from "@stylexjs/stylex";
-import type { JSX } from "solid-js";
+import type { ComponentProps } from "react";
 
 import * as stylex from "@stylexjs/stylex";
-import { splitProps } from "solid-js";
 
-import { sx } from "~/lib/styles/sx";
-import { borders, colors, radii } from "~/lib/styles/tokens.stylex";
+import { sx } from "@/lib/styles/sx";
+import { borders, colors, radii } from "@/lib/styles/tokens.stylex";
 
 export type IconButtonSizeT = "sm" | "md" | "lg";
 export type IconButtonVariantT =
@@ -14,10 +13,7 @@ export type IconButtonVariantT =
   | "primary"
   | "danger";
 
-interface IconButtonPropsT extends Omit<
-  JSX.ButtonHTMLAttributes<HTMLButtonElement>,
-  "style"
-> {
+interface IconButtonPropsT extends Omit<ComponentProps<"button">, "style"> {
   style?: StyleXStyles;
   size?: IconButtonSizeT;
   variant?: IconButtonVariantT;
@@ -25,24 +21,18 @@ interface IconButtonPropsT extends Omit<
 }
 
 export function IconButton(props: Readonly<IconButtonPropsT>) {
-  const [own, rest] = splitProps(props, [
-    "size",
-    "variant",
-    "bordered",
-    "style",
-    "type",
-  ]);
+  const { size, variant, bordered, style, type, ...rest } = props;
 
   return (
     <button
-      type={own.type ?? "button"}
+      type={type ?? "button"}
       {...rest}
       {...sx(
         s.btn,
-        SIZES[own.size ?? "md"],
-        VARIANTS[own.variant ?? "ghost"],
-        own.bordered && s.bordered,
-        own.style,
+        SIZES[size ?? "md"],
+        VARIANTS[variant ?? "ghost"],
+        bordered && s.bordered,
+        style,
       )}
     />
   );

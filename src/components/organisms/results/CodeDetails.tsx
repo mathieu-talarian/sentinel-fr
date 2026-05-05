@@ -1,11 +1,10 @@
-import type { CodeDetailsContentT, HierarchyNodeT } from "~/lib/types";
+import type { CodeDetailsContentT, HierarchyNodeT } from "@/lib/types";
 
 import * as stylex from "@stylexjs/stylex";
-import { For, Show } from "solid-js";
 
-import { sx } from "~/lib/styles/sx";
-import { colors, fonts } from "~/lib/styles/tokens.stylex";
-import { formatHtsCode } from "~/lib/utils/format";
+import { sx } from "@/lib/styles/sx";
+import { colors, fonts } from "@/lib/styles/tokens.stylex";
+import { formatHtsCode } from "@/lib/utils/format";
 
 interface CrumbT {
   code?: string;
@@ -39,47 +38,38 @@ const description = (result: CodeDetailsContentT) =>
   result.desc_en ?? result.desc_fr ?? result.desc ?? "";
 
 export function CodeDetails(props: Readonly<{ result: CodeDetailsContentT }>) {
-  const crumbs = () => buildCrumbs(props.result);
-  const units = () => props.result.units ?? props.result.unit;
+  const crumbs = buildCrumbs(props.result);
+  const units = props.result.units ?? props.result.unit;
 
   return (
     <div>
       <div {...sx(d.crumb)}>
-        <For each={crumbs()}>
-          {(seg, i) => (
-            <>
-              <span
-                {...sx(
-                  d.crumbItem,
-                  i() === crumbs().length - 1 && d.crumbItemLast,
-                )}
-                title={seg.code ? formatHtsCode(seg.code) : undefined}
-              >
-                {seg.code ? formatHtsCode(seg.code) : seg.label}
-              </span>
-              <Show when={i() < crumbs().length - 1}>
-                <span {...sx(d.crumbSep)}>›</span>
-              </Show>
-            </>
-          )}
-        </For>
+        {crumbs.map((seg, i) => (
+          <span key={i} style={{ display: "contents" }}>
+            <span
+              {...sx(d.crumbItem, i === crumbs.length - 1 && d.crumbItemLast)}
+              title={seg.code ? formatHtsCode(seg.code) : undefined}
+            >
+              {seg.code ? formatHtsCode(seg.code) : seg.label}
+            </span>
+            {i < crumbs.length - 1 && <span {...sx(d.crumbSep)}>›</span>}
+          </span>
+        ))}
       </div>
-      <Show when={props.result.code}>
-        {(code) => <div {...sx(d.codeLine)}>{formatHtsCode(code())}</div>}
-      </Show>
+      {props.result.code && (
+        <div {...sx(d.codeLine)}>{formatHtsCode(props.result.code)}</div>
+      )}
       <div {...sx(d.desc)}>{description(props.result)}</div>
       <div {...sx(d.rateRow)}>
         <span {...sx(d.rateLabel)}>MFN duty</span>
         <span {...sx(d.rateVal)}>{rateText(props.result)}</span>
       </div>
-      <Show when={units()}>
-        {(u) => (
-          <div {...sx(d.unit)}>
-            unit: {u()}
-            {props.result.section301 ? ` · ${props.result.section301}` : ""}
-          </div>
-        )}
-      </Show>
+      {units && (
+        <div {...sx(d.unit)}>
+          unit: {units}
+          {props.result.section301 ? ` · ${props.result.section301}` : ""}
+        </div>
+      )}
     </div>
   );
 }

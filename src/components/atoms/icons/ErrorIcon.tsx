@@ -6,7 +6,7 @@ export function ErrorIcon() {
       viewBox="0 0 12 12"
       fill="none"
       stroke="currentColor"
-      stroke-width="1.5"
+      strokeWidth="1.5"
       aria-hidden="true"
     >
       <circle cx="6" cy="6" r="4.5" />

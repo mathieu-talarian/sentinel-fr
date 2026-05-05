@@ -1,10 +1,10 @@
 import * as stylex from "@stylexjs/stylex";
 
-import { Avatar } from "~/components/atoms/Avatar";
-import { IconButton } from "~/components/atoms/IconButton";
-import { Icon } from "~/components/atoms/Icons";
-import { sx } from "~/lib/styles/sx";
-import { borders, colors } from "~/lib/styles/tokens.stylex";
+import { Avatar } from "@/components/atoms/Avatar";
+import { IconButton } from "@/components/atoms/IconButton";
+import { Icon } from "@/components/atoms/Icons";
+import { sx } from "@/lib/styles/sx";
+import { borders, colors } from "@/lib/styles/tokens.stylex";
 
 interface RailFooterPropsT {
   initial: string;

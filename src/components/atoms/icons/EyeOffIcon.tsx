@@ -6,9 +6,9 @@ export function EyeOffIcon() {
       viewBox="0 0 16 16"
       fill="none"
       stroke="currentColor"
-      stroke-width="1.5"
-      stroke-linecap="round"
-      stroke-linejoin="round"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
     >
       <path d="M2 2l12 12" />
       <path d="M6.5 6.5a2 2 0 0 0 2.83 2.83" />

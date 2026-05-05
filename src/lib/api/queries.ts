@@ -1,8 +1,8 @@
-import type { AlertItemT } from "~/lib/types";
+import type { AlertItemT } from "@/lib/types";
 
-import { queryOptions } from "@tanstack/solid-query";
+import { queryOptions } from "@tanstack/react-query";
 
-import { fetchMe } from "~/lib/api/auth";
+import { fetchMe } from "@/lib/api/auth";
 
 export interface PriorConvoT {
   id: string;

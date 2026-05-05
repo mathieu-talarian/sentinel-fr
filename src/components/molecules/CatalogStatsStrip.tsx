@@ -1,32 +1,30 @@
 import * as stylex from "@stylexjs/stylex";
-import { createQuery } from "@tanstack/solid-query";
-import { Show } from "solid-js";
+import { useQuery } from "@tanstack/react-query";
 
-import { Icon } from "~/components/atoms/Icons";
-import { catalogStatsQuery } from "~/lib/api/queries";
-import { sx } from "~/lib/styles/sx";
-import { colors, fonts } from "~/lib/styles/tokens.stylex";
+import { Icon } from "@/components/atoms/Icons";
+import { catalogStatsQuery } from "@/lib/api/queries";
+import { sx } from "@/lib/styles/sx";
+import { colors, fonts } from "@/lib/styles/tokens.stylex";
 
 export function CatalogStatsStrip() {
-  const stats = createQuery(() => catalogStatsQuery());
+  const stats = useQuery(catalogStatsQuery());
+
+  if (!stats.data) return null;
+  const d = stats.data;
 
   return (
-    <Show when={stats.data}>
-      {(d) => (
-        <div {...sx(s.meta)}>
-          <span {...sx(s.item)}>
-            <Icon.Customs /> {d().hts_codes_indexed.toLocaleString("en-US")} HTS
-            codes indexed
-          </span>
-          <span {...sx(s.item)}>
-            <Icon.Scroll /> CBP CROSS rulings since {d().cross_rulings_since}
-          </span>
-          <span {...sx(s.item)}>
-            <Icon.Bell /> {d().active_alerts} active alerts
-          </span>
-        </div>
-      )}
-    </Show>
+    <div {...sx(s.meta)}>
+      <span {...sx(s.item)}>
+        <Icon.Customs /> {d.hts_codes_indexed.toLocaleString("en-US")} HTS codes
+        indexed
+      </span>
+      <span {...sx(s.item)}>
+        <Icon.Scroll /> CBP CROSS rulings since {d.cross_rulings_since}
+      </span>
+      <span {...sx(s.item)}>
+        <Icon.Bell /> {d.active_alerts} active alerts
+      </span>
+    </div>
   );
 }
 

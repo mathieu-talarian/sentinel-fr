@@ -1,5 +1,5 @@
-import { Section } from "~/components/molecules/Section";
-import { ToggleSwitch } from "~/components/molecules/ToggleSwitch";
+import { Section } from "@/components/molecules/Section";
+import { ToggleSwitch } from "@/components/molecules/ToggleSwitch";
 
 interface BehaviourSectionPropsT {
   showThinkingByDefault: boolean;

@@ -1,18 +1,14 @@
 import type { StyleXStyles } from "@stylexjs/stylex";
-import type { JSX } from "solid-js";
+import type { ComponentProps } from "react";
 
 import * as stylex from "@stylexjs/stylex";
-import { splitProps } from "solid-js";
 
-import { sx } from "~/lib/styles/sx";
-import { colors } from "~/lib/styles/tokens.stylex";
+import { sx } from "@/lib/styles/sx";
+import { colors } from "@/lib/styles/tokens.stylex";
 
 export type AvatarToneT = "gold" | "ink";
 
-interface AvatarPropsT extends Omit<
-  JSX.HTMLAttributes<HTMLDivElement>,
-  "style"
-> {
+interface AvatarPropsT extends Omit<ComponentProps<"div">, "style"> {
   style?: StyleXStyles;
   initial: string;
   size?: number;
@@ -20,19 +16,14 @@ interface AvatarPropsT extends Omit<
 }
 
 export function Avatar(props: Readonly<AvatarPropsT>) {
-  const [own, rest] = splitProps(props, ["initial", "size", "tone", "style"]);
+  const { initial, size, tone, style, ...rest } = props;
 
   return (
     <div
       {...rest}
-      {...sx(
-        s.avatar,
-        TONES[own.tone ?? "gold"],
-        s.sized(own.size ?? 28),
-        own.style,
-      )}
+      {...sx(s.avatar, TONES[tone ?? "gold"], s.sized(size ?? 28), style)}
     >
-      {own.initial}
+      {initial}
     </div>
   );
 }

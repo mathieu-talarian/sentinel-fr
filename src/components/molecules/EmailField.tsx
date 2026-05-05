@@ -1,10 +1,9 @@
 import * as stylex from "@stylexjs/stylex";
-import { Show } from "solid-js";
 
-import { FieldError } from "~/components/atoms/FieldError";
-import { FieldLabel } from "~/components/atoms/FieldLabel";
-import { Input } from "~/components/atoms/Input";
-import { sx } from "~/lib/styles/sx";
+import { FieldError } from "@/components/atoms/FieldError";
+import { FieldLabel } from "@/components/atoms/FieldLabel";
+import { Input } from "@/components/atoms/Input";
+import { sx } from "@/lib/styles/sx";
 
 interface EmailFieldPropsT {
   id: string;
@@ -19,13 +18,13 @@ interface EmailFieldPropsT {
 export function EmailField(props: Readonly<EmailFieldPropsT>) {
   return (
     <div {...sx(s.field)}>
-      <FieldLabel for={props.id}>Email</FieldLabel>
+      <FieldLabel htmlFor={props.id}>Email</FieldLabel>
       <Input
         id={props.id}
         name={props.name}
         type="email"
         placeholder="marie@exporter.fr"
-        autocomplete="email"
+        autoComplete="email"
         required
         value={props.value}
         state={props.error ? "error" : "default"}
@@ -35,7 +34,7 @@ export function EmailField(props: Readonly<EmailFieldPropsT>) {
           props.onBlur();
         }}
       />
-      <Show when={props.error}>{(msg) => <FieldError message={msg()} />}</Show>
+      {props.error && <FieldError message={props.error} />}
     </div>
   );
 }

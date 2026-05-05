@@ -1,8 +1,8 @@
 import * as stylex from "@stylexjs/stylex";
 
-import { TextLink } from "~/components/atoms/TextLink";
-import { sx } from "~/lib/styles/sx";
-import { colors, fonts } from "~/lib/styles/tokens.stylex";
+import { TextLink } from "@/components/atoms/TextLink";
+import { sx } from "@/lib/styles/sx";
+import { colors, fonts } from "@/lib/styles/tokens.stylex";
 
 export function LoginFooter() {
   return (

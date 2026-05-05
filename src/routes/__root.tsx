@@ -1,18 +1,20 @@
-import type { RouterContextT } from "~/router";
+/* eslint-disable react-refresh/only-export-components -- TanStack Router files
+   colocate the `Route` config alongside the route component. */
+import type { RouterContextT } from "@/router";
 
 import * as stylex from "@stylexjs/stylex";
-import { Outlet, createRootRouteWithContext } from "@tanstack/solid-router";
-import { Suspense, createEffect, lazy } from "solid-js";
+import { Outlet, createRootRouteWithContext } from "@tanstack/react-router";
+import { Suspense, lazy, useEffect } from "react";
 
-import { useTweaks } from "~/lib/state/tweaks";
-import { sx } from "~/lib/styles/sx";
-import { darkTheme } from "~/lib/styles/themes";
-import { colors } from "~/lib/styles/tokens.stylex";
+import { useTweaks } from "@/lib/state/tweaks";
+import { sx } from "@/lib/styles/sx";
+import { darkTheme } from "@/lib/styles/themes";
+import { colors } from "@/lib/styles/tokens.stylex";
 
 const TanStackRouterDevtools = import.meta.env.PROD
   ? () => null
   : lazy(() =>
-      import("@tanstack/solid-router-devtools").then((m) => ({
+      import("@tanstack/react-router-devtools").then((m) => ({
         default: m.TanStackRouterDevtools,
       })),
     );
@@ -24,19 +26,29 @@ export const Route = createRootRouteWithContext<RouterContextT>()({
 function RootComponent() {
   const [tweaks] = useTweaks();
 
-  // StyleX components are themed via createTheme on the app shell below.
-  // `data-theme` is still set for the `.reply-html` descendant rules in styles.css
-  // (innerHTML content can't be reached by StyleX descendant selectors).
-  createEffect(() => {
-    const t = tweaks();
-    document.documentElement.dataset.theme = t.theme;
-    document.documentElement.dataset.density = t.density;
-    document.documentElement.lang = t.lang;
-  });
+  // Apply the StyleX theme to <html> rather than a single subtree so portaled
+  // descendants (Radix Dialog, etc.) inherit the same CSS-variable values —
+  // CSS custom properties only flow through ancestors, and Radix mounts its
+  // portals into `document.body`, outside any in-tree wrapper. `data-theme`
+  // is still set for the `.reply-html` descendant rules in styles.css that
+  // StyleX can't reach (innerHTML content).
+  useEffect(() => {
+    document.documentElement.dataset.theme = tweaks.theme;
+    document.documentElement.dataset.density = tweaks.density;
+    document.documentElement.lang = tweaks.lang;
+
+    const themeClass = sx(tweaks.theme === "dark" && darkTheme).className;
+    if (!themeClass) return;
+    const tokens = themeClass.split(" ").filter(Boolean);
+    document.documentElement.classList.add(...tokens);
+    return () => {
+      document.documentElement.classList.remove(...tokens);
+    };
+  }, [tweaks.theme, tweaks.density, tweaks.lang]);
 
   return (
     <>
-      <div {...sx(s.app, tweaks().theme === "dark" && darkTheme)}>
+      <div {...sx(s.app)}>
         <Outlet />
       </div>
       <Suspense>

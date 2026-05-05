@@ -1,16 +1,15 @@
 import type { StyleXStyles } from "@stylexjs/stylex";
-import type { JSX } from "solid-js";
+import type { ComponentProps } from "react";
 
 import * as stylex from "@stylexjs/stylex";
-import { splitProps } from "solid-js";
 
-import { sx } from "~/lib/styles/sx";
-import { borders, colors, radii, shadows } from "~/lib/styles/tokens.stylex";
+import { sx } from "@/lib/styles/sx";
+import { borders, colors, radii, shadows } from "@/lib/styles/tokens.stylex";
 
 export type CardElevationT = "none" | "md" | "lg";
 export type CardGapT = "none" | "sm" | "md" | "lg";
 
-interface CardPropsT extends Omit<JSX.HTMLAttributes<HTMLDivElement>, "style"> {
+interface CardPropsT extends Omit<ComponentProps<"div">, "style"> {
   style?: StyleXStyles;
   elevation?: CardElevationT;
   bordered?: boolean;
@@ -20,26 +19,19 @@ interface CardPropsT extends Omit<JSX.HTMLAttributes<HTMLDivElement>, "style"> {
 }
 
 export function Card(props: Readonly<CardPropsT>) {
-  const [own, rest] = splitProps(props, [
-    "elevation",
-    "bordered",
-    "padded",
-    "gap",
-    "width",
-    "style",
-  ]);
+  const { elevation, bordered, padded, gap, width, style, ...rest } = props;
 
   return (
     <div
       {...rest}
       {...sx(
         s.card,
-        ELEVATIONS[own.elevation ?? "none"],
-        GAPS[own.gap ?? "none"],
-        own.bordered !== false && s.bordered,
-        own.padded && s.padded,
-        own.width != null && s.maxW(own.width),
-        own.style,
+        ELEVATIONS[elevation ?? "none"],
+        GAPS[gap ?? "none"],
+        bordered !== false && s.bordered,
+        padded && s.padded,
+        width != null && s.maxW(width),
+        style,
       )}
     />
   );

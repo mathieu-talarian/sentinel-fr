@@ -1,10 +1,10 @@
-import type { JSX } from "solid-js";
+import type { ReactNode } from "react";
 
-import { IconButton } from "~/components/atoms/IconButton";
+import { IconButton } from "@/components/atoms/IconButton";
 
 interface ComposerToolButtonPropsT {
   title: string;
-  children: JSX.Element;
+  children: ReactNode;
   onClick?: () => void;
 }
 

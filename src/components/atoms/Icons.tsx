@@ -1,75 +1,67 @@
-import type { Component, JSX } from "solid-js";
+import type { Icon as TablerIconCmpT } from "@tabler/icons-react";
 
 import {
-  ArrowRight,
-  Bell,
-  Book,
-  Check,
-  ChevronRight,
-  Clipboard,
-  Coins,
-  Copy,
-  Hash,
-  Landmark,
-  PanelRight,
-  Paperclip,
-  Plus,
-  RotateCw,
-  ScrollText,
-  Search,
-  Send,
-  Settings,
-  Sparkle,
-  Square,
-  ThumbsDown,
-  ThumbsUp,
-  X,
-} from "lucide-solid/icons";
+  IconArrowRight,
+  IconBell,
+  IconBook,
+  IconBuildingBank,
+  IconCheck,
+  IconChevronRight,
+  IconClipboard,
+  IconCoins,
+  IconCopy,
+  IconFileDescription,
+  IconHash,
+  IconLayoutSidebarRight,
+  IconPaperclip,
+  IconPlus,
+  IconRefresh,
+  IconSearch,
+  IconSend,
+  IconSettings,
+  IconSparkles,
+  IconSquareFilled,
+  IconThumbDown,
+  IconThumbUp,
+  IconX,
+} from "@tabler/icons-react";
 
 interface IconPropsT {
   size?: number;
-  class?: string;
+  className?: string;
 }
 
-const wrap =
-  // Solid components from lucide are typed permissively; cast to a thin
-  // signature that matches what we use at call sites.
-  (
-      Component: Component<{
-        size?: number;
-        class?: string;
-        fill?: string;
-      }>,
-      extra?: { fill?: string },
-    ) =>
-    (p?: IconPropsT): JSX.Element => (
-      <Component size={p?.size ?? 16} class={p?.class} fill={extra?.fill} />
-    );
+// Match the original 16-px lucide visual weight: scale Tabler's 24-px grid down
+// and tighten the stroke proportionally so glyphs don't look chunky next to
+// surrounding 12–14 px text.
+const wrap = (Component: TablerIconCmpT) => (p?: IconPropsT) => (
+  <Component size={p?.size ?? 16} stroke={1.75} className={p?.className} />
+);
 
 export const Icon = {
-  Plus: wrap(Plus),
-  Search: wrap(Search),
-  Book: wrap(Book),
-  Coin: wrap(Coins),
-  Scroll: wrap(ScrollText),
-  Bell: wrap(Bell),
-  Clipboard: wrap(Clipboard),
-  Send: wrap(Send),
-  Stop: wrap(Square, { fill: "currentColor" }),
-  Paperclip: wrap(Paperclip),
-  Sparkle: wrap(Sparkle),
-  Chevron: wrap(ChevronRight),
-  Check: wrap(Check),
-  X: wrap(X),
-  Side: wrap(PanelRight),
-  Settings: wrap(Settings),
-  Hash: wrap(Hash),
-  Copy: wrap(Copy),
-  Refresh: wrap(RotateCw),
-  ThumbUp: wrap(ThumbsUp),
-  ThumbDown: wrap(ThumbsDown),
-  Arrow: wrap(ArrowRight),
-  Customs: wrap(Landmark),
+  Plus: wrap(IconPlus),
+  Search: wrap(IconSearch),
+  Book: wrap(IconBook),
+  Coin: wrap(IconCoins),
+  Scroll: wrap(IconFileDescription),
+  Bell: wrap(IconBell),
+  Clipboard: wrap(IconClipboard),
+  Send: wrap(IconSend),
+  Stop: wrap(IconSquareFilled),
+  Paperclip: wrap(IconPaperclip),
+  Sparkle: wrap(IconSparkles),
+  Chevron: wrap(IconChevronRight),
+  Check: wrap(IconCheck),
+  X: wrap(IconX),
+  Side: wrap(IconLayoutSidebarRight),
+  Settings: wrap(IconSettings),
+  Hash: wrap(IconHash),
+  Copy: wrap(IconCopy),
+  Refresh: wrap(IconRefresh),
+  ThumbUp: wrap(IconThumbUp),
+  ThumbDown: wrap(IconThumbDown),
+  Arrow: wrap(IconArrowRight),
+  Customs: wrap(IconBuildingBank),
 };
 
 export type IconKeyT = keyof typeof Icon;

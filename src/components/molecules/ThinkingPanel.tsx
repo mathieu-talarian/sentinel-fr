@@ -1,10 +1,10 @@
 import * as stylex from "@stylexjs/stylex";
-import { Show, createEffect, createSignal, on } from "solid-js";
+import { useEffect, useRef, useState } from "react";
 
-import { Icon } from "~/components/atoms/Icons";
-import { Pulse } from "~/components/atoms/Pulse";
-import { sx } from "~/lib/styles/sx";
-import { borders, colors, fonts, radii } from "~/lib/styles/tokens.stylex";
+import { Icon } from "@/components/atoms/Icons";
+import { Pulse } from "@/components/atoms/Pulse";
+import { sx } from "@/lib/styles/sx";
+import { borders, colors, fonts, radii } from "@/lib/styles/tokens.stylex";
 
 interface ThinkingPanelPropsT {
   text: string;
@@ -20,28 +20,26 @@ const tokenCount = (text: string): number | undefined =>
   text ? Math.round(text.length / 3.5) : undefined;
 
 export function ThinkingPanel(props: Readonly<ThinkingPanelPropsT>) {
-  const [open, setOpen] = createSignal(props.defaultOpen);
-  const [userToggled, setUserToggled] = createSignal(false);
-  const [bodyRef, setBodyRef] = createSignal<HTMLDivElement>();
+  const [open, setOpen] = useState(props.defaultOpen);
+  const [userToggled, setUserToggled] = useState(false);
+  const bodyRef = useRef<HTMLDivElement | null>(null);
 
-  createEffect(() => {
-    if (props.autoCollapse && !props.active && !userToggled()) setOpen(false);
-  });
+  useEffect(() => {
+    // Auto-collapse once thinking finishes — the close is a one-shot side
+    // effect, not a render-derived value, so calling setOpen here is correct.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (props.autoCollapse && !props.active && !userToggled) setOpen(false);
+  }, [props.autoCollapse, props.active, userToggled]);
 
   // Pin scroll to the bottom while reasoning streams in.
-  createEffect(
-    on(
-      () => props.text,
-      () => {
-        const el = bodyRef();
-        if (open() && el && props.active) {
-          el.scrollTop = el.scrollHeight;
-        }
-      },
-    ),
-  );
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (open && el && props.active) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, [props.text, open, props.active]);
 
-  const tokens = () => tokenCount(props.text);
+  const tokens = tokenCount(props.text);
 
   const handleToggle = () => {
     setOpen((o) => !o);
@@ -51,31 +49,25 @@ export function ThinkingPanel(props: Readonly<ThinkingPanelPropsT>) {
   return (
     <div {...sx(t.root)}>
       <div {...sx(t.head)} onClick={handleToggle}>
-        <span {...sx(t.chev, open() && t.chevOpen)}>
+        <span {...sx(t.chev, open && t.chevOpen)}>
           <Icon.Chevron />
         </span>
         <span {...sx(t.label)}>
-          <Show when={props.active}>
-            <Pulse />
-          </Show>
+          {props.active && <Pulse />}
           <span {...sx(t.labelText)}>
             {props.active ? "Thinking…" : "Thought"}
           </span>
         </span>
         <span {...sx(t.stats)}>
-          <Show when={props.ms != null}>
-            {(_) => <>{formatMs(props.ms ?? 0)}</>}
-          </Show>
-          <Show when={tokens() != null}>
-            {(_) => <> · {tokens()} tokens</>}
-          </Show>
+          {props.ms != null && <>{formatMs(props.ms)}</>}
+          {tokens != null && <> · {tokens} tokens</>}
         </span>
       </div>
-      <Show when={open()}>
-        <div ref={setBodyRef} {...sx(t.body)}>
+      {open && (
+        <div ref={bodyRef} {...sx(t.body)}>
           {props.text}
         </div>
-      </Show>
+      )}
     </div>
   );
 }

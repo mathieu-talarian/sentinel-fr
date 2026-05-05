@@ -1,39 +1,37 @@
-import type { ToolCallStatusT } from "~/lib/types";
+import type { ToolCallStatusT } from "@/lib/types";
 
 import * as stylex from "@stylexjs/stylex";
-import { Show } from "solid-js";
 
-import { Icon } from "~/components/atoms/Icons";
-import { animations } from "~/lib/styles/animations.stylex";
-import { sx } from "~/lib/styles/sx";
-import { borders, colors } from "~/lib/styles/tokens.stylex";
+import { Icon } from "@/components/atoms/Icons";
+import { animations } from "@/lib/styles/animations.stylex";
+import { sx } from "@/lib/styles/sx";
+import { borders, colors } from "@/lib/styles/tokens.stylex";
 
 interface ToolPillStatusGlyphPropsT {
   status: ToolCallStatusT;
 }
 
-export function ToolPillStatusGlyph(
-  props: Readonly<ToolPillStatusGlyphPropsT>,
-) {
-  return (
-    <span {...sx(s.slot, toneFor(props.status))}>
-      <Show
-        when={props.status !== "in-flight"}
-        fallback={<span {...sx(s.spinner)} />}
-      >
-        <Show when={props.status === "complete"} fallback={<Icon.X />}>
-          <Icon.Check />
-        </Show>
-      </Show>
-    </span>
-  );
-}
+const renderGlyph = (status: ToolCallStatusT) => {
+  if (status === "in-flight") return <span {...sx(s.spinner)} />;
+  if (status === "complete") return <Icon.Check />;
+  return <Icon.X />;
+};
 
 const toneFor = (status: ToolCallStatusT) => {
   if (status === "in-flight") return s.inFlight;
   if (status === "complete") return s.complete;
   return s.failed;
 };
+
+export function ToolPillStatusGlyph(
+  props: Readonly<ToolPillStatusGlyphPropsT>,
+) {
+  return (
+    <span {...sx(s.slot, toneFor(props.status))}>
+      {renderGlyph(props.status)}
+    </span>
+  );
+}
 
 const s = stylex.create({
   slot: {

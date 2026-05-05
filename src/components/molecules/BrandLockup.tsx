@@ -1,17 +1,16 @@
 import * as stylex from "@stylexjs/stylex";
 
-import { BrandMark } from "~/components/atoms/BrandMark";
-import { sx } from "~/lib/styles/sx";
-import { colors, fonts } from "~/lib/styles/tokens.stylex";
+import { BrandMark } from "@/components/atoms/BrandMark";
+import { sx } from "@/lib/styles/sx";
+import { colors, fonts } from "@/lib/styles/tokens.stylex";
 
 interface BrandLockupPropsT {
   size?: "sm" | "md";
 }
 
 export function BrandLockup(props: Readonly<BrandLockupPropsT>) {
-  const sized = () => (props.size === "md" ? s.md : s.sm);
   return (
-    <div {...sx(s.brand, sized())}>
+    <div {...sx(s.brand, props.size === "md" ? s.md : s.sm)}>
       <BrandMark size={props.size} />
       <span>Sentinel</span>
     </div>

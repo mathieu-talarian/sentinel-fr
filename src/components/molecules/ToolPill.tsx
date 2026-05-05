@@ -1,13 +1,12 @@
-import type { IconKeyT } from "~/components/atoms/Icons";
-import type { ToolCallStatusT, ToolCallT } from "~/lib/types";
+import type { IconKeyT } from "@/components/atoms/Icons";
+import type { ToolCallStatusT, ToolCallT } from "@/lib/types";
 
 import * as stylex from "@stylexjs/stylex";
-import { Show } from "solid-js";
 
-import { Icon } from "~/components/atoms/Icons";
-import { sx } from "~/lib/styles/sx";
-import { borders, colors, fonts } from "~/lib/styles/tokens.stylex";
-import { formatHtsCode, truncate } from "~/lib/utils/format";
+import { Icon } from "@/components/atoms/Icons";
+import { sx } from "@/lib/styles/sx";
+import { borders, colors, fonts } from "@/lib/styles/tokens.stylex";
+import { formatHtsCode, truncate } from "@/lib/utils/format";
 
 import { ToolPillStatusGlyph } from "./ToolPillStatusGlyph";
 
@@ -81,10 +80,10 @@ interface ToolPillPropsT {
 }
 
 export function ToolPill(props: Readonly<ToolPillPropsT>) {
-  const meta = () => metaFor(props.call.tool);
-  const IconCmp = () => Icon[meta().icon];
-  const suffix = () => suffixFor(props.call.tool, props.call.args);
-  const label = () => labelFor(props.call.tool);
+  const meta = metaFor(props.call.tool);
+  const IconCmp = Icon[meta.icon];
+  const suffix = suffixFor(props.call.tool, props.call.args);
+  const label = labelFor(props.call.tool);
 
   return (
     <button
@@ -97,9 +96,11 @@ export function ToolPill(props: Readonly<ToolPillPropsT>) {
     >
       <ToolPillStatusGlyph status={props.call.status} />
       <span {...sx(p.body)}>
-        <span {...sx(p.toolIcon)}>{IconCmp()({})}</span>
-        <span>{label()}</span>
-        <Show when={suffix()}>{(c) => <span {...sx(p.code)}>{c()}</span>}</Show>
+        <span {...sx(p.toolIcon)}>
+          <IconCmp />
+        </span>
+        <span>{label}</span>
+        {suffix && <span {...sx(p.code)}>{suffix}</span>}
       </span>
     </button>
   );

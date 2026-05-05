@@ -1,8 +1,8 @@
 import * as stylex from "@stylexjs/stylex";
 
-import { Checkbox } from "~/components/atoms/Checkbox";
-import { sx } from "~/lib/styles/sx";
-import { colors } from "~/lib/styles/tokens.stylex";
+import { Checkbox } from "@/components/atoms/Checkbox";
+import { sx } from "@/lib/styles/sx";
+import { colors } from "@/lib/styles/tokens.stylex";
 
 interface CheckboxRowPropsT {
   label: string;

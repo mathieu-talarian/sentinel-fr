@@ -1,21 +1,17 @@
 import type { StyleXStyles } from "@stylexjs/stylex";
-import type { JSX } from "solid-js";
+import type { ComponentProps } from "react";
 
 import * as stylex from "@stylexjs/stylex";
-import { splitProps } from "solid-js";
-import { Dynamic } from "solid-js/web";
+import { createElement } from "react";
 
-import { sx } from "~/lib/styles/sx";
-import { colors, fonts } from "~/lib/styles/tokens.stylex";
+import { sx } from "@/lib/styles/sx";
+import { colors, fonts } from "@/lib/styles/tokens.stylex";
 
 export type HeadingLevelT = "h1" | "h2" | "h3";
 export type HeadingSizeT = "sm" | "md" | "lg";
 export type HeadingAlignT = "start" | "center";
 
-interface HeadingPropsT extends Omit<
-  JSX.HTMLAttributes<HTMLHeadingElement>,
-  "style"
-> {
+interface HeadingPropsT extends Omit<ComponentProps<"h1">, "style"> {
   style?: StyleXStyles;
   level?: HeadingLevelT;
   size?: HeadingSizeT;
@@ -23,20 +19,17 @@ interface HeadingPropsT extends Omit<
 }
 
 export function Heading(props: Readonly<HeadingPropsT>) {
-  const [own, rest] = splitProps(props, ["level", "size", "align", "style"]);
+  const { level, size, align, style, ...rest } = props;
 
-  return (
-    <Dynamic
-      component={own.level ?? "h1"}
-      {...rest}
-      {...sx(
-        s.heading,
-        SIZES[own.size ?? "md"],
-        own.align === "center" ? s.center : undefined,
-        own.style,
-      )}
-    />
-  );
+  return createElement(level ?? "h1", {
+    ...rest,
+    ...sx(
+      s.heading,
+      SIZES[size ?? "md"],
+      align === "center" ? s.center : undefined,
+      style,
+    ),
+  });
 }
 
 const s = stylex.create({

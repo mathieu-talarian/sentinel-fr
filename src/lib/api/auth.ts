@@ -5,7 +5,7 @@ import { z } from "zod";
  *
  * Validation runs at the network boundary (zod parses both incoming session
  * envelopes and outgoing form submissions). Caching + invalidation lives in
- * `~/lib/queries.ts`; the route guards consume that via TanStack Query.
+ * `@/lib/queries.ts`; the route guards consume that via TanStack Query.
  *
  * The HttpOnly `sentinel_session` cookie is the source of truth — JS never
  * reads it. We re-ask the server via `/auth/me` on every cold load.

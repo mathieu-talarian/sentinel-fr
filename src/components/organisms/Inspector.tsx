@@ -1,18 +1,17 @@
-import type { ToolCallT } from "~/lib/types";
+import type { ToolCallT } from "@/lib/types";
 
 import * as stylex from "@stylexjs/stylex";
-import { For, Show } from "solid-js";
 
-import { InspectorEmpty } from "~/components/molecules/InspectorEmpty";
-import { InspectorHeader } from "~/components/molecules/InspectorHeader";
-import { sx } from "~/lib/styles/sx";
-import { borders, colors } from "~/lib/styles/tokens.stylex";
+import { InspectorEmpty } from "@/components/molecules/InspectorEmpty";
+import { InspectorHeader } from "@/components/molecules/InspectorHeader";
+import { sx } from "@/lib/styles/sx";
+import { borders, colors } from "@/lib/styles/tokens.stylex";
 
 import { ResultCard } from "./ResultCard";
 
 interface InspectorPropsT {
   open: boolean;
-  calls: ToolCallT[];
+  calls: readonly ToolCallT[];
   focusedCallId: string | null;
   onFocusCall: (id: string) => void;
   onClose: () => void;
@@ -22,28 +21,29 @@ const isComplete = (c: ToolCallT) =>
   c.status === "complete" && c.result != null;
 
 export function Inspector(props: Readonly<InspectorPropsT>) {
-  const completed = () => props.calls.filter((c) => isComplete(c));
+  const completed = props.calls.filter((c) => isComplete(c));
 
   return (
     <aside {...sx(s.aside)} aria-hidden={!props.open}>
       <InspectorHeader onClose={props.onClose} />
       <div {...sx(s.body)}>
-        <Show when={completed().length > 0} fallback={<InspectorEmpty />}>
-          <For each={completed()}>
-            {(call) => (
-              <div
-                onClick={() => {
-                  props.onFocusCall(call.id);
-                }}
-              >
-                <ResultCard
-                  call={call}
-                  highlight={call.id === props.focusedCallId}
-                />
-              </div>
-            )}
-          </For>
-        </Show>
+        {completed.length === 0 ? (
+          <InspectorEmpty />
+        ) : (
+          completed.map((call) => (
+            <div
+              key={call.id}
+              onClick={() => {
+                props.onFocusCall(call.id);
+              }}
+            >
+              <ResultCard
+                call={call}
+                highlight={call.id === props.focusedCallId}
+              />
+            </div>
+          ))
+        )}
       </div>
     </aside>
   );

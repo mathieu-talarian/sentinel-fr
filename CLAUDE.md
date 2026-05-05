@@ -1,12 +1,12 @@
 # Sentinel FR — Project Facts
 
-- Stack: Solid + Vite + StyleX + Ark UI (Solid) + TanStack Router/Query/Form + lucide-solid (icons)
+- Stack: React 19 + Vite + StyleX + Radix UI primitives + TanStack Router/Query/Form + Redux Toolkit + @tabler/icons-react
 - Package manager: yarn (`yarn run build`, `yarn run lint`, `yarn run format`, `yarn run check` for read-only prettier); never `npm`
 - `yarn run format` (prettier + eslint `--fix`) auto-renames type identifiers to `T` suffix (e.g. `Suggestion` → `SuggestionT`). When you rename a type, expect import sites to surface as fresh diagnostics until they're fixed too
-- Path alias: `~/` → `src/`. Wired into Vite, TS **and** StyleX babel (`aliases` option in `vite.config.ts`) — use `~/...` everywhere, including `.stylex.ts` imports
-- `sx(...)` and `cn(...)` helpers in `src/lib/styles/sx.ts` wrap `stylex.attrs()` for Solid; spread: `<div {...sx(s.foo, cond && s.bar)} />`. `cn(styled, passthrough)` merges a stylex class with a consumer-provided `class`. `StyleArg` is `unknown` because `Theme<…>` is invariant
+- Path alias: `@/` → `src/`. Wired into Vite, TS **and** StyleX babel (`aliases` option in `vite.config.ts`) — use `@/...` everywhere, including `.stylex.ts` imports
+- `sx(...)` helper in `src/lib/styles/sx.ts` wraps `stylex.props()` for React; spread: `<div {...sx(s.foo, cond && s.bar)} />`. Returns `{ className, style }`. Style args are typed as `unknown` because StyleX's `Theme<…>` is invariant
 - Type names use `T` suffix: `SessionT`, `SuggestionT`, `ToolCallT`
-- Icons: `src/components/atoms/Icons.tsx` is a thin namespace over `lucide-solid` (`Icon.Search`, `Icon.Bell`, etc.). Add new icons by importing from `lucide-solid` and wrapping with `wrap(...)`. Default size is 16. Single-purpose SVGs live in `src/components/atoms/icons/<Name>.tsx`
+- Icons: `src/components/atoms/Icons.tsx` is a thin namespace over `@tabler/icons-react` (`Icon.Search`, `Icon.Bell`, etc.). Add new icons by importing the `Icon*` named export from `@tabler/icons-react` and wrapping with `wrap(...)`. Default size is 16 with `stroke={1.75}` to scale Tabler's 24-px grid down without looking chunky. Single-purpose SVGs live in `src/components/atoms/icons/<Name>.tsx`
 
 ## StyleX Conventions
 
@@ -14,20 +14,28 @@
 - `.stylex.ts` files: ONLY `defineVars` / `defineConsts` — no components, no helpers, no themes
   - `src/lib/styles/tokens.stylex.ts`: `colors` (defineVars, themed), `fonts`/`radii`/`shadows` (defineConsts, static)
   - `src/lib/styles/animations.stylex.ts`: `animations.spin`, `animations.pulse`, `animations.blink`
-- `createTheme` returns regular styles → lives in plain `.ts`: `src/lib/styles/themes.ts` exports `darkTheme`. Applied in `__root.tsx` via `sx(s.app, tweaks().theme === 'dark' && darkTheme)`
+- `createTheme` returns regular styles → lives in plain `.ts`: `src/lib/styles/themes.ts` exports `darkTheme`. Applied to `<html>` in `__root.tsx` via a `useEffect` that toggles the StyleX-generated class on `document.documentElement` — NOT on a single subtree. CSS custom properties only flow through ancestors, and Radix `Dialog.Portal` (and any future Tooltip/Popover/Toast) mounts into `document.body`. Scoping the theme to `<html>` keeps portaled descendants in the same variable scope as the in-tree app
 - `data-theme` attribute on `<html>` is still set by `__root.tsx` — only because `.reply-html` (innerHTML) descendant rules in `src/styles.css` can't be reached by StyleX
 - Conditional styles: nest per-property with `default` key, NOT top-level pseudo-class blocks
-- Ark UI / Zag parts expose `data-state="checked|unchecked|open|closed"` on every part — match via `':is([data-state="checked"])'` instead of conditional class merging. Same idea for native `aria-checked`, `aria-hidden`
+- Radix UI primitives expose `data-state="checked|unchecked|open|closed"` on every part — match via `':is([data-state="checked"])'` instead of conditional class merging. Same idea for native `aria-checked`, `aria-hidden`. Import from the `radix-ui` umbrella (`import { Dialog, Switch, RadioGroup } from "radix-ui"`) — tree-shakable, matches the official docs, and avoids picking individual `@radix-ui/react-*` packages one at a time
 - Shorthands StyleX rejects: `border`, `borderTop/Bottom/Left/Right`, `outline`, multi-corner `borderRadius`. Decompose to longhand (`borderTopColor`/`Style`/`Width`, etc.). `flex` numeric values must be strings (`'1'`)
 - For focus rings, prefer `outline-*` longhand over `boxShadow: '0 0 0 Npx <color>'` so the color can come from `colors.*`
 - Avoid compound CSS strings that embed a token — StyleX has no template-literal support. If you need a gradient/shadow with theming, define it as a `defineConsts` constant or add it to `colors` and reference directly
+- Variant maps vs dynamic functions: closed enum props (`tone: "gold"|"ink"`, `size: "sm"|"md"|"lg"`) → separate `stylex.create({a:{...}, b:{...}})` indexed by the prop (atomic class per variant, supports `:hover`/media/pseudo-elements). Continuous numeric props (`maxHeight: number`, `size: number`) → arrow-function entry `(n: number) => ({...})` inside `stylex.create`. Function args must be simple identifiers, body must be an object literal — no destructuring, defaults, or `return`
 
 ## Component Architecture
 
 - Atomic Design layout: `src/components/{atoms,molecules,organisms,templates}/`. Routes (`src/routes/`) are pages. ESLint `noBarrelFiles` is on — no `index.ts` re-exports; `Foo/index.tsx` is only allowed when it IS the component
 - Lib layout: `src/lib/{api,state,styles,utils}/` — api (auth/queries/chatStream), state (chatStore/tweaks), styles (sx/tokens/animations/themes), utils (format/suggestions). Wire types stay at `src/lib/types.ts`
-- Atom contract: `extends Omit<JSX.*HTMLAttributes<…>, "style">`, add `style?: StyleXStyles` (from `@stylexjs/stylex`), pass `own.style` as the LAST arg to `sx(...)` so callers override. Use `splitProps` for the own/rest split; merge `class` via `cn()`
-- Solid event handlers for value-bearing inputs: `JSX.InputEventHandler<T, E>` for `onInput`, `JSX.ChangeEventHandler<T, E>` for `onChange` — these have `target: T`. The plain `JSX.EventHandler<T, E>` has `target: Element` and won't accept Solid's narrowed events
+- Atom contract: `extends Omit<ComponentProps<"div">, "style">` (from `react`), add `style?: StyleXStyles` (from `@stylexjs/stylex`), pass `style` as the LAST arg to `sx(...)` so callers override. Destructure own props off `props` and spread the rest as `<el {...rest} {...sx(...)} />` — stylex's `className`/`style` win over rest. No manual `className` merge; if a caller wants extra styling, that's what `style?: StyleXStyles` is for
+- React event handlers for value-bearing inputs use `ChangeEvent<HTMLInputElement>`/`ChangeEvent<HTMLTextAreaElement>` from `react`. Atoms expose an `onValueChange?: (v: string) => void` convenience and forward the original `onChange` so callers can still hook in
+
+## State (Redux Toolkit)
+
+- Global state lives in Redux Toolkit slices under `src/lib/state/` and is wired via `<Provider store={store}>` in `src/main.tsx`. Two slices today: `tweaksSlice` (theme/density/lang/provider/inspectorAutoOpen/showThinkingByDefault) and `chatSlice` (messages/running/focusedCallId/inspectorOpen + the streaming-chunk reducer). Types `RootStateT` / `AppDispatchT` / `AppThunkT<R>` are exported from `store.ts`; typed `useAppDispatch` / `useAppSelector` live in `hooks.ts` (use those, not the raw `react-redux` exports)
+- Async work is plain thunks (`AppThunkT`), not `createAsyncThunk` — see `chatThunks.ts` for the SSE streaming pattern. The `AbortController` lives at module scope (non-serializable, so it stays out of state); `sendChat(text)` reads `tweaks.provider` / `tweaks.inspectorAutoOpen` lazily via `getState()` so toggling tweaks mid-stream is honoured
+- Consumer ergonomics: `useTweaks()` (`src/lib/state/tweaks.ts`) and `useChatStore()` (`src/lib/state/chatStore.ts`) are thin `useCallback`-wrapped facades over the typed hooks. Component code uses these — it should NOT import slice actions or thunks directly unless dispatching something the facade doesn't expose
+- Persistence: `tweaksSlice` initial state is loaded from `localStorage`, and `store.ts` subscribes once to mirror tweaks → `localStorage` on every change (reference-equality short-circuit). Don't put non-serializable values in any slice — RTK's serializable-state middleware will scream
 
 ## Workflow Gotchas
 

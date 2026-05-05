@@ -1,8 +1,7 @@
 import * as stylex from "@stylexjs/stylex";
-import { For } from "solid-js";
 
-import { sx } from "~/lib/styles/sx";
-import { borders, colors, radii } from "~/lib/styles/tokens.stylex";
+import { sx } from "@/lib/styles/sx";
+import { borders, colors, radii } from "@/lib/styles/tokens.stylex";
 
 interface MessageCaveatsPropsT {
   items: readonly string[];
@@ -13,7 +12,11 @@ export function MessageCaveats(props: Readonly<MessageCaveatsPropsT>) {
     <div {...sx(s.caveats)}>
       <div {...sx(s.label)}>Caveats</div>
       <ul {...sx(s.list)}>
-        <For each={props.items}>{(c) => <li {...sx(s.item)}>{c}</li>}</For>
+        {props.items.map((c, i) => (
+          <li key={i} {...sx(s.item)}>
+            {c}
+          </li>
+        ))}
       </ul>
     </div>
   );

@@ -1,9 +1,9 @@
 import * as stylex from "@stylexjs/stylex";
 
-import { IconButton } from "~/components/atoms/IconButton";
-import { Icon } from "~/components/atoms/Icons";
-import { sx } from "~/lib/styles/sx";
-import { borders, colors, fonts } from "~/lib/styles/tokens.stylex";
+import { IconButton } from "@/components/atoms/IconButton";
+import { Icon } from "@/components/atoms/Icons";
+import { sx } from "@/lib/styles/sx";
+import { borders, colors, fonts } from "@/lib/styles/tokens.stylex";
 
 interface InspectorHeaderPropsT {
   onClose: () => void;

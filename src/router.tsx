@@ -1,6 +1,6 @@
-import type { QueryClient } from "@tanstack/solid-query";
+import type { QueryClient } from "@tanstack/react-query";
 
-import { createRouter as createTanStackRouter } from "@tanstack/solid-router";
+import { createRouter as createTanStackRouter } from "@tanstack/react-router";
 
 import { routeTree } from "./routeTree.gen";
 
@@ -18,7 +18,7 @@ export function getRouter(queryClient: QueryClient) {
   });
 }
 
-declare module "@tanstack/solid-router" {
+declare module "@tanstack/react-router" {
   // eslint-disable-next-line @typescript-eslint/naming-convention
   interface Register {
     router: ReturnType<typeof getRouter>;

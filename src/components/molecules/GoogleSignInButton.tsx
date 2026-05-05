@@ -1,8 +1,6 @@
-import { Show } from "solid-js";
-
-import { Button } from "~/components/atoms/Button";
-import { Spinner } from "~/components/atoms/Spinner";
-import { GoogleLogo } from "~/components/atoms/icons/GoogleLogo";
+import { Button } from "@/components/atoms/Button";
+import { Spinner } from "@/components/atoms/Spinner";
+import { GoogleLogo } from "@/components/atoms/icons/GoogleLogo";
 
 interface GoogleSignInButtonPropsT {
   busy: boolean;
@@ -17,18 +15,17 @@ export function GoogleSignInButton(props: Readonly<GoogleSignInButtonPropsT>) {
       disabled={props.busy}
       onClick={props.onClick}
     >
-      <Show
-        when={props.busy}
-        fallback={
-          <>
-            <GoogleLogo />
-            <span>Continue with Google</span>
-          </>
-        }
-      >
-        <Spinner tone="ink" />
-        <span>Connecting to Google…</span>
-      </Show>
+      {props.busy ? (
+        <>
+          <Spinner tone="ink" />
+          <span>Connecting to Google…</span>
+        </>
+      ) : (
+        <>
+          <GoogleLogo />
+          <span>Continue with Google</span>
+        </>
+      )}
     </Button>
   );
 }

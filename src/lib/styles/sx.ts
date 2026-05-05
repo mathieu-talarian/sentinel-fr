@@ -1,17 +1,17 @@
 import * as stylex from "@stylexjs/stylex";
 
 /**
- * Solid-friendly StyleX prop binder.
+ * StyleX prop binder for React.
  *
- * StyleX returns `{ className, style }` (React naming). Solid wants `class`.
- * Spreading `sx(...)` directly onto a JSX element wires both correctly:
+ * `stylex.props` returns `{ className, style }` — exactly the shape React
+ * expects. Spread it onto a JSX element to wire both at once:
  *
  *   <div {...sx(styles.foo, condition && styles.bar)} />
  *
- * `stylex.attrs` is invariant on its style argument; we accept `unknown[]` and
+ * `stylex.props` is invariant on its style argument; we accept `unknown[]` and
  * defer validation to the StyleX compiler/runtime so conditional spreads stay
  * ergonomic.
  */
 export function sx(...args: unknown[]) {
-  return stylex.attrs(...(args as never[]));
+  return stylex.props(...(args as never[]));
 }

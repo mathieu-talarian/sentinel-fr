@@ -1,11 +1,11 @@
-import type { ProviderT } from "~/lib/state/tweaks";
+import type { ProviderT } from "@/lib/state/tweaksSlice";
 
 import * as stylex from "@stylexjs/stylex";
 
-import { InspectorToggleButton } from "~/components/molecules/InspectorToggleButton";
-import { SegmentedToggle } from "~/components/molecules/SegmentedToggle";
-import { sx } from "~/lib/styles/sx";
-import { borders, colors } from "~/lib/styles/tokens.stylex";
+import { InspectorToggleButton } from "@/components/molecules/InspectorToggleButton";
+import { SegmentedToggle } from "@/components/molecules/SegmentedToggle";
+import { sx } from "@/lib/styles/sx";
+import { borders, colors } from "@/lib/styles/tokens.stylex";
 
 type LangT = "en" | "fr";
 

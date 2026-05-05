@@ -1,28 +1,23 @@
 import * as stylex from "@stylexjs/stylex";
-import { createQuery } from "@tanstack/solid-query";
-import { For, Show, Suspense } from "solid-js";
+import { useQuery } from "@tanstack/react-query";
 
-import { RailConvoItem } from "~/components/molecules/RailConvoItem";
-import { priorConvosQuery } from "~/lib/api/queries";
-import { sx } from "~/lib/styles/sx";
-import { colors, fonts } from "~/lib/styles/tokens.stylex";
+import { RailConvoItem } from "@/components/molecules/RailConvoItem";
+import { priorConvosQuery } from "@/lib/api/queries";
+import { sx } from "@/lib/styles/sx";
+import { colors, fonts } from "@/lib/styles/tokens.stylex";
 
 export function RailHistoryList() {
-  const convos = createQuery(() => priorConvosQuery());
+  const convos = useQuery(priorConvosQuery());
 
   return (
     <>
       <div {...sx(s.section)}>Recent</div>
       <div {...sx(s.list)}>
         <RailConvoItem title="New chat" when="Now" active />
-        <Suspense>
-          <For each={convos.data ?? []}>
-            {(c) => <RailConvoItem title={c.title} when={c.when} />}
-          </For>
-        </Suspense>
-        <Show when={convos.isError}>
-          <div {...sx(s.error)}>Couldn't load history</div>
-        </Show>
+        {(convos.data ?? []).map((c) => (
+          <RailConvoItem key={c.id} title={c.title} when={c.when} />
+        ))}
+        {convos.isError && <div {...sx(s.error)}>Couldn't load history</div>}
       </div>
     </>
   );

@@ -1,23 +1,19 @@
 import type { StyleXStyles } from "@stylexjs/stylex";
-import type { JSX } from "solid-js";
+import type { ComponentProps } from "react";
 
 import * as stylex from "@stylexjs/stylex";
-import { splitProps } from "solid-js";
 
-import { sx } from "~/lib/styles/sx";
-import { colors } from "~/lib/styles/tokens.stylex";
+import { sx } from "@/lib/styles/sx";
+import { colors } from "@/lib/styles/tokens.stylex";
 
-interface FieldLabelPropsT extends Omit<
-  JSX.LabelHTMLAttributes<HTMLLabelElement>,
-  "style"
-> {
+interface FieldLabelPropsT extends Omit<ComponentProps<"label">, "style"> {
   style?: StyleXStyles;
 }
 
 export function FieldLabel(props: Readonly<FieldLabelPropsT>) {
-  const [own, rest] = splitProps(props, ["style"]);
+  const { style, ...rest } = props;
 
-  return <label {...rest} {...sx(s.label, own.style)} />;
+  return <label {...rest} {...sx(s.label, style)} />;
 }
 
 const s = stylex.create({

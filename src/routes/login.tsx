@@ -1,20 +1,22 @@
+/* eslint-disable react-refresh/only-export-components -- TanStack Router files
+   colocate the `Route` config alongside the route component. */
 import * as stylex from "@stylexjs/stylex";
-import { createFileRoute, redirect } from "@tanstack/solid-router";
-import { Show, createSignal } from "solid-js";
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { useState } from "react";
 import { z } from "zod";
 
-import { TextLink } from "~/components/atoms/TextLink";
-import { BrandLockup } from "~/components/molecules/BrandLockup";
-import { ErrorBanner } from "~/components/molecules/ErrorBanner";
-import { GoogleSignInButton } from "~/components/molecules/GoogleSignInButton";
-import { LoginDivider } from "~/components/molecules/LoginDivider";
-import { LoginFooter } from "~/components/molecules/LoginFooter";
-import { LoginCard } from "~/components/organisms/LoginCard";
-import { SignInForm } from "~/components/organisms/SignInForm";
-import { oauthErrorMessage, signInWithGoogle } from "~/lib/api/auth";
-import { meQueryOptions } from "~/lib/api/queries";
-import { sx } from "~/lib/styles/sx";
-import { colors, fonts } from "~/lib/styles/tokens.stylex";
+import { TextLink } from "@/components/atoms/TextLink";
+import { BrandLockup } from "@/components/molecules/BrandLockup";
+import { ErrorBanner } from "@/components/molecules/ErrorBanner";
+import { GoogleSignInButton } from "@/components/molecules/GoogleSignInButton";
+import { LoginDivider } from "@/components/molecules/LoginDivider";
+import { LoginFooter } from "@/components/molecules/LoginFooter";
+import { LoginCard } from "@/components/organisms/LoginCard";
+import { SignInForm } from "@/components/organisms/SignInForm";
+import { oauthErrorMessage, signInWithGoogle } from "@/lib/api/auth";
+import { meQueryOptions } from "@/lib/api/queries";
+import { sx } from "@/lib/styles/sx";
+import { colors, fonts } from "@/lib/styles/tokens.stylex";
 
 /**
  * Search params for `/login`. The `error` code lands here from
@@ -44,14 +46,14 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const search = Route.useSearch();
-  const [googleSubmitting, setGoogleSubmitting] = createSignal(false);
+  const [googleSubmitting, setGoogleSubmitting] = useState(false);
 
   const handleGoogle = () => {
     setGoogleSubmitting(true);
-    signInWithGoogle(search().next);
+    signInWithGoogle(search.next);
   };
 
-  const errorMsg = () => oauthErrorMessage(search().error);
+  const errorMsg = oauthErrorMessage(search.error);
 
   return (
     <div {...sx(s.shell)}>
@@ -65,15 +67,13 @@ function LoginPage() {
         }
         subtitle="Sign in to continue."
       >
-        <Show when={errorMsg()}>
-          {(msg) => <ErrorBanner message={msg()} />}
-        </Show>
+        {errorMsg && <ErrorBanner message={errorMsg} />}
 
-        <GoogleSignInButton busy={googleSubmitting()} onClick={handleGoogle} />
+        <GoogleSignInButton busy={googleSubmitting} onClick={handleGoogle} />
 
         <LoginDivider />
 
-        <SignInForm busy={googleSubmitting()} next={search().next} />
+        <SignInForm busy={googleSubmitting} next={search.next} />
 
         <p {...sx(s.signupLine)}>
           New to Sentinel? <TextLink>Request access</TextLink>

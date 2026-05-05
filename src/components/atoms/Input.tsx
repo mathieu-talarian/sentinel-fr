@@ -1,18 +1,14 @@
 import type { StyleXStyles } from "@stylexjs/stylex";
-import type { JSX } from "solid-js";
+import type { ChangeEvent, ComponentProps } from "react";
 
 import * as stylex from "@stylexjs/stylex";
-import { splitProps } from "solid-js";
 
-import { sx } from "~/lib/styles/sx";
-import { borders, colors, fonts, radii } from "~/lib/styles/tokens.stylex";
+import { sx } from "@/lib/styles/sx";
+import { borders, colors, fonts, radii } from "@/lib/styles/tokens.stylex";
 
 export type InputStateT = "default" | "error" | "warning" | "success";
 
-interface InputPropsT extends Omit<
-  JSX.InputHTMLAttributes<HTMLInputElement>,
-  "style"
-> {
+interface InputPropsT extends Omit<ComponentProps<"input">, "style"> {
   /** StyleX overrides — applied last so callers win over local rules. */
   style?: StyleXStyles;
   state?: InputStateT;
@@ -21,20 +17,11 @@ interface InputPropsT extends Omit<
 }
 
 export function Input(props: Readonly<InputPropsT>) {
-  const [own, rest] = splitProps(props, [
-    "state",
-    "paddedRight",
-    "style",
-    "onValueChange",
-    "onInput",
-  ]);
+  const { state, paddedRight, style, onValueChange, onChange, ...rest } = props;
 
-  const handleInput: JSX.InputEventHandler<HTMLInputElement, InputEvent> = (
-    e,
-  ) => {
-    own.onValueChange?.(e.currentTarget.value);
-    const native = own.onInput;
-    if (typeof native === "function") native(e);
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    onValueChange?.(e.currentTarget.value);
+    onChange?.(e);
   };
 
   return (
@@ -43,11 +30,11 @@ export function Input(props: Readonly<InputPropsT>) {
       {...rest}
       {...sx(
         s.input,
-        STATES[own.state ?? "default"],
-        own.paddedRight && s.padRight,
-        own.style,
+        STATES[state ?? "default"],
+        paddedRight && s.padRight,
+        style,
       )}
-      onInput={handleInput}
+      onChange={handleChange}
     />
   );
 }

@@ -1,7 +1,7 @@
 import * as stylex from "@stylexjs/stylex";
 
-import { sx } from "~/lib/styles/sx";
-import { colors } from "~/lib/styles/tokens.stylex";
+import { sx } from "@/lib/styles/sx";
+import { colors } from "@/lib/styles/tokens.stylex";
 
 interface UserBubblePropsT {
   text: string;

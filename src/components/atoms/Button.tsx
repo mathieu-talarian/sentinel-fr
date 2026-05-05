@@ -1,41 +1,27 @@
 import type { StyleXStyles } from "@stylexjs/stylex";
-import type { JSX } from "solid-js";
+import type { ComponentProps } from "react";
 
 import * as stylex from "@stylexjs/stylex";
-import { splitProps } from "solid-js";
 
-import { sx } from "~/lib/styles/sx";
-import { borders, colors, fonts, radii } from "~/lib/styles/tokens.stylex";
+import { sx } from "@/lib/styles/sx";
+import { borders, colors, fonts, radii } from "@/lib/styles/tokens.stylex";
 
 export type ButtonVariantT = "primary" | "secondary" | "danger";
 
-interface ButtonPropsT extends Omit<
-  JSX.ButtonHTMLAttributes<HTMLButtonElement>,
-  "style"
-> {
+interface ButtonPropsT extends Omit<ComponentProps<"button">, "style"> {
   style?: StyleXStyles;
   variant?: ButtonVariantT;
   fullWidth?: boolean;
 }
 
 export function Button(props: Readonly<ButtonPropsT>) {
-  const [own, rest] = splitProps(props, [
-    "variant",
-    "fullWidth",
-    "style",
-    "type",
-  ]);
+  const { variant, fullWidth, style, type, ...rest } = props;
 
   return (
     <button
-      type={own.type ?? "button"}
+      type={type ?? "button"}
       {...rest}
-      {...sx(
-        s.btn,
-        VARIANTS[own.variant ?? "primary"],
-        own.fullWidth && s.full,
-        own.style,
-      )}
+      {...sx(s.btn, VARIANTS[variant ?? "primary"], fullWidth && s.full, style)}
     />
   );
 }

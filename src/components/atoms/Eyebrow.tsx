@@ -1,31 +1,31 @@
 import type { StyleXStyles } from "@stylexjs/stylex";
-import type { JSX } from "solid-js";
+import type { ComponentProps } from "react";
 
 import * as stylex from "@stylexjs/stylex";
-import { splitProps } from "solid-js";
 
-import { sx } from "~/lib/styles/sx";
-import { colors, fonts } from "~/lib/styles/tokens.stylex";
+import { sx } from "@/lib/styles/sx";
+import { colors, fonts } from "@/lib/styles/tokens.stylex";
 
 export type EyebrowToneT = "default" | "accent";
 
-interface EyebrowPropsT extends Omit<
-  JSX.HTMLAttributes<HTMLDivElement>,
-  "style"
-> {
+interface EyebrowPropsT extends Omit<ComponentProps<"div">, "style"> {
   style?: StyleXStyles;
   rule?: boolean;
   tone?: EyebrowToneT;
 }
 
 export function Eyebrow(props: Readonly<EyebrowPropsT>) {
-  const [own, rest] = splitProps(props, ["rule", "tone", "style"]);
-  const tone = () => (own.tone === "accent" ? s.accent : s.def);
+  const { rule, tone, style, ...rest } = props;
 
   return (
     <div
       {...rest}
-      {...sx(s.eyebrow, tone(), own.rule && s.withRule, own.style)}
+      {...sx(
+        s.eyebrow,
+        tone === "accent" ? s.accent : s.def,
+        rule && s.withRule,
+        style,
+      )}
     />
   );
 }

@@ -1,7 +1,5 @@
-import { Show } from "solid-js";
-
-import { IconButton } from "~/components/atoms/IconButton";
-import { Icon } from "~/components/atoms/Icons";
+import { IconButton } from "@/components/atoms/IconButton";
+import { Icon } from "@/components/atoms/Icons";
 
 interface ComposerSendButtonPropsT {
   running: boolean;
@@ -11,21 +9,8 @@ interface ComposerSendButtonPropsT {
 }
 
 export function ComposerSendButton(props: Readonly<ComposerSendButtonPropsT>) {
-  return (
-    <Show
-      when={props.running}
-      fallback={
-        <IconButton
-          size="lg"
-          variant="primary"
-          disabled={!props.canSend}
-          title="Send"
-          onClick={props.onSend}
-        >
-          <Icon.Send />
-        </IconButton>
-      }
-    >
+  if (props.running) {
+    return (
       <IconButton
         size="lg"
         variant="danger"
@@ -34,6 +19,18 @@ export function ComposerSendButton(props: Readonly<ComposerSendButtonPropsT>) {
       >
         <Icon.Stop />
       </IconButton>
-    </Show>
+    );
+  }
+
+  return (
+    <IconButton
+      size="lg"
+      variant="primary"
+      disabled={!props.canSend}
+      title="Send"
+      onClick={props.onSend}
+    >
+      <Icon.Send />
+    </IconButton>
   );
 }

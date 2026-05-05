@@ -1,8 +1,7 @@
 import * as stylex from "@stylexjs/stylex";
-import { For } from "solid-js";
 
-import { sx } from "~/lib/styles/sx";
-import { borders, colors, fonts, radii } from "~/lib/styles/tokens.stylex";
+import { sx } from "@/lib/styles/sx";
+import { borders, colors, fonts, radii } from "@/lib/styles/tokens.stylex";
 
 interface SegmentedToggleOptionT<V extends string> {
   value: V;
@@ -23,23 +22,22 @@ export function SegmentedToggle<V extends string>(
 ) {
   return (
     <div {...sx(s.toggle)} role="radiogroup" aria-label={props.ariaLabel}>
-      <For each={props.options}>
-        {(opt) => (
-          <button
-            type="button"
-            role="radio"
-            aria-checked={props.value === opt.value}
-            {...sx(s.btn)}
-            onClick={() => {
-              props.onChange(opt.value);
-            }}
-            disabled={props.disabled}
-            title={opt.title}
-          >
-            {opt.label}
-          </button>
-        )}
-      </For>
+      {props.options.map((opt) => (
+        <button
+          key={opt.value}
+          type="button"
+          role="radio"
+          aria-checked={props.value === opt.value}
+          {...sx(s.btn)}
+          onClick={() => {
+            props.onChange(opt.value);
+          }}
+          disabled={props.disabled}
+          title={opt.title}
+        >
+          {opt.label}
+        </button>
+      ))}
     </div>
   );
 }

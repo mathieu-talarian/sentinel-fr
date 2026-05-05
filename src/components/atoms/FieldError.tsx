@@ -1,8 +1,8 @@
 import * as stylex from "@stylexjs/stylex";
 
-import { ErrorIcon } from "~/components/atoms/icons/ErrorIcon";
-import { sx } from "~/lib/styles/sx";
-import { colors } from "~/lib/styles/tokens.stylex";
+import { ErrorIcon } from "@/components/atoms/icons/ErrorIcon";
+import { sx } from "@/lib/styles/sx";
+import { colors } from "@/lib/styles/tokens.stylex";
 
 interface FieldErrorPropsT {
   message: string;

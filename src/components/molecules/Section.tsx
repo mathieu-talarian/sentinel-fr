@@ -1,13 +1,13 @@
-import type { JSX } from "solid-js";
+import type { ReactNode } from "react";
 
 import * as stylex from "@stylexjs/stylex";
 
-import { Eyebrow } from "~/components/atoms/Eyebrow";
-import { sx } from "~/lib/styles/sx";
+import { Eyebrow } from "@/components/atoms/Eyebrow";
+import { sx } from "@/lib/styles/sx";
 
 interface SectionPropsT {
   label: string;
-  children: JSX.Element;
+  children: ReactNode;
 }
 
 export function Section(props: Readonly<SectionPropsT>) {

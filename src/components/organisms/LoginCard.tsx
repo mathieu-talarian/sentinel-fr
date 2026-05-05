@@ -1,16 +1,16 @@
-import type { JSX } from "solid-js";
+import type { ReactNode } from "react";
 
 import * as stylex from "@stylexjs/stylex";
 
-import { Card } from "~/components/atoms/Card";
-import { Heading } from "~/components/atoms/Heading";
-import { sx } from "~/lib/styles/sx";
-import { colors } from "~/lib/styles/tokens.stylex";
+import { Card } from "@/components/atoms/Card";
+import { Heading } from "@/components/atoms/Heading";
+import { sx } from "@/lib/styles/sx";
+import { colors } from "@/lib/styles/tokens.stylex";
 
 interface LoginCardPropsT {
-  title: JSX.Element;
+  title: ReactNode;
   subtitle: string;
-  children: JSX.Element;
+  children: ReactNode;
 }
 
 export function LoginCard(props: Readonly<LoginCardPropsT>) {

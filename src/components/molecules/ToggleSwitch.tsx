@@ -1,9 +1,8 @@
-import { Switch } from "@ark-ui/solid";
 import * as stylex from "@stylexjs/stylex";
-import { Show } from "solid-js";
+import { Switch } from "radix-ui";
 
-import { sx } from "~/lib/styles/sx";
-import { colors } from "~/lib/styles/tokens.stylex";
+import { sx } from "@/lib/styles/sx";
+import { colors } from "@/lib/styles/tokens.stylex";
 
 interface ToggleSwitchPropsT {
   label: string;
@@ -17,17 +16,10 @@ export function ToggleSwitch(props: Readonly<ToggleSwitchPropsT>) {
       <span {...sx(s.rowLabel)}>{props.label}</span>
       <Switch.Root
         checked={props.checked}
-        onCheckedChange={(d) => {
-          props.onChange(d.checked);
-        }}
+        onCheckedChange={props.onChange}
+        {...sx(s.switchRoot)}
       >
-        <Switch.Control {...sx(s.switchCtrl)}>
-          <Switch.Thumb {...sx(s.switchThumb)} />
-        </Switch.Control>
-        <Switch.HiddenInput />
-        <Show when={false}>
-          <Switch.Label />
-        </Show>
+        <Switch.Thumb {...sx(s.switchThumb)} />
       </Switch.Root>
     </div>
   );
@@ -42,7 +34,7 @@ const s = stylex.create({
     justifyContent: "space-between",
   },
   rowLabel: { color: colors.ink2, fontSize: 12.5, fontWeight: 500 },
-  switchCtrl: {
+  switchRoot: {
     background: {
       default: colors.lineStrong,
       ':is([data-state="checked"])': colors.ok,
@@ -61,14 +53,13 @@ const s = stylex.create({
     borderRadius: "50%",
     transition: "transform 140ms",
     boxShadow: "0 1px 2px oklch(0 0 0 / 0.25)",
-    position: "absolute",
+    display: "block",
     transform: {
-      default: "translateX(0)",
-      ':is([data-state="checked"])': "translateX(14px)",
+      default: "translateX(2px)",
+      ':is([data-state="checked"])': "translateX(16px)",
     },
+    willChange: "transform",
     height: 14,
-    left: 2,
-    top: 2,
     width: 14,
   },
 });

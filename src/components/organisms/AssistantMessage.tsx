@@ -1,16 +1,15 @@
-import type { AssistantMessageDataT } from "~/lib/types";
+import type { AssistantMessageDataT } from "@/lib/types";
 
 import * as stylex from "@stylexjs/stylex";
-import { For, Show } from "solid-js";
 
-import { AssistantAvatar } from "~/components/molecules/AssistantAvatar";
-import { MessageActions } from "~/components/molecules/MessageActions";
-import { MessageCaveats } from "~/components/molecules/MessageCaveats";
-import { MessageError } from "~/components/molecules/MessageError";
-import { Reply } from "~/components/molecules/Reply";
-import { ThinkingPanel } from "~/components/molecules/ThinkingPanel";
-import { ToolPill } from "~/components/molecules/ToolPill";
-import { sx } from "~/lib/styles/sx";
+import { AssistantAvatar } from "@/components/molecules/AssistantAvatar";
+import { MessageActions } from "@/components/molecules/MessageActions";
+import { MessageCaveats } from "@/components/molecules/MessageCaveats";
+import { MessageError } from "@/components/molecules/MessageError";
+import { Reply } from "@/components/molecules/Reply";
+import { ThinkingPanel } from "@/components/molecules/ThinkingPanel";
+import { ToolPill } from "@/components/molecules/ToolPill";
+import { sx } from "@/lib/styles/sx";
 
 interface AssistantMessagePropsT {
   msg: AssistantMessageDataT;
@@ -21,14 +20,14 @@ interface AssistantMessagePropsT {
 }
 
 export function AssistantMessage(props: Readonly<AssistantMessagePropsT>) {
-  const showThinking = () => !!props.msg.thinking || props.msg.thinkingActive;
-  const showActions = () => props.msg.done && !props.msg.streaming;
+  const showThinking = !!props.msg.thinking || props.msg.thinkingActive;
+  const showActions = props.msg.done && !props.msg.streaming;
 
   return (
     <div {...sx(s.row)}>
       <AssistantAvatar />
       <div {...sx(s.body)}>
-        <Show when={showThinking()}>
+        {showThinking && (
           <ThinkingPanel
             text={props.msg.thinking}
             active={props.msg.thinkingActive}
@@ -36,39 +35,34 @@ export function AssistantMessage(props: Readonly<AssistantMessagePropsT>) {
             autoCollapse={props.autoCollapseThinking}
             defaultOpen={props.defaultThinkingOpen || props.msg.thinkingActive}
           />
-        </Show>
+        )}
 
-        <Show when={props.msg.calls.length > 0}>
+        {props.msg.calls.length > 0 && (
           <div {...sx(s.pills)}>
-            <For each={props.msg.calls}>
-              {(call) => (
-                <ToolPill
-                  call={call}
-                  active={call.id === props.focusedCallId}
-                  onClick={() => {
-                    props.onFocusCall(call.id);
-                  }}
-                />
-              )}
-            </For>
+            {props.msg.calls.map((call) => (
+              <ToolPill
+                key={call.id}
+                call={call}
+                active={call.id === props.focusedCallId}
+                onClick={() => {
+                  props.onFocusCall(call.id);
+                }}
+              />
+            ))}
           </div>
-        </Show>
+        )}
 
-        <Show when={props.msg.reply}>
+        {props.msg.reply && (
           <Reply text={props.msg.reply} streaming={props.msg.streaming} />
-        </Show>
+        )}
 
-        <Show when={props.msg.error}>
-          {(err) => <MessageError message={err()} />}
-        </Show>
+        {props.msg.error && <MessageError message={props.msg.error} />}
 
-        <Show when={props.msg.caveats?.length}>
-          <MessageCaveats items={props.msg.caveats ?? []} />
-        </Show>
+        {props.msg.caveats?.length ? (
+          <MessageCaveats items={props.msg.caveats} />
+        ) : null}
 
-        <Show when={showActions()}>
-          <MessageActions />
-        </Show>
+        {showActions && <MessageActions />}
       </div>
     </div>
   );

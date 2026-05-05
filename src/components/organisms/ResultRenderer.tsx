@@ -5,13 +5,12 @@ import type {
   LandedCostContentT,
   SearchCodesContentT,
   SubscribeWatchContentT,
-} from "~/lib/types";
+} from "@/lib/types";
 
 import * as stylex from "@stylexjs/stylex";
-import { Match, Switch } from "solid-js";
 
-import { sx } from "~/lib/styles/sx";
-import { fonts } from "~/lib/styles/tokens.stylex";
+import { sx } from "@/lib/styles/sx";
+import { fonts } from "@/lib/styles/tokens.stylex";
 
 import { AlertList } from "./results/AlertList";
 import { CodeDetails } from "./results/CodeDetails";
@@ -26,32 +25,31 @@ interface ResultRendererPropsT {
 }
 
 export function ResultRenderer(props: Readonly<ResultRendererPropsT>) {
-  return (
-    <Switch
-      fallback={
-        <pre {...sx(s.pre)}>{JSON.stringify(props.result, null, 2)}</pre>
-      }
-    >
-      <Match when={props.tool === "search_codes"}>
-        <SearchResult result={props.result as SearchCodesContentT} />
-      </Match>
-      <Match when={props.tool === "get_code_details"}>
-        <CodeDetails result={props.result as CodeDetailsContentT} />
-      </Match>
-      <Match when={props.tool === "get_landed_cost"}>
-        <LandedCost result={props.result as LandedCostContentT} />
-      </Match>
-      <Match when={props.tool === "find_cross_rulings"}>
-        <Rulings result={props.result as CrossRulingsContentT} />
-      </Match>
-      <Match when={props.tool === "subscribe_watch"}>
+  switch (props.tool) {
+    case "search_codes": {
+      return <SearchResult result={props.result as SearchCodesContentT} />;
+    }
+    case "get_code_details": {
+      return <CodeDetails result={props.result as CodeDetailsContentT} />;
+    }
+    case "get_landed_cost": {
+      return <LandedCost result={props.result as LandedCostContentT} />;
+    }
+    case "find_cross_rulings": {
+      return <Rulings result={props.result as CrossRulingsContentT} />;
+    }
+    case "subscribe_watch": {
+      return (
         <SubscribeConfirm result={props.result as SubscribeWatchContentT} />
-      </Match>
-      <Match when={props.tool === "list_alerts"}>
-        <AlertList result={props.result as AlertsContentT} />
-      </Match>
-    </Switch>
-  );
+      );
+    }
+    case "list_alerts": {
+      return <AlertList result={props.result as AlertsContentT} />;
+    }
+    default: {
+      return <pre {...sx(s.pre)}>{JSON.stringify(props.result, null, 2)}</pre>;
+    }
+  }
 }
 
 const s = stylex.create({

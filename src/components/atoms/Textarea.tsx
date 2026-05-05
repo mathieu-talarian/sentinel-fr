@@ -1,18 +1,13 @@
+import type { InputStateT } from "@/components/atoms/Input";
 import type { StyleXStyles } from "@stylexjs/stylex";
-import type { JSX } from "solid-js";
-import type { InputStateT } from "~/components/atoms/Input";
+import type { ChangeEvent, ComponentProps } from "react";
 
 import * as stylex from "@stylexjs/stylex";
-import { splitProps } from "solid-js";
 
+import { sx } from "@/lib/styles/sx";
+import { colors, fonts } from "@/lib/styles/tokens.stylex";
 
-import { sx } from "~/lib/styles/sx";
-import { colors, fonts } from "~/lib/styles/tokens.stylex";
-
-interface TextareaPropsT extends Omit<
-  JSX.TextareaHTMLAttributes<HTMLTextAreaElement>,
-  "style"
-> {
+interface TextareaPropsT extends Omit<ComponentProps<"textarea">, "style"> {
   style?: StyleXStyles;
   state?: InputStateT;
   maxHeight?: number;
@@ -20,20 +15,11 @@ interface TextareaPropsT extends Omit<
 }
 
 export function Textarea(props: Readonly<TextareaPropsT>) {
-  const [own, rest] = splitProps(props, [
-    "state",
-    "maxHeight",
-    "style",
-    "onValueChange",
-    "onInput",
-  ]);
+  const { state, maxHeight, style, onValueChange, onChange, ...rest } = props;
 
-  const handleInput: JSX.InputEventHandler<HTMLTextAreaElement, InputEvent> = (
-    e,
-  ) => {
-    own.onValueChange?.(e.currentTarget.value);
-    const native = own.onInput;
-    if (typeof native === "function") native(e);
+  const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
+    onValueChange?.(e.currentTarget.value);
+    onChange?.(e);
   };
 
   return (
@@ -42,11 +28,11 @@ export function Textarea(props: Readonly<TextareaPropsT>) {
       {...rest}
       {...sx(
         s.textarea,
-        STATES[own.state ?? "default"],
-        s.dynamic(own.maxHeight ?? 160),
-        own.style,
+        STATES[state ?? "default"],
+        s.dynamic(maxHeight ?? 160),
+        style,
       )}
-      onInput={handleInput}
+      onChange={handleChange}
     />
   );
 }

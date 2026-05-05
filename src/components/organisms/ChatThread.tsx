@@ -1,22 +1,27 @@
-import type { JSX } from "solid-js";
-import type { MessageT } from "~/lib/types";
+import type { MessageT } from "@/lib/types";
+import type { ReactNode, Ref } from "react";
 
 import * as stylex from "@stylexjs/stylex";
-import { For } from "solid-js";
 
-import { sx } from "~/lib/styles/sx";
+import { sx } from "@/lib/styles/sx";
 
 interface ChatThreadPropsT {
   messages: readonly MessageT[];
-  ref?: (el: HTMLDivElement) => void;
-  renderMessage: (msg: MessageT) => JSX.Element;
+  scrollRef?: Ref<HTMLDivElement>;
+  renderMessage: (msg: MessageT) => ReactNode;
 }
 
-export function ChatThread(props: Readonly<ChatThreadPropsT>) {
+export function ChatThread({
+  messages,
+  scrollRef,
+  renderMessage,
+}: Readonly<ChatThreadPropsT>) {
   return (
-    <div {...sx(s.thread)} ref={props.ref}>
+    <div {...sx(s.thread)} ref={scrollRef}>
       <div {...sx(s.inner)}>
-        <For each={props.messages}>{(msg) => props.renderMessage(msg)}</For>
+        {messages.map((msg) => (
+          <div key={msg.id}>{renderMessage(msg)}</div>
+        ))}
       </div>
     </div>
   );

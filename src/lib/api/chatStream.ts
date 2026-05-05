@@ -1,4 +1,4 @@
-import type { ChatChunkT, ChatTurnT } from "~/lib/types";
+import type { ChatChunkT, ChatTurnT } from "@/lib/types";
 
 interface StreamOptionsT {
   provider?: "anthropic" | "openai";

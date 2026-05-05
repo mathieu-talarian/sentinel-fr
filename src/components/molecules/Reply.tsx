@@ -1,10 +1,9 @@
 import * as stylex from "@stylexjs/stylex";
-import { Show } from "solid-js";
-import { SolidMarkdown } from "solid-markdown";
+import Markdown from "react-markdown";
 
-import { Cursor } from "~/components/atoms/Cursor";
-import { sx } from "~/lib/styles/sx";
-import { colors, fonts } from "~/lib/styles/tokens.stylex";
+import { Cursor } from "@/components/atoms/Cursor";
+import { sx } from "@/lib/styles/sx";
+import { colors, fonts } from "@/lib/styles/tokens.stylex";
 
 interface ReplyPropsT {
   text: string;
@@ -14,10 +13,8 @@ interface ReplyPropsT {
 export function Reply(props: Readonly<ReplyPropsT>) {
   return (
     <div {...sx(s.reply)}>
-      <SolidMarkdown renderingStrategy="reconcile" children={props.text} />
-      <Show when={props.streaming}>
-        <Cursor />
-      </Show>
+      <Markdown>{props.text}</Markdown>
+      {props.streaming && <Cursor />}
     </div>
   );
 }

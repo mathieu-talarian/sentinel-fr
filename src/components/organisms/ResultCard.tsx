@@ -1,12 +1,11 @@
-import type { IconKeyT } from "~/components/atoms/Icons";
-import type { ToolCallT } from "~/lib/types";
+import type { IconKeyT } from "@/components/atoms/Icons";
+import type { ToolCallT } from "@/lib/types";
 
 import * as stylex from "@stylexjs/stylex";
-import { Show } from "solid-js";
 
-import { Icon } from "~/components/atoms/Icons";
-import { sx } from "~/lib/styles/sx";
-import { borders, colors, fonts, radii } from "~/lib/styles/tokens.stylex";
+import { Icon } from "@/components/atoms/Icons";
+import { sx } from "@/lib/styles/sx";
+import { borders, colors, fonts, radii } from "@/lib/styles/tokens.stylex";
 
 import { ResultRenderer } from "./ResultRenderer";
 
@@ -58,19 +57,19 @@ interface ResultCardPropsT {
 }
 
 export function ResultCard(props: Readonly<ResultCardPropsT>) {
-  const meta = () => metaFor(props.call.tool);
-  const IconCmp = () => Icon[meta().icon];
+  const meta = metaFor(props.call.tool);
+  const IconCmp = Icon[meta.icon];
 
   return (
     <div {...sx(c.card, props.highlight && c.cardHighlight)}>
       <div {...sx(c.head)}>
-        <span {...sx(c.headIcon)}>{IconCmp()({})}</span>
-        <span {...sx(c.headLabel)}>{meta().title}</span>
+        <span {...sx(c.headIcon)}>
+          <IconCmp />
+        </span>
+        <span {...sx(c.headLabel)}>{meta.title}</span>
         <span {...sx(c.headStats)}>
-          {meta().tag}
-          <Show when={props.call.durationMs}>
-            {(ms) => <> · {String(ms())}ms</>}
-          </Show>
+          {meta.tag}
+          {props.call.durationMs != null && <> · {props.call.durationMs}ms</>}
         </span>
       </div>
       <div {...sx(c.body)}>

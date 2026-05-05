@@ -1,15 +1,15 @@
-import type { SessionT } from "~/lib/api/auth";
+import type { SessionT } from "@/lib/api/auth";
 
 import * as stylex from "@stylexjs/stylex";
-import { useMutation, useQueryClient } from "@tanstack/solid-query";
-import { useNavigate } from "@tanstack/solid-router";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 
-import { Button } from "~/components/atoms/Button";
-import { Section } from "~/components/molecules/Section";
-import { signOut } from "~/lib/api/auth";
-import { ME_QUERY_KEY } from "~/lib/api/queries";
-import { sx } from "~/lib/styles/sx";
-import { borders, colors, fonts, radii } from "~/lib/styles/tokens.stylex";
+import { Button } from "@/components/atoms/Button";
+import { Section } from "@/components/molecules/Section";
+import { signOut } from "@/lib/api/auth";
+import { ME_QUERY_KEY } from "@/lib/api/queries";
+import { sx } from "@/lib/styles/sx";
+import { borders, colors, fonts, radii } from "@/lib/styles/tokens.stylex";
 
 interface AccountSectionPropsT {
   email: string;
@@ -20,12 +20,12 @@ export function AccountSection(props: Readonly<AccountSectionPropsT>) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const signOutMutation = useMutation(() => ({
+  const signOutMutation = useMutation({
     mutationFn: signOut,
     onSettled: () => {
       queryClient.setQueryData<SessionT | null>(ME_QUERY_KEY, null);
     },
-  }));
+  });
 
   const handleSignOut = () => {
     void (async () => {

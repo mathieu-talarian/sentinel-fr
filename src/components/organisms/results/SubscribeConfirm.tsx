@@ -1,15 +1,16 @@
-import type { SubscribeWatchContentT } from "~/lib/types";
+import type { SubscribeWatchContentT } from "@/lib/types";
 
 import * as stylex from "@stylexjs/stylex";
-import { For, Show } from "solid-js";
 
-import { Icon } from "~/components/atoms/Icons";
-import { sx } from "~/lib/styles/sx";
-import { borders, colors, fonts, radii } from "~/lib/styles/tokens.stylex";
+import { Icon } from "@/components/atoms/Icons";
+import { sx } from "@/lib/styles/sx";
+import { borders, colors, fonts, radii } from "@/lib/styles/tokens.stylex";
 
 export function SubscribeConfirm(
   props: Readonly<{ result: SubscribeWatchContentT }>,
 ) {
+  const showTech = !!props.result.cadence || !!props.result.subscription_id;
+
   return (
     <div>
       <div {...sx(sb.banner)}>
@@ -25,23 +26,23 @@ export function SubscribeConfirm(
       <div {...sx(sb.sources)}>
         <div {...sx(sb.sourcesLabel)}>Sources monitored</div>
         <ul {...sx(sb.sourcesList)}>
-          <For each={props.result.sources}>{(src) => <li>{src}</li>}</For>
+          {props.result.sources.map((src) => (
+            <li key={src}>{src}</li>
+          ))}
         </ul>
-        <Show when={!!props.result.cadence || !!props.result.subscription_id}>
+        {showTech && (
           <div {...sx(sb.tech)}>
-            <Show when={props.result.cadence}>
-              {(c) => (
-                <>
-                  cadence: {c()}
-                  <br />
-                </>
-              )}
-            </Show>
-            <Show when={props.result.subscription_id}>
-              {(id) => <>subscription: {id()}</>}
-            </Show>
+            {props.result.cadence && (
+              <>
+                cadence: {props.result.cadence}
+                <br />
+              </>
+            )}
+            {props.result.subscription_id && (
+              <>subscription: {props.result.subscription_id}</>
+            )}
           </div>
-        </Show>
+        )}
       </div>
     </div>
   );

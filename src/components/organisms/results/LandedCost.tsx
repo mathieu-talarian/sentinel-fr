@@ -1,11 +1,10 @@
-import type { LandedCostContentT, LandedCostRowT } from "~/lib/types";
+import type { LandedCostContentT, LandedCostRowT } from "@/lib/types";
 
 import * as stylex from "@stylexjs/stylex";
-import { For, Show } from "solid-js";
 
-import { sx } from "~/lib/styles/sx";
-import { borders, colors, fonts, radii } from "~/lib/styles/tokens.stylex";
-import { formatHtsCode } from "~/lib/utils/format";
+import { sx } from "@/lib/styles/sx";
+import { borders, colors, fonts, radii } from "@/lib/styles/tokens.stylex";
+import { formatHtsCode } from "@/lib/utils/format";
 
 const fmt = (n: number) =>
   n.toLocaleString("en-US", {
@@ -53,43 +52,41 @@ const buildRows = (r: LandedCostContentT): LandedCostRowT[] => {
 };
 
 export function LandedCost(props: Readonly<{ result: LandedCostContentT }>) {
-  const rows = () => buildRows(props.result);
-  const total = () =>
-    props.result.total ?? props.result.landed_cost_usd ?? sumRows(rows());
+  const rows = buildRows(props.result);
+  const total =
+    props.result.total ?? props.result.landed_cost_usd ?? sumRows(rows);
 
   return (
     <div>
       <table {...sx(lc.table)}>
         <tbody>
-          <For each={rows()}>
-            {(row) => (
-              <tr>
-                <td {...sx(lc.cell, lc.cellLeft)}>
-                  {row.label}
-                  <Show when={row.sub}>
-                    {(sub) => <span {...sx(lc.sub)}>{sub()}</span>}
-                  </Show>
-                </td>
-                <td {...sx(lc.cell, lc.cellRight)}>${fmt(row.amount)}</td>
-              </tr>
-            )}
-          </For>
+          {rows.map((row, i) => (
+            <tr key={i}>
+              <td {...sx(lc.cell, lc.cellLeft)}>
+                {row.label}
+                {row.sub && <span {...sx(lc.sub)}>{row.sub}</span>}
+              </td>
+              <td {...sx(lc.cell, lc.cellRight)}>${fmt(row.amount)}</td>
+            </tr>
+          ))}
           <tr>
             <td {...sx(lc.cell, lc.totalLeft)}>Landed cost</td>
-            <td {...sx(lc.cell, lc.totalRight)}>${fmt(total())}</td>
+            <td {...sx(lc.cell, lc.totalRight)}>${fmt(total)}</td>
           </tr>
         </tbody>
       </table>
-      <Show when={props.result.caveats?.length}>
+      {props.result.caveats?.length ? (
         <div {...sx(lc.caveats)}>
           <div {...sx(lc.caveatsLabel)}>Caveats</div>
           <ul {...sx(lc.caveatsList)}>
-            <For each={props.result.caveats}>
-              {(item) => <li {...sx(lc.caveatsItem)}>{item}</li>}
-            </For>
+            {props.result.caveats.map((item, i) => (
+              <li key={i} {...sx(lc.caveatsItem)}>
+                {item}
+              </li>
+            ))}
           </ul>
         </div>
-      </Show>
+      ) : null}
     </div>
   );
 }

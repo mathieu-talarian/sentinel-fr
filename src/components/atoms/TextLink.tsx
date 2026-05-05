@@ -1,42 +1,31 @@
 import type { StyleXStyles } from "@stylexjs/stylex";
-import type { JSX } from "solid-js";
+import type { ComponentProps, MouseEvent } from "react";
 
 import * as stylex from "@stylexjs/stylex";
-import { splitProps } from "solid-js";
 
-import { sx } from "~/lib/styles/sx";
-import { colors } from "~/lib/styles/tokens.stylex";
+import { sx } from "@/lib/styles/sx";
+import { colors } from "@/lib/styles/tokens.stylex";
 
 export type TextLinkToneT = "default" | "accent";
 
-interface TextLinkPropsT extends Omit<
-  JSX.AnchorHTMLAttributes<HTMLAnchorElement>,
-  "style"
-> {
+interface TextLinkPropsT extends Omit<ComponentProps<"a">, "style"> {
   style?: StyleXStyles;
   tone?: TextLinkToneT;
 }
 
-const preventDefault = (e: MouseEvent) => {
-  e.preventDefault();
-};
-
 export function TextLink(props: Readonly<TextLinkPropsT>) {
-  const [own, rest] = splitProps(props, ["tone", "style", "href", "onClick"]);
-  const tone = () => (own.tone === "accent" ? s.accent : s.def);
-  const href = () => own.href ?? "#";
+  const { tone, style, href, onClick, ...rest } = props;
 
-  const handleClick: JSX.EventHandler<HTMLAnchorElement, MouseEvent> = (e) => {
-    if (!own.href || own.href === "#") preventDefault(e);
-    const native = own.onClick;
-    if (typeof native === "function") native(e);
+  const handleClick = (e: MouseEvent<HTMLAnchorElement>) => {
+    if (!href || href === "#") e.preventDefault();
+    onClick?.(e);
   };
 
   return (
     <a
       {...rest}
-      href={href()}
-      {...sx(s.link, tone(), own.style)}
+      href={href ?? "#"}
+      {...sx(s.link, tone === "accent" ? s.accent : s.def, style)}
       onClick={handleClick}
     />
   );

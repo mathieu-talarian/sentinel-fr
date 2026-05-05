@@ -1,8 +1,8 @@
 import * as stylex from "@stylexjs/stylex";
 
-import { animations } from "~/lib/styles/animations.stylex";
-import { sx } from "~/lib/styles/sx";
-import { borders, colors } from "~/lib/styles/tokens.stylex";
+import { animations } from "@/lib/styles/animations.stylex";
+import { sx } from "@/lib/styles/sx";
+import { borders, colors } from "@/lib/styles/tokens.stylex";
 
 interface SpinnerPropsT {
   tone: "ink" | "paper";

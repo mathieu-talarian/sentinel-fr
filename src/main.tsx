@@ -1,9 +1,12 @@
 /* @refresh reload */
-import "solid-devtools";
 
-import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
-import { RouterProvider } from "@tanstack/solid-router";
-import { render } from "solid-js/web";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { RouterProvider } from "@tanstack/react-router";
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import { Provider as ReduxProvider } from "react-redux";
+
+import { store } from "@/lib/state/store";
 
 import { getRouter } from "./router";
 import "./styles.css";
@@ -21,11 +24,12 @@ const router = getRouter(queryClient);
 const root = document.querySelector("#root");
 if (!root) throw new Error("Missing #root mount node");
 
-render(
-  () => (
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>
-  ),
-  root,
+createRoot(root).render(
+  <StrictMode>
+    <ReduxProvider store={store}>
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>
+    </ReduxProvider>
+  </StrictMode>,
 );

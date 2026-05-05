@@ -1,8 +1,8 @@
 import * as stylex from "@stylexjs/stylex";
 
-import { Icon } from "~/components/atoms/Icons";
-import { sx } from "~/lib/styles/sx";
-import { borders, colors, radii } from "~/lib/styles/tokens.stylex";
+import { Icon } from "@/components/atoms/Icons";
+import { sx } from "@/lib/styles/sx";
+import { borders, colors, radii } from "@/lib/styles/tokens.stylex";
 
 interface RailNewChatButtonPropsT {
   onClick: () => void;

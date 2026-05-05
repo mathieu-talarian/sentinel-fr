@@ -1,9 +1,8 @@
-import { useQuery } from "@tanstack/solid-query";
-import { Show } from "solid-js";
+import { useQuery } from "@tanstack/react-query";
 
-import { TweaksDialogShell } from "~/components/templates/TweaksDialogShell";
-import { meQueryOptions } from "~/lib/api/queries";
-import { useTweaks } from "~/lib/state/tweaks";
+import { TweaksDialogShell } from "@/components/templates/TweaksDialogShell";
+import { meQueryOptions } from "@/lib/api/queries";
+import { useTweaks } from "@/lib/state/tweaks";
 
 import { AccountSection } from "./AccountSection";
 import { AppearanceSection } from "./AppearanceSection";
@@ -18,7 +17,7 @@ interface TweaksPanelPropsT {
 
 export function TweaksPanel(props: Readonly<TweaksPanelPropsT>) {
   const [tweaks, setTweaks] = useTweaks();
-  const meQuery = useQuery(() => meQueryOptions());
+  const meQuery = useQuery(meQueryOptions());
 
   const close = () => {
     props.onOpenChange(false);
@@ -31,8 +30,8 @@ export function TweaksPanel(props: Readonly<TweaksPanelPropsT>) {
       onOpenChange={props.onOpenChange}
     >
       <AppearanceSection
-        theme={tweaks().theme}
-        density={tweaks().density}
+        theme={tweaks.theme}
+        density={tweaks.density}
         onThemeChange={(theme) => {
           setTweaks({ theme });
         }}
@@ -42,8 +41,8 @@ export function TweaksPanel(props: Readonly<TweaksPanelPropsT>) {
       />
 
       <BehaviourSection
-        showThinkingByDefault={tweaks().showThinkingByDefault}
-        inspectorAutoOpen={tweaks().inspectorAutoOpen}
+        showThinkingByDefault={tweaks.showThinkingByDefault}
+        inspectorAutoOpen={tweaks.inspectorAutoOpen}
         onShowThinkingChange={(showThinkingByDefault) => {
           setTweaks({ showThinkingByDefault });
         }}
@@ -54,11 +53,9 @@ export function TweaksPanel(props: Readonly<TweaksPanelPropsT>) {
 
       <ReplaySection onReplay={props.onReplay} />
 
-      <Show when={meQuery.data}>
-        {(session) => (
-          <AccountSection email={session().email} onSignedOut={close} />
-        )}
-      </Show>
+      {meQuery.data && (
+        <AccountSection email={meQuery.data.email} onSignedOut={close} />
+      )}
     </TweaksDialogShell>
   );
 }

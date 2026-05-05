@@ -1,34 +1,34 @@
-import type { CrossRulingsContentT } from "~/lib/types";
+import type { CrossRulingsContentT } from "@/lib/types";
 
 import * as stylex from "@stylexjs/stylex";
-import { For } from "solid-js";
 
-import { sx } from "~/lib/styles/sx";
-import { borders, colors, fonts } from "~/lib/styles/tokens.stylex";
+import { sx } from "@/lib/styles/sx";
+import { borders, colors, fonts } from "@/lib/styles/tokens.stylex";
 
 export function Rulings(props: Readonly<{ result: CrossRulingsContentT }>) {
   return (
     <div>
-      <For each={props.result.rulings}>
-        {(rg) => (
-          <div {...sx(rl.ruling)}>
-            <div {...sx(rl.row1)}>
-              <span {...sx(rl.num)}>{rg.num}</span>
-              <span {...sx(rl.date)}>{rg.date}</span>
-            </div>
-            <div {...sx(rl.subj)}>{rg.subject}</div>
-            <div {...sx(rl.codes)}>
-              <For each={rg.codes}>
-                {(code) => <span {...sx(rl.code)}>{code}</span>}
-              </For>
-            </div>
+      {props.result.rulings.map((rg) => (
+        <div key={rg.num} {...sx(rl.ruling)}>
+          <div {...sx(rl.row1)}>
+            <span {...sx(rl.num)}>{rg.num}</span>
+            <span {...sx(rl.date)}>{rg.date}</span>
           </div>
-        )}
-      </For>
+          <div {...sx(rl.subj)}>{rg.subject}</div>
+          <div {...sx(rl.codes)}>
+            {rg.codes.map((code) => (
+              <span key={code} {...sx(rl.code)}>
+                {code}
+              </span>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const rl = stylex.create({
   ruling: {
     padding: {

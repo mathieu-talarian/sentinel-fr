@@ -6,9 +6,9 @@ export function CheckIcon() {
       viewBox="0 0 14 14"
       fill="none"
       stroke="currentColor"
-      stroke-width="1.8"
-      stroke-linecap="round"
-      stroke-linejoin="round"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
       aria-hidden="true"
     >
       <path d="m3 7 3 3 5-6" />

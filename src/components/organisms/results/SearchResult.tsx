@@ -1,11 +1,10 @@
-import type { SearchCandidateT, SearchCodesContentT } from "~/lib/types";
+import type { SearchCandidateT, SearchCodesContentT } from "@/lib/types";
 
 import * as stylex from "@stylexjs/stylex";
-import { For } from "solid-js";
 
-import { sx } from "~/lib/styles/sx";
-import { borders, colors, fonts } from "~/lib/styles/tokens.stylex";
-import { formatHtsCode } from "~/lib/utils/format";
+import { sx } from "@/lib/styles/sx";
+import { borders, colors, fonts } from "@/lib/styles/tokens.stylex";
+import { formatHtsCode } from "@/lib/utils/format";
 
 const scoreOf = (c: SearchCandidateT) => c.fused_score ?? c.score ?? 0;
 
@@ -19,35 +18,33 @@ const maxScore = (candidates: readonly SearchCandidateT[]) => {
 };
 
 export function SearchResult(props: Readonly<{ result: SearchCodesContentT }>) {
-  const candidates = () => props.result.candidates;
-  const max = () => maxScore(candidates());
-  const norm = (v: number) => Math.max(0, Math.min(1, v / max()));
+  const candidates = props.result.candidates;
+  const max = maxScore(candidates);
+  const norm = (v: number) => Math.max(0, Math.min(1, v / max));
 
   return (
     <div>
-      <For each={candidates()}>
-        {(cand) => {
-          const score = scoreOf(cand);
-          const isBest = score === max();
-          return (
-            <div {...sx(r.candidate, isBest && r.candidateBest)}>
-              <div {...sx(r.row1)}>
-                <span {...sx(r.code, isBest && r.codeBest)}>
-                  {formatHtsCode(cand.code)}
-                </span>
-                <span {...sx(r.score)}>{score.toFixed(score < 1 ? 3 : 2)}</span>
-              </div>
-              <div {...sx(r.bar)}>
-                <div
-                  {...sx(r.barFill, isBest && r.barFillBest)}
-                  style={{ width: `${String(norm(score) * 100)}%` }}
-                />
-              </div>
-              <div {...sx(r.desc)}>{cand.desc_en ?? cand.desc ?? ""}</div>
+      {candidates.map((cand) => {
+        const score = scoreOf(cand);
+        const isBest = score === max;
+        return (
+          <div key={cand.code} {...sx(r.candidate, isBest && r.candidateBest)}>
+            <div {...sx(r.row1)}>
+              <span {...sx(r.code, isBest && r.codeBest)}>
+                {formatHtsCode(cand.code)}
+              </span>
+              <span {...sx(r.score)}>{score.toFixed(score < 1 ? 3 : 2)}</span>
             </div>
-          );
-        }}
-      </For>
+            <div {...sx(r.bar)}>
+              <div
+                {...sx(r.barFill, isBest && r.barFillBest)}
+                style={{ width: `${String(norm(score) * 100)}%` }}
+              />
+            </div>
+            <div {...sx(r.desc)}>{cand.desc_en ?? cand.desc ?? ""}</div>
+          </div>
+        );
+      })}
     </div>
   );
 }

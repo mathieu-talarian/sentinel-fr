@@ -1,7 +1,7 @@
-import type { TweaksT } from "~/lib/state/tweaks";
+import type { TweaksT } from "@/lib/state/tweaksSlice";
 
-import { Section } from "~/components/molecules/Section";
-import { SegmentedRadio } from "~/components/molecules/SegmentedRadio";
+import { Section } from "@/components/molecules/Section";
+import { SegmentedRadio } from "@/components/molecules/SegmentedRadio";
 
 const THEME_OPTIONS = [
   { value: "light", label: "Light" },
