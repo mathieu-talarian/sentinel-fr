@@ -9,7 +9,7 @@ import { borders, colors, fonts, radii } from "@/lib/styles/tokens.stylex";
 export function SubscribeConfirm(
   props: Readonly<{ result: SubscribeWatchContentT }>,
 ) {
-  const showTech = !!props.result.cadence || !!props.result.subscription_id;
+  const showTech = !!props.result.cadence || !!props.result.subscriptionId;
 
   return (
     <div>
@@ -38,8 +38,8 @@ export function SubscribeConfirm(
                 <br />
               </>
             )}
-            {props.result.subscription_id && (
-              <>subscription: {props.result.subscription_id}</>
+            {props.result.subscriptionId && (
+              <>subscription: {props.result.subscriptionId}</>
             )}
           </div>
         )}

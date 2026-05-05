@@ -21,6 +21,7 @@ import type {
   LandedCostRow,
   SearchBody,
   SearchCandidate,
+  WatchSubscribeResponse,
 } from "@/lib/api/generated/types.gen";
 
 export interface UsageT {
@@ -116,6 +117,8 @@ export type LandedCostRowT = LandedCostRow;
 export type AlertItemT = AlertItem;
 export type AlertsContentT = AlertsResponse;
 
+export type SubscribeWatchContentT = WatchSubscribeResponse;
+
 /* ---------- Tool-result shapes not yet in the OpenAPI spec ---------- */
 
 export interface RulingItemT {
@@ -128,14 +131,4 @@ export interface RulingItemT {
 
 export interface CrossRulingsContentT {
   rulings: RulingItemT[];
-}
-
-export interface SubscribeWatchContentT {
-  ok?: boolean;
-  subscription_id?: string;
-  email: string;
-  codes: string[];
-  sources: string[];
-  cadence?: string;
-  subscriptions?: unknown[];
 }

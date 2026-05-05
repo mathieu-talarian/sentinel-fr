@@ -454,7 +454,14 @@ export type WatchSubscribeBody = {
 };
 
 export type WatchSubscribeResponse = {
-  subscriptions: Array<WatchSubscription>;
+  cadence: string;
+  codes: Array<string>;
+  createdAt?: string | null;
+  email: string;
+  ok: boolean;
+  sources: Array<string>;
+  subscriptionId?: string | null;
+  subscriptions: Array<WatchSubscriptionView>;
 };
 
 export type WatchSubscription = {
@@ -466,6 +473,16 @@ export type WatchSubscription = {
   createdAt: string;
   email: string;
   id: string;
+};
+
+export type WatchSubscriptionView = {
+  active: boolean;
+  cadence: string;
+  codePrefix: string;
+  createdAt: string;
+  email: string;
+  id: string;
+  sources: Array<string>;
 };
 
 export type FrontendAlertsData = {

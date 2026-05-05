@@ -306,16 +306,31 @@ usage?: null | UsageView;
 `UsageView = { cachedInputTokens, inputTokens, outputTokens, totalTokens }`.
 Replaying a saved thread is now wire-typed end-to-end.
 
-### 3.6 `subscribe_watch` SSE result — still pending
+### 3.6 `subscribe_watch` — ✅ canonical, FE migrated
 
-`WatchSubscribeResponse = { subscriptions: WatchSubscription[] }` is the
-REST shape. The FE's `SubscribeConfirm.tsx` renderer for the SSE tool
-call still reads `email`, `codes[]`, `sources[]`, `cadence`,
-`subscriptionId`, plus a top-level `ok` — fields the REST shape doesn't
-carry. Until the SSE tool-result content is documented, this stays as the
-last hand-written tool-result shape (`SubscribeWatchContentT` in
-`src/lib/types.ts`). Either drop those fields from the renderer, or have
-the SSE content carry them in addition to `subscriptions`.
+`WatchSubscribeResponse` is now the confirmation envelope:
+
+```json
+{
+  "ok": true,
+  "subscriptionId": "sub_01H8E…",
+  "email": "marie@exporter.fr",
+  "codes": ["8517.13"],
+  "sources": ["CSMS", "Federal Register"],
+  "cadence": "daily",
+  "createdAt": "2026-04-22T09:00:00Z",
+  "subscriptions": [/* all of the user's WatchSubscriptionView entries */]
+}
+```
+
+`WatchSubscriptionView` carries `{ id, email, codePrefix, sources,
+cadence, active, createdAt }` so the future "Manage subscriptions" pane
+can display each watch in full. The SSE tool-result content for
+`subscribe_watch` carries the same shape — REST = SSE rule preserved.
+
+`SubscribeConfirm.tsx` reads from the alias; `SubscribeWatchContentT` in
+`src/lib/types.ts` is now `WatchSubscribeResponse`. The hand-written
+tool-result type list now contains exactly one entry: `CrossRulingsContentT`.
 
 This is the only place where the SSE tool-result shape and the REST
 shape diverge.

@@ -162,4 +162,5 @@ export type {
   WatchSubscribeResponse2,
   WatchSubscribeResponses,
   WatchSubscription,
+  WatchSubscriptionView,
 } from "./types.gen";
