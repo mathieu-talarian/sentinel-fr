@@ -1,110 +1,52 @@
-import type { AlertItemT } from "@/lib/types";
+import type { SessionView } from "@/lib/api/generated/types.gen";
 
 import { queryOptions } from "@tanstack/react-query";
 
-import { fetchMe } from "@/lib/api/auth";
+import { authMeQueryKey } from "@/lib/api/generated/@tanstack/react-query.gen";
+import { authMe } from "@/lib/api/generated/sdk.gen";
 
-export interface PriorConvoT {
-  id: string;
-  title: string;
-  when: string;
-}
+/**
+ * Hand-tuned wrapper over `authMeOptions`.
+ *
+ * The generated `authMeOptions` throws on every non-2xx (including the 401
+ * that means "not signed in"), which would make route-guard
+ * `ensureQueryData(meQueryOptions())` throw too. We wrap the queryFn so a
+ * 401 resolves to `null` and unwrap the `SessionEnvelope` so consumers see
+ * a flat `SessionView | null`.
+ *
+ * Every other query (`conversationsListOptions`, `frontendAlertsOptions`,
+ * `catalogStatsOptions`) is fine as-is — import them directly from
+ * `@/lib/api/generated/@tanstack/react-query.gen` at use sites instead of
+ * routing through this file. ESLint's `no-barrel-files` rule blocks pure
+ * re-exports anyway.
+ */
 
-/* In a real backend these endpoints would be wired in; for now we resolve
-   client-side mock data so the screens have realistic content. The query
-   shape stays correct so the swap is a one-liner later. */
+export const ME_QUERY_KEY = authMeQueryKey();
 
-const PRIOR_CONVOS: PriorConvoT[] = [
-  {
-    id: "c1",
-    title: "Wine import duty — 2023 vintage Bordeaux",
-    when: "Today",
-  },
-  { id: "c2", title: "Textile origin rules under USMCA", when: "Yesterday" },
-  { id: "c3", title: "EU footwear → 6402 vs 6404 split", when: "Apr 28" },
-  { id: "c4", title: "Section 232 steel surcharge — France", when: "Apr 25" },
-  { id: "c5", title: "Cosmetics with botanical extracts", when: "Apr 22" },
-  { id: "c6", title: "Smartphone accessories bundling", when: "Apr 19" },
-  { id: "c7", title: "De minimis threshold for samples", when: "Apr 14" },
-];
-
-const ALERTS: AlertItemT[] = [
-  {
-    date: "2026-04-22",
-    code: "8517.13",
-    source: "CSMS #59812",
-    status: "sent",
-    subject: "USMCA: clarification on smartphone country-of-origin marking",
-  },
-  {
-    date: "2026-03-08",
-    code: "8517.13",
-    source: "Federal Register 91 FR 14207",
-    status: "sent",
-    subject: "Section 232 Phase II: investigation into ICT imports",
-  },
-  {
-    date: "2026-02-15",
-    code: "8517.13",
-    source: "CSMS #58441",
-    status: "sent",
-    subject: "Updated guidance on lithium-battery declarations",
-  },
-];
-
-export interface CatalogStatsT {
-  hts_codes_indexed: number;
-  cross_rulings_since: number;
-  active_alerts: number;
-}
-
-const CATALOG_STATS: CatalogStatsT = {
-  hts_codes_indexed: 13_847,
-  cross_rulings_since: 2002,
-  active_alerts: 3,
+const problemMessage = (
+  e: { detail?: unknown; title?: unknown },
+  fallback: string,
+): string => {
+  if (typeof e.detail === "string") return e.detail;
+  if (typeof e.title === "string") return e.title;
+  return fallback;
 };
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-export const ME_QUERY_KEY = ["auth", "me"] as const;
 
 export const meQueryOptions = () =>
   queryOptions({
     queryKey: ME_QUERY_KEY,
-    queryFn: fetchMe,
-    // No `initialData`. TanStack's `ensureQueryData` only fetches when the
-    // cached value is `undefined` — providing initialData (even `null`) makes
-    // it short-circuit and return the cached value without ever hitting
-    // `/auth/me`. The HttpOnly cookie is the source of truth, so we always
-    // ask the server on cold load.
+    queryFn: async ({ signal }): Promise<SessionView | null> => {
+      const r = await authMe({ signal, throwOnError: false });
+      const status = r.response?.status ?? 0;
+      if (status === 401) return null;
+      if (r.error) {
+        throw new Error(
+          problemMessage(r.error, `/auth/me: ${status.toString()}`),
+        );
+      }
+      return r.data.session;
+    },
     staleTime: 5 * 60_000,
     gcTime: Infinity,
     retry: false,
-  });
-
-export const priorConvosQuery = () =>
-  queryOptions({
-    queryKey: ["prior-convos"],
-    queryFn: async () => {
-      await sleep(40);
-      return PRIOR_CONVOS;
-    },
-  });
-
-export const alertsQuery = () =>
-  queryOptions({
-    queryKey: ["alerts"],
-    queryFn: async () => {
-      await sleep(40);
-      return ALERTS;
-    },
-  });
-
-export const catalogStatsQuery = () =>
-  queryOptions({
-    queryKey: ["catalog-stats"],
-    queryFn: async () => {
-      await sleep(20);
-      return CATALOG_STATS;
-    },
   });

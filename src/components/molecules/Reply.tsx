@@ -33,7 +33,7 @@ const components = {
   td: (props: { children?: ReactNode }) => (
     <td {...sx(t.td)}>{props.children}</td>
   ),
-};
+} as const;
 
 export function Reply(props: Readonly<ReplyPropsT>) {
   return (

@@ -1,23 +1,27 @@
+import type { SessionView } from "@/lib/api/generated/types.gen";
+
 import { z } from "zod";
 
 /**
- * Auth schemas + fetch helpers for the Sentinel `/auth/*` endpoints.
+ * Validation + helpers for the Sentinel `/auth/*` endpoints.
  *
- * Validation runs at the network boundary (zod parses both incoming session
- * envelopes and outgoing form submissions). Caching + invalidation lives in
- * `@/lib/queries.ts`; the route guards consume that via TanStack Query.
+ * Network calls themselves are generated from the OpenAPI spec under
+ * `@/lib/api/generated/sdk.gen.ts` (`authMe`, `authSignIn`, `authSignOut`,
+ * `authGoogleStart`). This file only keeps:
+ *   - `SignInSchema` — the form-side zod that drives TanStack Form validation
+ *     in `SignInForm.tsx`. The backend re-validates on receipt; this is for UX.
+ *   - `signInWithGoogle()` — top-level navigation (NOT fetch — Google's consent
+ *     screen blocks iframes, and `SameSite=Lax` cookies only land on the same
+ *     browsing context the user clicked from).
+ *   - `oauthErrorMessage()` — friendly copy for `?error=<…>` codes the
+ *     `/auth/google/callback` redirect can land on.
  *
- * The HttpOnly `sentinel_session` cookie is the source of truth — JS never
- * reads it. We re-ask the server via `/auth/me` on every cold load.
+ * The HttpOnly `sentinelSession` cookie is the source of truth — JS never
+ * reads it. We re-ask the server via `/auth/me` on every cold load (route
+ * guards in `__root.tsx` and `login.tsx` use the generated `authMeOptions`).
  */
 
-export const SessionSchema = z.object({
-  email: z.email(),
-  expires_at: z.iso.datetime({ offset: true }),
-});
-export type SessionT = z.infer<typeof SessionSchema>;
-
-const SessionEnvelopeSchema = z.object({ session: SessionSchema });
+export type SessionT = SessionView;
 
 export const SignInSchema = z.object({
   email: z.email("Enter a valid email address."),
@@ -26,49 +30,15 @@ export const SignInSchema = z.object({
 });
 export type SignInArgsT = z.infer<typeof SignInSchema>;
 
-const buildHeaders = () => ({
-  "content-type": "application/json",
-  "x-request-id": crypto.randomUUID(),
-});
-
-async function throwAsProblem(r: Response): Promise<never> {
-  const problem = (await r.json().catch(() => ({}))) as {
-    title?: string;
-    detail?: string;
-  };
-  throw new Error(
-    problem.detail ??
-      problem.title ??
-      `Request failed (${r.status.toString()}).`,
-  );
-}
-
-export async function signIn(args: SignInArgsT): Promise<SessionT> {
-  const r = await fetch("/auth/sign-in", {
-    method: "POST",
-    credentials: "include",
-    headers: buildHeaders(),
-    body: JSON.stringify({
-      email: args.email,
-      password: args.password,
-      remember_me: args.rememberMe,
-    }),
-  });
-  if (!r.ok) await throwAsProblem(r);
-  return SessionEnvelopeSchema.parse(await r.json()).session;
-}
-
 /**
  * Server-side OAuth flow.
  *
- * Top-level navigation (NOT fetch) — Google's consent screen blocks iframes,
- * and `SameSite=Lax` cookies only land on the same browsing context the user
- * clicked from. The backend sanitises `return_to` to a same-origin path, so
- * passing `location.pathname + location.search` is safe even if a query
- * string slipped in. Defaults to `/` for the cold-start case (login page).
+ * The backend sanitises `return_to` to a same-origin path, so passing
+ * `location.pathname + location.search` is safe even if a query string
+ * slipped in. Defaults to `/` for the cold-start case (login page).
  *
- * Codes for `?error=<…>` on the callback's redirect to `/login` are documented
- * in `FRONTEND_GOOGLE_AUTH.md` §7 and surfaced by `OAUTH_ERROR_COPY`.
+ * Codes for `?error=<…>` on the callback's redirect to `/login` are
+ * documented in `FRONTEND_GOOGLE_AUTH.md` §7 and surfaced by `OAUTH_ERROR_COPY`.
  */
 export function signInWithGoogle(returnTo?: string): void {
   const fromLocation =
@@ -95,20 +65,3 @@ export const oauthErrorMessage = (code: string | undefined): string | null => {
   if (!code) return null;
   return OAUTH_ERROR_COPY[code] ?? "Sign-in failed. Please try again.";
 };
-
-export async function signOut(): Promise<void> {
-  await fetch("/auth/sign-out", {
-    method: "POST",
-    credentials: "include",
-    headers: { "x-request-id": crypto.randomUUID() },
-  }).catch(() => {
-    // Best-effort — even if the network call fails we still clear local state.
-  });
-}
-
-export async function fetchMe(): Promise<SessionT | null> {
-  const r = await fetch("/auth/me", { credentials: "include" });
-  if (r.status === 401) return null;
-  if (!r.ok) throw new Error(`/auth/me: ${r.status.toString()}`);
-  return SessionEnvelopeSchema.parse(await r.json()).session;
-}

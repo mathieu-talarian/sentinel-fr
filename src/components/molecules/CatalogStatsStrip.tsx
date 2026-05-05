@@ -2,12 +2,12 @@ import * as stylex from "@stylexjs/stylex";
 import { useQuery } from "@tanstack/react-query";
 
 import { Icon } from "@/components/atoms/Icons";
-import { catalogStatsQuery } from "@/lib/api/queries";
+import { catalogStatsOptions } from "@/lib/api/generated/@tanstack/react-query.gen";
 import { sx } from "@/lib/styles/sx";
 import { colors, fonts } from "@/lib/styles/tokens.stylex";
 
 export function CatalogStatsStrip() {
-  const stats = useQuery(catalogStatsQuery());
+  const stats = useQuery(catalogStatsOptions());
 
   if (!stats.data) return null;
   const d = stats.data;
@@ -15,14 +15,14 @@ export function CatalogStatsStrip() {
   return (
     <div {...sx(s.meta)}>
       <span {...sx(s.item)}>
-        <Icon.Customs /> {d.hts_codes_indexed.toLocaleString("en-US")} HTS codes
+        <Icon.Customs /> {d.htsCodesIndexed.toLocaleString("en-US")} HTS codes
         indexed
       </span>
       <span {...sx(s.item)}>
-        <Icon.Scroll /> CBP CROSS rulings since {d.cross_rulings_since}
+        <Icon.Scroll /> CBP CROSS rulings since {d.crossRulingsSince}
       </span>
       <span {...sx(s.item)}>
-        <Icon.Bell /> {d.active_alerts} active alerts
+        <Icon.Bell /> {d.activeAlerts} active alerts
       </span>
     </div>
   );

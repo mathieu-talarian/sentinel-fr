@@ -13,7 +13,8 @@ import { CheckboxRow } from "@/components/molecules/CheckboxRow";
 import { EmailField } from "@/components/molecules/EmailField";
 import { ErrorBanner } from "@/components/molecules/ErrorBanner";
 import { PasswordField } from "@/components/molecules/PasswordField";
-import { SignInSchema, signIn } from "@/lib/api/auth";
+import { SignInSchema } from "@/lib/api/auth";
+import { authSignInMutation } from "@/lib/api/generated/@tanstack/react-query.gen";
 import { ME_QUERY_KEY } from "@/lib/api/queries";
 import { sx } from "@/lib/styles/sx";
 
@@ -39,9 +40,9 @@ export function SignInForm(props: Readonly<SignInFormPropsT>) {
   const [success, setSuccess] = useState(false);
 
   const signInMutation = useMutation({
-    mutationFn: signIn,
-    onSuccess: (session: SessionT) => {
-      queryClient.setQueryData<SessionT | null>(ME_QUERY_KEY, session);
+    ...authSignInMutation(),
+    onSuccess: (envelope) => {
+      queryClient.setQueryData<SessionT | null>(ME_QUERY_KEY, envelope.session);
       setSuccess(true);
       // Brief dwell on the success state before navigating, matching the
       // design's "Welcome back → redirect" transition. Only honour `next`
@@ -60,9 +61,11 @@ export function SignInForm(props: Readonly<SignInFormPropsT>) {
     defaultValues: { email: "", password: "", rememberMe: false },
     onSubmit: async ({ value }) => {
       await signInMutation.mutateAsync({
-        email: value.email,
-        password: value.password,
-        rememberMe: value.rememberMe,
+        body: {
+          email: value.email,
+          password: value.password,
+          rememberMe: value.rememberMe,
+        },
       });
     },
   });

@@ -6,7 +6,7 @@ import { useNavigate } from "@tanstack/react-router";
 
 import { Button } from "@/components/atoms/Button";
 import { Section } from "@/components/molecules/Section";
-import { signOut } from "@/lib/api/auth";
+import { authSignOutMutation } from "@/lib/api/generated/@tanstack/react-query.gen";
 import { ME_QUERY_KEY } from "@/lib/api/queries";
 import { sx } from "@/lib/styles/sx";
 import { borders, colors, fonts, radii } from "@/lib/styles/tokens.stylex";
@@ -21,7 +21,7 @@ export function AccountSection(props: Readonly<AccountSectionPropsT>) {
   const queryClient = useQueryClient();
 
   const signOutMutation = useMutation({
-    mutationFn: signOut,
+    ...authSignOutMutation(),
     onSettled: () => {
       queryClient.setQueryData<SessionT | null>(ME_QUERY_KEY, null);
     },
@@ -29,7 +29,7 @@ export function AccountSection(props: Readonly<AccountSectionPropsT>) {
 
   const handleSignOut = () => {
     void (async () => {
-      await signOutMutation.mutateAsync();
+      await signOutMutation.mutateAsync({});
       props.onSignedOut();
       void navigate({ to: "/login" });
     })();

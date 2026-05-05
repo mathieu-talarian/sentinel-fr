@@ -6,10 +6,13 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { Provider as ReduxProvider } from "react-redux";
 
+import { configureApiClient } from "@/lib/api/client";
 import { store } from "@/lib/state/store";
 
 import { getRouter } from "./router";
 import "./styles.css";
+
+configureApiClient();
 
 const queryClient = new QueryClient({
   defaultOptions: {
