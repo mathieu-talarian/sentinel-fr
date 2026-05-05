@@ -149,11 +149,11 @@ Query params: `limit?`, `cursor?`. ✅ Matches FE expectations.
 ### 2.3 `GET /conversations/{id}` + `PATCH /conversations/{id}` + `DELETE /conversations/{id}`
 
 `GET` returns `{ id, title, messages, createdAt }`. `PATCH` takes
-`{ title }`. `DELETE` is empty-body. ✅ All present.
-
-> **Drift**: `ConversationMessage.toolCalls` and `.usage` are typed as
-> `unknown` (`{ [key: string]: unknown }`). The FE can't replay a saved
-> thread without knowing the per-tool result shapes — see § 3.5.
+`{ title }`. `DELETE` is empty-body. ✅ All present, and
+`ConversationMessage.toolCalls` / `.usage` are now typed
+(`Array<ToolCallView>` / `UsageView`) — the FE can rehydrate saved
+threads end-to-end. The rail-item-click "open saved thread" feature is
+unblocked.
 
 ### 2.4 `GET /alerts` (`frontendAlerts`)
 
@@ -217,13 +217,13 @@ today but the SDK is generated for future use:
 
 | Endpoint | SDK function | Notes |
 |---|---|---|
-| `GET /code/{code}` | `getCode` | HS code detail — see § 3.2 drift |
-| `POST /search` | `search` | Catalog search — see § 3.1 drift |
+| `GET /code/{code}` | `getCode` | ✅ canonical `CommodityBody` (§ 3.2) |
+| `POST /search` | `search` | ✅ canonical `SearchCandidate` (§ 3.1). Now POST + body — `searchOptions` became `searchMutation` |
 | `POST /landed-cost` | `landedCost` | ✅ canonical shape (§ 3.3) |
 | `GET /watch/alerts` | `watchAlerts` | List recent alerts |
 | `POST /watch/check` | `watchCheck` | One-shot alert check |
 | `POST /watch/subscribe` | `watchSubscribe` | Create an alert subscription |
-| `POST /classify` | `classify` | One-shot HS classification — see § 3.4 drift |
+| `POST /classify` | `classify` | ✅ camelCase request body (§ 3.4) |
 
 ### 2.8 Infra endpoints
 
@@ -231,37 +231,13 @@ today but the SDK is generated for future use:
 
 ---
 
-## 3 · Drift — backend shapes that don't fully match the spec doc
+## 3 · Drift — closed in the latest spec
 
-Each item here has shipped, but with a shape that prevents the FE from
-collapsing its legacy-tolerant code. Fixing these is a small backend
-change + a generated-SDK regeneration on the FE side.
+Most of this section was a list of shapes that ship'd in snake_case or
+typed `unknown`. The backend has since **closed all the major drift items**;
+this section now records the current state for future regression-tracking.
 
-### 3.1 `POST /search` returns `Hit` with snake_case + missing locale
-
-Current `Hit` shape:
-
-```jsonc
-{
-  "code": "4202.21.00.00",
-  "desc": "Handbags, leather, valued ≤ $20",
-  "fused_score": 0.873,
-  "bm25_rank": 2,
-  "bm25_score": 0.65,
-  "vec_distance": 0.12,
-  "vec_rank": 1,
-  "id": "doc_…"
-}
-```
-
-Issues vs § 0:
-- `fused_score`, `bm25_rank`, `bm25_score`, `vec_distance`, `vec_rank` are
-  snake_case — should be `fusedScore`, `bm25Rank`, etc.
-- `desc` is a single string — FE wants `description: { en, fr }` so the
-  `tweaks.lang` toggle picks the right localized label without a second
-  fetch.
-
-**Canonical**:
+### 3.1 `POST /search` — ✅ canonical `SearchCandidate`, FE migrated
 
 ```json
 {
@@ -276,21 +252,15 @@ Issues vs § 0:
 }
 ```
 
-`scoreComponents` is optional (drives a power-user tooltip).
+`Hit` is gone. `SearchCandidate` carries `description: LocalizedDescription`
+(`{en?, fr?}`) and a single `score` (the fused one), with optional
+`scoreComponents` for a future power-user tooltip. `SearchResult.tsx` now
+consumes the canonical shape and honours `tweaks.lang` for label selection.
 
-### 3.2 `GET /code/{code}` — `CommodityEntry` snake_case
+Note: `/search` is now POST-with-body (`SearchRequest = { q, lang?, k? }`).
+The generated tanstack helper is `searchMutation` (no `searchOptions`).
 
-Current:
-
-```json
-{
-  "parents": [
-    { "code": "4202", "desc_en": "…", "desc_fr": "…", "hier_pos": 0, "is_declarable": false }
-  ]
-}
-```
-
-Wanted:
+### 3.2 `GET /code/{code}` — ✅ canonical `CommodityBody`, FE migrated
 
 ```json
 {
@@ -307,58 +277,45 @@ Wanted:
 }
 ```
 
-- `desc_en`/`desc_fr` → `description.{en,fr}`
-- `hier_pos` → drop (the array order is the position)
-- `is_declarable` → `isDeclarable`
-- Add `rate` object so the renderer doesn't have to scrape free text
+Old `CommodityEntry` (with `desc_en` / `desc_fr` / `hier_pos` /
+`is_declarable`) is gone — replaced by `CommodityHierarchyEntry` and a
+top-level `CommodityRate`. `CodeDetails.tsx` now reads `description`,
+`rate.value`, `unit`, `hierarchy` directly (no fallback chain) and honours
+`tweaks.lang`.
 
 ### 3.3 `POST /landed-cost` — ✅ canonical, FE migrated
 
-`LandedCostResponse = { code, currency, rows, total, transport, caveats }`
-matches the canonical shape exactly. The FE now imports
-`LandedCostResponse` directly from the generated types (see
-`src/lib/types.ts` + `LandedCost.tsx` — the legacy `*_usd` fallback was
-removed). **Use this as the template for § 3.1 and § 3.2.**
+`LandedCostResponse = { code, currency, rows, total, transport, caveats }`.
+`LandedCost.tsx` reads from the generated alias; ~25 lines of `*_usd`
+fallback reconstruction were dropped.
 
-### 3.4 `POST /classify` — `ClassifyBody` snake_case
+### 3.4 `POST /classify` — ✅ camelCase request body
 
-```json
-{
-  "description": "Leather handbag",
-  "declared_value_usd": 20000,
-  "freight_usd": 1450,
-  "destination": "US"
-}
-```
+`ClassifyBody = { description, declaredValueUsd?, freightUsd?, refDate?,
+destination?, transport?, lang? }`. No FE consumer today (the agent calls
+the tool internally), but the spec is now in line with § 0.
 
-`declared_value_usd` / `freight_usd` should be `declaredValueUsd` /
-`freightUsd`.
-
-### 3.5 `ConversationMessage.toolCalls` and `.usage` are opaque
-
-Currently:
+### 3.5 `ConversationMessage.toolCalls` and `.usage` — ✅ typed
 
 ```ts
-toolCalls?: { [key: string]: unknown } | null;
-usage?: { [key: string]: unknown } | null;
+toolCalls?: Array<ToolCallView> | null;
+usage?: null | UsageView;
 ```
 
-The FE can't rehydrate a saved thread without the typed shape. Mirror the
-SSE shapes (after § 4.5 lands) so a `GET /conversations/{id}` consumer
-gets the same structure as the live stream.
+`ToolCallView = { id, tool, args, code?, durationMs?, message?, result?, status }`,
+`UsageView = { cachedInputTokens, inputTokens, outputTokens, totalTokens }`.
+Replaying a saved thread is now wire-typed end-to-end.
 
-### 3.6 `WatchSubscribeResponse` and `subscribe_watch` SSE content
+### 3.6 `subscribe_watch` SSE result — still pending
 
-`WatchSubscribeResponse = { subscriptions: WatchSubscription[] }` —
-clean. But the FE renderer for the `subscribe_watch` SSE tool call
-(`SubscribeConfirm.tsx`) reads `email`, `codes[]`, `sources[]`,
-`cadence`, `subscriptionId`, plus a top-level `ok`. Either:
-
-- Drop the FE renderer's expectation that the result includes `email` /
-  `codes` / `sources` / `cadence` / `ok` (use a different shape on the
-  card), or
-- Have the SSE tool-result content for `subscribe_watch` carry those
-  fields *in addition to* (or instead of) `subscriptions`.
+`WatchSubscribeResponse = { subscriptions: WatchSubscription[] }` is the
+REST shape. The FE's `SubscribeConfirm.tsx` renderer for the SSE tool
+call still reads `email`, `codes[]`, `sources[]`, `cadence`,
+`subscriptionId`, plus a top-level `ok` — fields the REST shape doesn't
+carry. Until the SSE tool-result content is documented, this stays as the
+last hand-written tool-result shape (`SubscribeWatchContentT` in
+`src/lib/types.ts`). Either drop those fields from the renderer, or have
+the SSE content carry them in addition to `subscriptions`.
 
 This is the only place where the SSE tool-result shape and the REST
 shape diverge.
@@ -530,18 +487,22 @@ Server-Timing: db;dur=12, llmFirstToken;dur=420, total;dur=512
 
 ## 7 · Quick-win order
 
-If you only have an afternoon:
+§ 3 drift is closed. The remaining list is all SSE / wire ergonomics:
 
-1. **Fix the camelCase drift in § 3** (`Hit`, `CommodityEntry`,
-   `ClassifyBody`). Pure rename + regenerate; ~30 min of FE migration.
-2. **Add `toolError` chunk** (§ 4.1). Fixes the worst observable UI bug
+1. **Add `toolError` chunk** (§ 4.1). Fixes the worst observable UI bug
    (forever-spinning pill on tool failure).
-3. **Add `turnStart` chunk** (§ 4.4) so `conversationId` becomes useful
-   end-to-end and the rail can finally open saved threads.
-4. **Type `ConversationMessage.toolCalls` / `.usage`** (§ 3.5) — once
-   chunks are typed, the message echoes them.
-5. **Heartbeat on `/chat/stream`** (§ 4.6). One-liner, kills orphaned
-   streams.
+2. **Add `turnStart` chunk** (§ 4.4) so `conversationId` becomes useful
+   end-to-end and the rail can finally open saved threads. § 5.2 is
+   half-wired today and waiting on this.
+3. **Document SSE chunk shapes** (§ 4.5) — the spec doesn't model them.
+   A separate JSON Schema or an `application/x-ndjson` discriminated
+   union in the OpenAPI extras would let `@hey-api/openapi-ts` generate
+   the chunk types instead of the hand-written `ChatChunkT` in
+   `src/lib/types.ts`.
+4. **Heartbeat on `/chat/stream`** (§ 4.6). One-liner, kills orphaned
+   streams behind nginx / Cloudflare.
+5. **Specify `subscribe_watch` SSE content** (§ 3.6) so the last
+   hand-written tool-result type can also become a generated alias.
 
 ---
 

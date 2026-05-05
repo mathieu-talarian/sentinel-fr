@@ -1,23 +1,28 @@
-import type { SearchCandidateT, SearchCodesContentT } from "@/lib/types";
+import type { LocalizedDescription } from "@/lib/api/generated/types.gen";
+import type { SearchCodesContentT } from "@/lib/types";
 
 import * as stylex from "@stylexjs/stylex";
 
+import { useTweaks } from "@/lib/state/tweaks";
 import { sx } from "@/lib/styles/sx";
 import { borders, colors, fonts } from "@/lib/styles/tokens.stylex";
 import { formatHtsCode } from "@/lib/utils/format";
 
-const scoreOf = (c: SearchCandidateT) => c.fused_score ?? c.score ?? 0;
+const localized = (
+  d: LocalizedDescription,
+  lang: "en" | "fr",
+): string => d[lang] ?? d.en ?? d.fr ?? "";
 
-const maxScore = (candidates: readonly SearchCandidateT[]) => {
+const maxScore = (candidates: readonly { score: number }[]): number => {
   let max = 0;
   for (const c of candidates) {
-    const v = scoreOf(c);
-    if (v > max) max = v;
+    if (c.score > max) max = c.score;
   }
   return max || 1;
 };
 
 export function SearchResult(props: Readonly<{ result: SearchCodesContentT }>) {
+  const [tweaks] = useTweaks();
   const candidates = props.result.candidates;
   const max = maxScore(candidates);
   const norm = (v: number) => Math.max(0, Math.min(1, v / max));
@@ -25,23 +30,24 @@ export function SearchResult(props: Readonly<{ result: SearchCodesContentT }>) {
   return (
     <div>
       {candidates.map((cand) => {
-        const score = scoreOf(cand);
-        const isBest = score === max;
+        const isBest = cand.score === max;
         return (
           <div key={cand.code} {...sx(r.candidate, isBest && r.candidateBest)}>
             <div {...sx(r.row1)}>
               <span {...sx(r.code, isBest && r.codeBest)}>
                 {formatHtsCode(cand.code)}
               </span>
-              <span {...sx(r.score)}>{score.toFixed(score < 1 ? 3 : 2)}</span>
+              <span {...sx(r.score)}>
+                {cand.score.toFixed(cand.score < 1 ? 3 : 2)}
+              </span>
             </div>
             <div {...sx(r.bar)}>
               <div
                 {...sx(r.barFill, isBest && r.barFillBest)}
-                style={{ width: `${String(norm(score) * 100)}%` }}
+                style={{ width: `${String(norm(cand.score) * 100)}%` }}
               />
             </div>
-            <div {...sx(r.desc)}>{cand.desc_en ?? cand.desc ?? ""}</div>
+            <div {...sx(r.desc)}>{localized(cand.description, tweaks.lang)}</div>
           </div>
         );
       })}

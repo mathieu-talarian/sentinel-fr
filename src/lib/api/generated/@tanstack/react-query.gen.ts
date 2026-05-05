@@ -633,30 +633,28 @@ export const landedCostMutation = (
   return mutationOptions;
 };
 
-export const searchQueryKey = (options: Options<SearchData>) =>
-  createQueryKey("search", options);
-
 /**
  * Hybrid lexical + vector search over the HTS catalog.
  */
-export const searchOptions = (options: Options<SearchData>) =>
-  queryOptions<
+export const searchMutation = (
+  options?: Partial<Options<SearchData>>,
+): UseMutationOptions<SearchResponse, SearchError, Options<SearchData>> => {
+  const mutationOptions: UseMutationOptions<
     SearchResponse,
     SearchError,
-    SearchResponse,
-    ReturnType<typeof searchQueryKey>
-  >({
-    queryFn: async ({ queryKey, signal }) => {
+    Options<SearchData>
+  > = {
+    mutationFn: async (fnOptions) => {
       const { data } = await search({
         ...options,
-        ...queryKey[0],
-        signal,
+        ...fnOptions,
         throwOnError: true,
       });
       return data;
     },
-    queryKey: searchQueryKey(options),
-  });
+  };
+  return mutationOptions;
+};
 
 export const watchAlertsQueryKey = (options?: Options<WatchAlertsData>) =>
   createQueryKey("watchAlerts", options);

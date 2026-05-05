@@ -327,9 +327,13 @@ export const landedCost = <ThrowOnError extends boolean = false>(
 export const search = <ThrowOnError extends boolean = false>(
   options: Options<SearchData, ThrowOnError>,
 ) =>
-  (options.client ?? client).get<SearchResponses, SearchErrors, ThrowOnError>({
+  (options.client ?? client).post<SearchResponses, SearchErrors, ThrowOnError>({
     url: "/search",
     ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
   });
 
 export const watchAlerts = <ThrowOnError extends boolean = false>(

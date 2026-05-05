@@ -71,7 +71,7 @@ export type ClassifyBody = {
    * Customs value in USD. When set, the agent calls get_landed_cost to
    * compute the duty + MPF + HMF + total.
    */
-  declared_value_usd?: number | null;
+  declaredValueUsd?: number | null;
   description: string;
   /**
    * ISO 3166-1 alpha-2 destination country (Sentinel V1 default: "US").
@@ -80,7 +80,7 @@ export type ClassifyBody = {
   /**
    * International freight in USD. Passed through to landed cost.
    */
-  freight_usd?: number | null;
+  freightUsd?: number | null;
   /**
    * Free-text language hint passed to the agent's first user turn.
    */
@@ -96,7 +96,7 @@ export type ClassifyBody = {
   /**
    * `YYYY-MM-DD`; defaults to today.
    */
-  ref_date?: string | null;
+  refDate?: string | null;
   /**
    * Transport mode: "ocean" | "air" | "truck" | "rail". Defaults to "ocean".
    */
@@ -137,17 +137,26 @@ export type ClassifyResult = {
 };
 
 export type CommodityBody = {
-  [key: string]: unknown;
-} & {
-  parents: Array<CommodityEntry>;
+  code: string;
+  description: LocalizedDescription;
+  found: boolean;
+  hierarchy: Array<CommodityHierarchyEntry>;
+  isDeclarable: boolean;
+  rate: CommodityRate;
+  section301?: string | null;
+  unit?: string | null;
 };
 
-export type CommodityEntry = {
+export type CommodityHierarchyEntry = {
   code: string;
-  desc_en?: string | null;
-  desc_fr?: string | null;
-  hier_pos: number;
-  is_declarable: boolean;
+  description: LocalizedDescription;
+  isDeclarable: boolean;
+};
+
+export type CommodityRate = {
+  kind: string;
+  sourceCode?: string | null;
+  value?: string | null;
 };
 
 export type ConversationListResponse = {
@@ -159,12 +168,8 @@ export type ConversationMessage = {
   content: string;
   id: string;
   role: string;
-  toolCalls?: {
-    [key: string]: unknown;
-  } | null;
-  usage?: {
-    [key: string]: unknown;
-  } | null;
+  toolCalls?: Array<ToolCallView> | null;
+  usage?: null | UsageView;
 };
 
 export type ConversationRenameBody = {
@@ -231,17 +236,6 @@ export type HealthBody = {
   status: string;
 };
 
-export type Hit = {
-  bm25_rank?: number | null;
-  bm25_score?: number | null;
-  code: string;
-  desc?: string | null;
-  fused_score: number;
-  id: string;
-  vec_distance?: number | null;
-  vec_rank?: number | null;
-};
-
 export type LandedCost = {
   caveats: Array<string>;
   code: string;
@@ -291,6 +285,11 @@ export type LandedCostRow = {
   sub?: string | null;
 };
 
+export type LocalizedDescription = {
+  en?: string | null;
+  fr?: string | null;
+};
+
 export type Problem = {
   [key: string]: unknown;
 } & {
@@ -319,9 +318,25 @@ export type Problem = {
 };
 
 export type SearchBody = {
-  candidates: Array<Hit>;
-  lang: string;
-  query: string;
+  candidates: Array<SearchCandidate>;
+};
+
+export type SearchCandidate = {
+  code: string;
+  description: LocalizedDescription;
+  score: number;
+  scoreComponents?: {
+    [key: string]: unknown;
+  } | null;
+};
+
+export type SearchRequest = {
+  k?: number | null;
+  lang?: string | null;
+  /**
+   * Free-text product description.
+   */
+  q: string;
 };
 
 export type SessionEnvelope = {
@@ -368,10 +383,32 @@ export type TariffEvent = {
   url?: string | null;
 };
 
+export type ToolCallView = {
+  args: {
+    [key: string]: unknown;
+  };
+  code?: string | null;
+  durationMs?: number | null;
+  id: string;
+  message?: string | null;
+  result?: {
+    [key: string]: unknown;
+  } | null;
+  status: string;
+  tool: string;
+};
+
 /**
  * Transport mode for HMF determination.
  */
 export type TransportMode = "ocean" | "air" | "truck" | "rail" | "other";
+
+export type UsageView = {
+  cachedInputTokens: number;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+};
 
 export type WatchAlert = {
   codePrefix: string;
@@ -913,13 +950,9 @@ export type LandedCostResponse2 =
   LandedCostResponses[keyof LandedCostResponses];
 
 export type SearchData = {
-  body?: never;
+  body: SearchRequest;
   path?: never;
-  query: {
-    q: string;
-    lang?: string | null;
-    k?: number | null;
-  };
+  query?: never;
   url: "/search";
 };
 

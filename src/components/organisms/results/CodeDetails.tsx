@@ -1,73 +1,52 @@
-import type { CodeDetailsContentT, HierarchyNodeT } from "@/lib/types";
+import type { LocalizedDescription } from "@/lib/api/generated/types.gen";
+import type { CodeDetailsContentT } from "@/lib/types";
 
 import * as stylex from "@stylexjs/stylex";
 
+import { useTweaks } from "@/lib/state/tweaks";
 import { sx } from "@/lib/styles/sx";
 import { colors, fonts } from "@/lib/styles/tokens.stylex";
 import { formatHtsCode } from "@/lib/utils/format";
 
-interface CrumbT {
-  code?: string;
-  label: string;
-}
-
-const hierarchyToCrumbs = (nodes: readonly HierarchyNodeT[]): CrumbT[] => {
-  // Backend hierarchy is leaf-to-root; walk it in reverse for a top-down
-  // breadcrumb without mutating the source array.
-  const out: CrumbT[] = [];
-  for (let i = nodes.length - 1; i >= 0; i--) {
-    const h = nodes[i];
-    out.push({
-      code: h.code,
-      label: h.desc_en ?? h.desc_fr ?? formatHtsCode(h.code),
-    });
-  }
-  return out;
-};
-
-const buildCrumbs = (result: CodeDetailsContentT): CrumbT[] => {
-  if (result.hierarchy?.length) return hierarchyToCrumbs(result.hierarchy);
-  if (result.chain?.length) return result.chain.map((s) => ({ label: s }));
-  return [];
-};
-
-const rateText = (result: CodeDetailsContentT) =>
-  result.general_rate ?? result.rate_text ?? result.mfn_rate ?? "—";
-
-const description = (result: CodeDetailsContentT) =>
-  result.desc_en ?? result.desc_fr ?? result.desc ?? "";
+const localized = (
+  d: LocalizedDescription | null | undefined,
+  lang: "en" | "fr",
+): string => d?.[lang] ?? d?.en ?? d?.fr ?? "";
 
 export function CodeDetails(props: Readonly<{ result: CodeDetailsContentT }>) {
-  const crumbs = buildCrumbs(props.result);
-  const units = props.result.units ?? props.result.unit;
+  const [tweaks] = useTweaks();
+  const { code, description, hierarchy, rate, unit, section301 } = props.result;
+
+  // Backend hierarchy is leaf-to-root; walk it in reverse for a top-down
+  // breadcrumb. `toReversed()` returns a new array (immutable).
+  const crumbs = hierarchy.toReversed();
+  const lastIdx = crumbs.length - 1;
 
   return (
     <div>
       <div {...sx(d.crumb)}>
         {crumbs.map((seg, i) => (
-          <span key={i} style={{ display: "contents" }}>
+          <span key={seg.code} style={{ display: "contents" }}>
             <span
-              {...sx(d.crumbItem, i === crumbs.length - 1 && d.crumbItemLast)}
-              title={seg.code ? formatHtsCode(seg.code) : undefined}
+              {...sx(d.crumbItem, i === lastIdx && d.crumbItemLast)}
+              title={localized(seg.description, tweaks.lang)}
             >
-              {seg.code ? formatHtsCode(seg.code) : seg.label}
+              {formatHtsCode(seg.code)}
             </span>
-            {i < crumbs.length - 1 && <span {...sx(d.crumbSep)}>›</span>}
+            {i < lastIdx && <span {...sx(d.crumbSep)}>›</span>}
           </span>
         ))}
       </div>
-      {props.result.code && (
-        <div {...sx(d.codeLine)}>{formatHtsCode(props.result.code)}</div>
-      )}
-      <div {...sx(d.desc)}>{description(props.result)}</div>
+      <div {...sx(d.codeLine)}>{formatHtsCode(code)}</div>
+      <div {...sx(d.desc)}>{localized(description, tweaks.lang)}</div>
       <div {...sx(d.rateRow)}>
         <span {...sx(d.rateLabel)}>MFN duty</span>
-        <span {...sx(d.rateVal)}>{rateText(props.result)}</span>
+        <span {...sx(d.rateVal)}>{rate.value ?? "—"}</span>
       </div>
-      {units && (
+      {unit && (
         <div {...sx(d.unit)}>
-          unit: {units}
-          {props.result.section301 ? ` · ${props.result.section301}` : ""}
+          unit: {unit}
+          {section301 ? ` · ${section301}` : ""}
         </div>
       )}
     </div>

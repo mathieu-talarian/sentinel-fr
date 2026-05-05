@@ -2,16 +2,25 @@
  * Wire types for the Sentinel chat SSE protocol.
  * Source of truth: /Users/mathieumoullec/work/sentinel/docs/CHAT_SSE_PROTOCOL.md
  *
- * Tool-result shapes that the OpenAPI spec covers (landed cost, alerts,
- * conversations, …) are imported from `@/lib/api/generated/types.gen`. The
+ * Tool-result shapes that the OpenAPI spec covers (search, code details,
+ * landed cost, alerts, conversations, …) are imported from
+ * `@/lib/api/generated/types.gen` — those are the canonical contracts. The
  * hand-written types in this file describe the SSE chunks themselves
- * (`ChatChunkT`, `ToolCallT`, `MessageT`) plus the renderer-side variants
- * we use until each tool-result shape is also surfaced through the spec.
+ * (`ChatChunkT`, `ToolCallT`, `MessageT`) which the spec doesn't model
+ * (chat/stream is typed `unknown`), plus tool-result shapes that don't yet
+ * have a REST mirror in the spec (`CrossRulingsContentT`,
+ * `SubscribeWatchContentT`).
  */
 
 import type {
+  AlertItem,
+  AlertsResponse,
+  CommodityBody,
+  CommodityHierarchyEntry,
   LandedCostResponse,
   LandedCostRow,
+  SearchBody,
+  SearchCandidate,
 } from "@/lib/api/generated/types.gen";
 
 export interface UsageT {
@@ -87,52 +96,27 @@ export interface UserMessageDataT {
 
 export type MessageT = UserMessageDataT | AssistantMessageDataT;
 
-/* ---------- Tool-result content shapes (best-effort, partial) ---------- */
+/* ---------- Tool-result content shapes ----------
+ *
+ * Aliases of the OpenAPI-generated types. The backend ships these same
+ * shapes via REST (e.g. `POST /search`, `GET /code/{code}`) AND inside
+ * SSE `tool_result.content`. Local aliases avoid the `no-barrel-files`
+ * rule that blocks pure `export … from` re-exports.
+ */
 
-export interface SearchCandidateT {
-  code: string;
-  desc_en?: string;
-  desc?: string;
-  fused_score?: number;
-  score?: number;
-}
+export type SearchCandidateT = SearchCandidate;
+export type SearchCodesContentT = SearchBody;
 
-export interface SearchCodesContentT {
-  candidates: SearchCandidateT[];
-}
+export type HierarchyNodeT = CommodityHierarchyEntry;
+export type CodeDetailsContentT = CommodityBody;
 
-export interface HierarchyNodeT {
-  code: string;
-  desc_en?: string;
-  desc_fr?: string;
-  general_rate?: string | null;
-}
-
-export interface CodeDetailsContentT {
-  found?: boolean;
-  code: string;
-  desc_en?: string;
-  desc_fr?: string;
-  desc?: string;
-  /** Backend-native shape: array of `{code, desc_en, desc_fr, general_rate}`. */
-  hierarchy?: HierarchyNodeT[];
-  /** Legacy/scenario shape: pre-rendered breadcrumb segments. */
-  chain?: string[];
-  general_rate?: string | null;
-  rate_text?: string;
-  mfn_rate?: string;
-  units?: string | null;
-  unit?: string;
-  section301?: string;
-  is_declarable?: boolean;
-}
-
-// Landed-cost shapes come straight from the OpenAPI spec — backend has
-// shipped the canonical shape from `BACKEND_INTEGRATION.md` § 3.2 (no `*_usd`
-// flat-soup fallback needed). Local aliases avoid the `no-barrel-files` rule
-// that blocks pure `export … from` re-exports.
 export type LandedCostContentT = LandedCostResponse;
 export type LandedCostRowT = LandedCostRow;
+
+export type AlertItemT = AlertItem;
+export type AlertsContentT = AlertsResponse;
+
+/* ---------- Tool-result shapes not yet in the OpenAPI spec ---------- */
 
 export interface RulingItemT {
   num: string;
@@ -154,16 +138,4 @@ export interface SubscribeWatchContentT {
   sources: string[];
   cadence?: string;
   subscriptions?: unknown[];
-}
-
-export interface AlertItemT {
-  date: string;
-  code: string;
-  source: string;
-  status: string;
-  subject: string;
-}
-
-export interface AlertsContentT {
-  alerts: AlertItemT[];
 }
