@@ -147,7 +147,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@babel/core@npm:^7.23.3, @babel/core@npm:^7.23.7, @babel/core@npm:^7.24.4, @babel/core@npm:^7.26.8, @babel/core@npm:^7.28.5":
+"@babel/core@npm:^7.23.3, @babel/core@npm:^7.23.7, @babel/core@npm:^7.24.4, @babel/core@npm:^7.26.8, @babel/core@npm:^7.27.4, @babel/core@npm:^7.28.5":
   version: 7.29.0
   resolution: "@babel/core@npm:7.29.0"
   dependencies:
@@ -430,7 +430,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@babel/types@npm:^7.0.0, @babel/types@npm:^7.18.6, @babel/types@npm:^7.20.7, @babel/types@npm:^7.23.6, @babel/types@npm:^7.26.8, @babel/types@npm:^7.27.1, @babel/types@npm:^7.27.3, @babel/types@npm:^7.28.2, @babel/types@npm:^7.28.5, @babel/types@npm:^7.28.6, @babel/types@npm:^7.29.0":
+"@babel/types@npm:^7.0.0, @babel/types@npm:^7.18.6, @babel/types@npm:^7.20.7, @babel/types@npm:^7.23.6, @babel/types@npm:^7.26.8, @babel/types@npm:^7.27.1, @babel/types@npm:^7.27.3, @babel/types@npm:^7.27.6, @babel/types@npm:^7.28.2, @babel/types@npm:^7.28.5, @babel/types@npm:^7.28.6, @babel/types@npm:^7.29.0":
   version: 7.29.0
   resolution: "@babel/types@npm:7.29.0"
   dependencies:
@@ -7438,6 +7438,7 @@ __metadata:
     jsdom: "npm:29.1.1"
     lucide-solid: "npm:^1.14.0"
     prettier: "npm:3.8.3"
+    solid-devtools: "npm:^0.34.5"
     solid-js: "npm:1.9.12"
     solid-markdown: "npm:^2.1.1"
     vite: "npm:8.0.10"
@@ -7569,6 +7570,25 @@ __metadata:
   version: 2.0.0
   resolution: "siginfo@npm:2.0.0"
   checksum: 10c0/3def8f8e516fbb34cb6ae415b07ccc5d9c018d85b4b8611e3dc6f8be6d1899f693a4382913c9ed51a06babb5201639d76453ab297d1c54a456544acf5c892e34
+  languageName: node
+  linkType: hard
+
+"solid-devtools@npm:^0.34.5":
+  version: 0.34.5
+  resolution: "solid-devtools@npm:0.34.5"
+  dependencies:
+    "@babel/core": "npm:^7.27.4"
+    "@babel/plugin-syntax-typescript": "npm:^7.27.1"
+    "@babel/types": "npm:^7.27.6"
+    "@solid-devtools/debugger": "npm:^0.28.1"
+    "@solid-devtools/shared": "npm:^0.20.0"
+  peerDependencies:
+    solid-js: ^1.9.0
+    vite: ^2.2.3 || ^3.0.0 || ^4.0.0 || ^5.0.0 || ^6.0.0 || ^7.0.0
+  peerDependenciesMeta:
+    vite:
+      optional: true
+  checksum: 10c0/075da9be54da8d5ce1771714912e44fda1f9ff95617e560ce9bdaa5298268357714ca003d69801fb6a4ff1fee3f10adaae23a6a7df16f4a424a4a48c4cef38c3
   languageName: node
   linkType: hard
 

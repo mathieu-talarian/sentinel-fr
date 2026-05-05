@@ -5,6 +5,7 @@ import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import { defineConfig, loadEnv } from "vite";
 import mkcert from "vite-plugin-mkcert";
 import solidPlugin from "vite-plugin-solid";
+import devtools from "solid-devtools/vite";
 
 const srcDir = fileURLToPath(new URL("src", import.meta.url));
 
@@ -20,12 +21,20 @@ export default defineConfig(({ mode }) => {
     },
     optimizeDeps: {
       // `solid-markdown` pulls in CJS deps (`debug`, `vfile`, `unified`, …)
-      // through `remark-parse` / `remark-rehype`. Vite's dep crawler doesn't
-      // always discover them in dev, which surfaces as
-      //   "/node_modules/debug/src/browser.js does not provide an export named 'default'"
-      // when the ESM consumer imports `debug` as default. Listing the
-      // entry-point package here forces Vite to prebundle the whole tree.
       include: ["micromark", "unified"],
+    },
+    build: {
+      rolldownOptions: {
+        output: {
+          manualChunks: (id: string) => {
+            if (id.includes("node_modules")) {
+              const w = id.split("/");
+              const idx = w.indexOf("node_modules");
+              return w[idx + 1];
+            }
+          },
+        },
+      },
     },
     server: {
       port: 3000,
@@ -42,6 +51,10 @@ export default defineConfig(({ mode }) => {
       },
     },
     plugins: [
+      devtools({
+        /* features options - all disabled by default */
+        autoname: true, // e.g. enable autoname
+      }),
       mkcert(),
       tanstackRouter({ target: "solid", autoCodeSplitting: true }),
       solidPlugin(),
