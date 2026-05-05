@@ -2,6 +2,10 @@ import type { ChatChunkT, ChatTurnT } from "@/lib/types";
 
 interface StreamOptionsT {
   provider?: "anthropic" | "openai";
+  /** ISO 639-1 language code for assistant reasoning + reply (`en` | `fr`). */
+  lang?: string;
+  /** When set, the backend prepends the persisted thread server-side. */
+  conversationId?: string;
   signal?: AbortSignal;
   baseUrl?: string;
 }
@@ -59,6 +63,8 @@ export async function* streamChat(
     body: JSON.stringify({
       messages,
       provider: opts.provider,
+      lang: opts.lang,
+      conversationId: opts.conversationId,
     }),
     signal: opts.signal,
   });

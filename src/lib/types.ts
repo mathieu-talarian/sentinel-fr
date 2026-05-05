@@ -1,7 +1,18 @@
 /**
  * Wire types for the Sentinel chat SSE protocol.
  * Source of truth: /Users/mathieumoullec/work/sentinel/docs/CHAT_SSE_PROTOCOL.md
+ *
+ * Tool-result shapes that the OpenAPI spec covers (landed cost, alerts,
+ * conversations, …) are imported from `@/lib/api/generated/types.gen`. The
+ * hand-written types in this file describe the SSE chunks themselves
+ * (`ChatChunkT`, `ToolCallT`, `MessageT`) plus the renderer-side variants
+ * we use until each tool-result shape is also surfaced through the spec.
  */
+
+import type {
+  LandedCostResponse,
+  LandedCostRow,
+} from "@/lib/api/generated/types.gen";
 
 export interface UsageT {
   input_tokens: number;
@@ -116,30 +127,12 @@ export interface CodeDetailsContentT {
   is_declarable?: boolean;
 }
 
-export interface LandedCostRowT {
-  label: string;
-  amount: number;
-  sub?: string;
-}
-
-export interface LandedCostContentT {
-  code?: string;
-  rows?: LandedCostRowT[];
-  declared_value_usd?: number;
-  customs_value_usd?: number;
-  duty_amount_usd?: number;
-  mpf_usd?: number;
-  hmf_usd?: number;
-  freight_usd?: number;
-  total_fees_usd?: number;
-  landed_cost_usd?: number;
-  total?: number;
-  rate_text?: string | null;
-  rate_source_code?: string | null;
-  duty_kind?: string;
-  transport?: string;
-  caveats?: string[];
-}
+// Landed-cost shapes come straight from the OpenAPI spec — backend has
+// shipped the canonical shape from `BACKEND_INTEGRATION.md` § 3.2 (no `*_usd`
+// flat-soup fallback needed). Local aliases avoid the `no-barrel-files` rule
+// that blocks pure `export … from` re-exports.
+export type LandedCostContentT = LandedCostResponse;
+export type LandedCostRowT = LandedCostRow;
 
 export interface RulingItemT {
   num: string;

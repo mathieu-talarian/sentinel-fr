@@ -1,13 +1,22 @@
 # Sentinel — Backend Integration Notes
 
-Audience: backend engineers. This doc captures everything the **sentinel-fr** frontend
-needs from the API to fully turn on the screens it already ships. It is grounded in
-the wire types (`src/lib/types.ts`), the query layer (`src/lib/api/queries.ts`,
-`src/lib/api/auth.ts`, `src/lib/api/chatStream.ts`), and the renderer organisms
-(`src/components/organisms/results/*`).
+Audience: backend engineers. This doc captures the contract the
+**sentinel-fr** frontend depends on. It is grounded in the live OpenAPI
+schema at `/api-doc/openapi.json` (auto-mirrored to
+`src/lib/api/generated/` on every `yarn run gen:api`) and the SSE protocol
+in `docs/CHAT_SSE_PROTOCOL.md` (sentinel repo).
 
-It is organised by **shippable change**, with a request/response shape for each.
-Each section ends with a "frontend payoff" line so you can prioritise.
+It is organised as **shipped reality first, gaps last**:
+
+- §§ 0–1 — naming + error conventions (frozen contract)
+- § 2 — endpoints already shipped, with the actual response shapes the FE
+  reads. Treat these as a "please don't break" list
+- § 3 — drift between today's spec and the canonical shapes the FE wants.
+  These are bugs to fix before doubling down on tool result rendering
+- § 4 — SSE additions still pending (the spec doesn't model SSE bodies, so
+  these gaps survive the OpenAPI roundtrip)
+- §§ 5–6 — quality-of-life signals + auth/plumbing nice-to-haves
+- § 7 — quick-win order
 
 ---
 
@@ -21,39 +30,30 @@ Each section ends with a "frontend payoff" line so you can prioritise.
 That includes:
 
 - response bodies for every endpoint in this doc
-- request bodies (`/auth/sign-in`, `/chat/stream`, …)
+- request bodies (`/auth/sign-in`, `/chat/stream`, `/landed-cost`,
+  `/classify`, …)
 - every SSE chunk on `/chat/stream` (chunk type discriminator stays `type`,
   field names underneath are camelCase: `callId`, `messageId`,
   `conversationId`, `inputTokens`, …)
 - nested objects, arrays of objects, error envelopes — all the way down
 
-HTTP header names follow standard HTTP casing (`X-Request-Id`, `X-Csrf-Token`,
-`Server-Timing`) — those are not JSON and stay as-is. Cookie names
-(`sentinelSession`) are camelCase too; they are not user-facing, but keeping
-the convention everywhere removes the only spot the team has to remember an
-exception.
+HTTP header names follow standard HTTP casing (`X-Request-Id`,
+`X-Csrf-Token`, `Server-Timing`) — those are not JSON and stay as-is.
+Cookie names (`sentinelSession`) are camelCase too; they are not
+user-facing, but keeping the convention everywhere removes the only spot
+the team has to remember an exception.
 
-### Coordinated cutover (breaks today's wire)
-
-Today's FE types still mix conventions because the original Rust/Python
-backend leaks `snake_case` (`input_tokens`, `desc_en`, `general_rate`,
-`expires_at`, `remember_me`, …). When the backend switches, **`src/lib/types.ts`,
-the SSE reducer in `src/lib/state/chatSlice.ts`, the auth schemas in
-`src/lib/api/auth.ts`, and the renderer organisms all change in lock-step**.
-Plan it as one PR pair (BE + FE) rather than dual-writing.
-
-If a transition window is unavoidable, expose `Accept-Version: 2` on the FE
-side and have the backend serve camelCase only on that header — never serve
-both shapes from the same response.
+Tool-registry identifiers (`get_code_details`, `find_cross_rulings`,
+`subscribe_watch`, …) are **enum string values** the model emits, not
+field names. They stay `snake_case` because changing them is an
+LLM-prompt-engineering question, not a wire question. Field names that
+*carry* them (`tool`, `name`) are camelCase as usual.
 
 ### How errors look — RFC 9457 Problem Details
 
 The backend serves [RFC 9457 Problem Details](https://www.rfc-editor.org/rfc/rfc9457.html)
-(successor to RFC 7807) with the standard `application/problem+json` content
-type. The FE already reads this shape (see `throwAsProblem()` in
-`src/lib/api/auth.ts` and `readProblem()` in `src/lib/api/chatStream.ts`),
-so there is no change needed on the wire — this section just pins the
-contract so neither side drifts.
+(successor to RFC 7807) with the standard `application/problem+json`
+content type. The FE reads this shape via the generated `Problem` type.
 
 ```http
 HTTP/1.1 504 Gateway Timeout
@@ -71,68 +71,64 @@ X-Request-Id: req_01H8E…
 }
 ```
 
-The five **standard** RFC 9457 members — `type`, `title`, `status`,
-`detail`, `instance` — keep their RFC-defined names (single lowercase
-tokens, no separator, so the camelCase rule is naturally satisfied). All
-five are optional per the RFC, but please always send `title` + `status`,
-and `detail` whenever the title alone isn't actionable.
+Standard members (`type`, `title`, `status`, `detail`, `instance`) keep
+their RFC-defined names. Extension members (`code`, `requestId`) follow
+§ 0:
 
-Any **extension members** the backend adds (`code`, `requestId`, …) follow
-§ 0 — camelCase, always:
-
-- `code` _(extension)_ — stable machine identifier, camelCase enum string
-  (e.g. `"upstreamTimeout"`, `"emailUnverified"`, `"stateMismatch"`). The
-  FE can switch on this without parsing free-text titles.
-- `requestId` _(extension)_ — echoes the inbound `X-Request-Id` header so
-  the FE can put a copyable correlation id in the error UI without parsing
-  headers.
+- `code` *(extension)* — stable machine identifier, camelCase enum string
+  (`"upstreamTimeout"`, `"emailUnverified"`, `"stateMismatch"`).
+- `requestId` *(extension)* — echoes the inbound `X-Request-Id` header.
 
 Streaming errors on `/chat/stream` follow the existing `error` SSE chunk
-(`{"type":"error","message":"…"}`), not the JSON Problem shape — the
-response is already 200 with an `text/event-stream` body once the stream
-opens, so problem details only apply to _pre-stream_ failures (4xx/5xx
-returned before the first SSE frame).
+(`{"type":"error","message":"…"}`), not the JSON Problem shape — once the
+stream opens (`200 + text/event-stream`), problem details only apply to
+*pre-stream* failures.
 
 ---
 
-## 1 · Status quo
+## 1 · Frontend wiring — how the spec is consumed
 
-What already works against a real backend:
+The FE pulls the OpenAPI document via `@hey-api/openapi-ts` codegen. The
+generated SDK lives at `src/lib/api/generated/` and is git-tracked but
+eslint-ignored. Three artifacts the FE reads from there:
 
-| Endpoint                        | Method              | Used by                                                  |
-| ------------------------------- | ------------------- | -------------------------------------------------------- |
-| `/auth/me`                      | GET                 | Route guards (`__root` ↔ `login`) — see `meQueryOptions` |
-| `/auth/sign-in`                 | POST                | Email/password form (`signIn` in `auth.ts`)              |
-| `/auth/sign-out`                | POST                | Tweaks panel sign-out button                             |
-| `/auth/google/start?returnTo=…` | top-level GET       | "Continue with Google"                                   |
-| `/auth/google/callback`         | top-level GET → 302 | Google OAuth redirect                                    |
-| `/chat/stream`                  | POST (SSE)          | Assistant streaming — see `streamChat()`                 |
+- `sdk.gen.ts` — typed fetch functions (`authMe()`, `conversationsList()`,
+  `landedCost()`, …)
+- `types.gen.ts` — every request/response shape
+- `@tanstack/react-query.gen.ts` — `*Options` for `useQuery`, `*Mutation`
+  for `useMutation`
 
-Wire contracts for the auth endpoints live in `src/lib/api/auth.ts` (zod
-schemas `SessionSchema` and `SignInSchema`). The chat SSE protocol is
-documented at `docs/CHAT_SSE_PROTOCOL.md` in the **sentinel** repo (the comment
-at the top of `src/lib/types.ts` points there). **Both contracts need a
-camelCase pass** — see § 5.4 below.
+The **runtime client** is bootstrapped in `src/lib/api/client.ts`:
+
+- `baseUrl: ""` overrides the spec-derived `https://localhost:8888` so the
+  Vite dev proxy + production reverse-proxy stay seamless
+- `credentials: "include"` for the HttpOnly `sentinelSession` cookie
+- per-request `X-Request-Id` interceptor so every call gets a correlation
+  id
+
+`yarn run gen:api` regenerates the SDK whenever `/api-doc/openapi.json`
+drifts. **Spec changes ARE the contract** — once a shape lands in the
+schema, treat the FE as bound to it.
 
 ---
 
-## 2 · Endpoints currently mocked client-side
+## 2 · Endpoints already shipped — current contracts
 
-`src/lib/api/queries.ts:13-65` literally hardcodes data with a fake `setTimeout`
-delay. Query keys and TS shapes are stable; just point them at real endpoints.
+Every endpoint listed here is in the live spec and the FE consumes the
+generated SDK directly. Treat these shapes as "frozen unless we coordinate
+a cutover".
 
-### 2.1 `GET /conversations`
+### 2.1 `GET /auth/me`, `POST /auth/sign-in`, `POST /auth/sign-out`
+
+Existing auth endpoints. `signIn` accepts `{ email, password, rememberMe?
+}`; `me`/`signIn` return `{ session: { email, expiresAt, rememberMe } }`.
+The FE wraps `meQueryOptions` in `src/lib/api/queries.ts` so a 401 maps to
+`null` (the route guards rely on this) and the envelope is unwrapped to a
+flat `SessionView | null`.
+
+### 2.2 `GET /conversations`
 
 Lists prior conversations for the rail.
-
-**Query params**
-
-| Name     | Type   | Default | Notes                         |
-| -------- | ------ | ------- | ----------------------------- |
-| `limit`  | int    | 20      | cap at 50                     |
-| `cursor` | string | —       | opaque, for "load more" later |
-
-**Response 200**
 
 ```json
 {
@@ -148,83 +144,18 @@ Lists prior conversations for the rail.
 }
 ```
 
-- `title` should be a **server-derived** session title, not the user's first
-  message truncated. Today the FE falls back to
-  `suggestionTitleFor(firstUserText)` in `routes/index.tsx`. The server has
-  more context (full thread, tool results) and can pick a better label.
-- `lastMessageAt` is **ISO 8601 UTC**. The FE renders relative time (`Today`,
-  `Yesterday`, `Apr 28`) per the user's locale; do not pre-format on the server.
-- `summary` is optional; if present, used as a tooltip on the rail item.
+Query params: `limit?`, `cursor?`. ✅ Matches FE expectations.
 
-**Frontend payoff**: `priorConvosQuery()` becomes a real fetch; the
-`PRIOR_CONVOS` constant in `queries.ts` is deleted.
+### 2.3 `GET /conversations/{id}` + `PATCH /conversations/{id}` + `DELETE /conversations/{id}`
 
-### 2.2 `GET /conversations/:id`
+`GET` returns `{ id, title, messages, createdAt }`. `PATCH` takes
+`{ title }`. `DELETE` is empty-body. ✅ All present.
 
-Fetch full message history when a rail item is clicked. Today rail items are
-no-ops.
+> **Drift**: `ConversationMessage.toolCalls` and `.usage` are typed as
+> `unknown` (`{ [key: string]: unknown }`). The FE can't replay a saved
+> thread without knowing the per-tool result shapes — see § 3.5.
 
-**Response 200**
-
-```json
-{
-  "id": "conv_01H8E…",
-  "title": "Wine import duty — 2023 vintage Bordeaux",
-  "messages": [
-    { "id": "msg_…", "role": "user", "content": "What is the duty on…" },
-    {
-      "id": "msg_…",
-      "role": "assistant",
-      "content": "The MFN duty is …",
-      "toolCalls": [
-        {
-          "id": "call_…",
-          "tool": "get_code_details",
-          "args": { "code": "2204.21.50" },
-          "result": {
-            /* see § 3 */
-          },
-          "status": "complete",
-          "durationMs": 432
-        }
-      ],
-      "usage": {
-        "inputTokens": 1284,
-        "outputTokens": 540,
-        "totalTokens": 1824,
-        "cachedInputTokens": 800
-      }
-    }
-  ],
-  "createdAt": "2026-05-05T09:14:22Z"
-}
-```
-
-- `toolCalls` mirrors `ToolCallT` in `src/lib/types.ts` (after the camelCase
-  cutover) — same field names so the reducer in `chatSlice.ts` can rehydrate
-  without remapping.
-- Tool **discriminator names** (`get_code_details`, `find_cross_rulings`, …)
-  are _enum string values_, not field names. They are intentionally
-  `snake_case` because they're the model's tool registry identifiers and
-  changing them is an LLM-prompt-engineering question, not a wire question.
-  Field names around them (`tool`, `callId`, …) are camelCase as usual.
-
-**Frontend payoff**: clicking a rail item replaces the empty state with the
-saved thread. Doable in ~50 lines of FE code once the endpoint exists.
-
-### 2.3 `PATCH /conversations/:id` and `DELETE /conversations/:id`
-
-Standard rename + delete. Body: `{ "title": "string" }`. No body on delete.
-
-### 2.4 `GET /alerts`
-
-Powers the (currently mocked) `alertsQuery()`. Also feeds the `list_alerts`
-tool result via the LLM agent.
-
-**Query params**: `code` (HTS prefix, optional), `since` (ISO date, optional),
-`limit` (default 20).
-
-**Response 200**
+### 2.4 `GET /alerts` (`frontendAlerts`)
 
 ```json
 {
@@ -241,14 +172,9 @@ tool result via the LLM agent.
 }
 ```
 
-- `url` is **new** vs the current `AlertItemT`. With a URL the row becomes
-  clickable. Drop it if not always available.
+✅ Matches. `url` is optional, FE handles missing.
 
 ### 2.5 `GET /catalog/stats`
-
-Powers the `CatalogStatsStrip` on the empty state.
-
-**Response 200**
 
 ```json
 {
@@ -259,48 +185,120 @@ Powers the `CatalogStatsStrip` on the empty state.
 }
 ```
 
-- `lastIndexedAt` is **new**. Lets the strip show data freshness ("indexed 2
-  days ago"), which is reassuring for a customs tool.
-- Field names switch from today's `hts_codes_indexed` /`cross_rulings_since` /
-  `active_alerts` to camelCase per § 0.
+✅ Matches.
+
+### 2.6 `POST /chat/stream` and `POST /chat`
+
+Body (`ChatBody`):
+
+```jsonc
+{
+  "messages": [
+    { "role": "user", "content": "What's the duty on a leather handbag?" }
+  ],
+  "provider": "anthropic",       // optional — falls back to server default
+  "lang": "fr",                  // optional — controls assistant output language
+  "conversationId": "conv_01H8E…" // optional — server prepends persisted history
+}
+```
+
+✅ Backend accepts both `lang` and `conversationId`. The FE now sends
+`lang` from `tweaks.lang` (`chatStream.ts` + `chatThunks.ts`).
+`conversationId` is wired but not yet populated — FE waits for a
+`turnStart` SSE chunk to learn the id (§ 4.4).
+
+`/chat/stream` returns `200 + text/event-stream`. Chunk shapes are
+**not** in the OpenAPI schema (response is typed `unknown`); see § 4.
+
+### 2.7 Tool-registry endpoints (REST mirrors of the LLM tools)
+
+These power the agent's tool calls; the FE doesn't call them directly
+today but the SDK is generated for future use:
+
+| Endpoint | SDK function | Notes |
+|---|---|---|
+| `GET /code/{code}` | `getCode` | HS code detail — see § 3.2 drift |
+| `POST /search` | `search` | Catalog search — see § 3.1 drift |
+| `POST /landed-cost` | `landedCost` | ✅ canonical shape (§ 3.3) |
+| `GET /watch/alerts` | `watchAlerts` | List recent alerts |
+| `POST /watch/check` | `watchCheck` | One-shot alert check |
+| `POST /watch/subscribe` | `watchSubscribe` | Create an alert subscription |
+| `POST /classify` | `classify` | One-shot HS classification — see § 3.4 drift |
+
+### 2.8 Infra endpoints
+
+`GET /health`, `GET /db/info` — present, FE doesn't consume.
 
 ---
 
-## 3 · Tool-result wire shapes — pick canonical names
+## 3 · Drift — backend shapes that don't fully match the spec doc
 
-The FE has `try-canonical-then-fall-back` defenses everywhere because each
-tool result currently allows two or three legacy shapes. Each cleanup below
-lets a renderer drop a branch.
+Each item here has shipped, but with a shape that prevents the FE from
+collapsing its legacy-tolerant code. Fixing these is a small backend
+change + a generated-SDK regeneration on the FE side.
 
-### 3.1 `get_code_details`
+### 3.1 `POST /search` returns `Hit` with snake_case + missing locale
 
-**Current** (`src/lib/types.ts:100-117`) — accepts:
+Current `Hit` shape:
 
-- description: `desc_en | desc_fr | desc`
-- rate: `general_rate | rate_text | mfn_rate`
-- units: `units | unit`
-- hierarchy: `hierarchy[]` (rich) **or** `chain[]` (pre-stringified)
+```jsonc
+{
+  "code": "4202.21.00.00",
+  "desc": "Handbags, leather, valued ≤ $20",
+  "fused_score": 0.873,
+  "bm25_rank": 2,
+  "bm25_score": 0.65,
+  "vec_distance": 0.12,
+  "vec_rank": 1,
+  "id": "doc_…"
+}
+```
 
-**Canonical**
+Issues vs § 0:
+- `fused_score`, `bm25_rank`, `bm25_score`, `vec_distance`, `vec_rank` are
+  snake_case — should be `fusedScore`, `bm25Rank`, etc.
+- `desc` is a single string — FE wants `description: { en, fr }` so the
+  `tweaks.lang` toggle picks the right localized label without a second
+  fetch.
+
+**Canonical**:
+
+```json
+{
+  "candidates": [
+    {
+      "code": "4202.21.00.00",
+      "description": { "en": "Handbags, leather…", "fr": "Sacs à main, cuir…" },
+      "score": 0.873,
+      "scoreComponents": { "lexical": 0.65, "semantic": 0.91 }
+    }
+  ]
+}
+```
+
+`scoreComponents` is optional (drives a power-user tooltip).
+
+### 3.2 `GET /code/{code}` — `CommodityEntry` snake_case
+
+Current:
+
+```json
+{
+  "parents": [
+    { "code": "4202", "desc_en": "…", "desc_fr": "…", "hier_pos": 0, "is_declarable": false }
+  ]
+}
+```
+
+Wanted:
 
 ```json
 {
   "code": "4202.21.00.00",
   "found": true,
-  "description": {
-    "en": "Handbags, with outer surface of leather",
-    "fr": "Sacs à main, à surface extérieure en cuir"
-  },
+  "description": { "en": "…", "fr": "…" },
   "hierarchy": [
-    { "code": "4202", "description": { "en": "Trunks, suit-cases…" } },
-    {
-      "code": "4202.21",
-      "description": { "en": "With outer surface of leather…" }
-    },
-    {
-      "code": "4202.21.00",
-      "description": { "en": "Handbags, leather, valued ≤ $20" }
-    }
+    { "code": "4202", "description": { "en": "…", "fr": "…" }, "isDeclarable": false }
   ],
   "rate": { "value": "8.0%", "kind": "adValorem", "sourceCode": "MFN" },
   "unit": "kg",
@@ -309,153 +307,73 @@ lets a renderer drop a branch.
 }
 ```
 
-- One name for description (`description` object with locale keys) — drop
-  `desc_en/desc_fr/desc` aliases.
-- One name for rate (`rate.value`) — drop `general_rate/rate_text/mfn_rate`.
-- One name for unit — drop `units` plural.
-- Hierarchy is **always** an array of `{ code, description }`. Drop `chain`
-  pre-stringified shape — the FE in `CodeDetails.tsx` already prefers
-  `hierarchy` and only falls back when missing.
-- `rate.kind` is a camelCase enum string: `adValorem | specific | compound`.
+- `desc_en`/`desc_fr` → `description.{en,fr}`
+- `hier_pos` → drop (the array order is the position)
+- `is_declarable` → `isDeclarable`
+- Add `rate` object so the renderer doesn't have to scrape free text
 
-**Frontend payoff**: `buildCrumbs`, `description()`, `rateText()` collapse to
-direct field reads. ~25 lines removed from `CodeDetails.tsx`.
+### 3.3 `POST /landed-cost` — ✅ canonical, FE migrated
 
-### 3.2 `get_landed_cost`
+`LandedCostResponse = { code, currency, rows, total, transport, caveats }`
+matches the canonical shape exactly. The FE now imports
+`LandedCostResponse` directly from the generated types (see
+`src/lib/types.ts` + `LandedCost.tsx` — the legacy `*_usd` fallback was
+removed). **Use this as the template for § 3.1 and § 3.2.**
 
-**Current** allows either pre-built `rows[]` **or** a flat soup of `*_usd`
-fields that `LandedCost.tsx:28-52` reassembles.
-
-**Canonical** — always ship `rows[]` and a `total`. The server picks labels
-(and can localise them); the client just renders.
+### 3.4 `POST /classify` — `ClassifyBody` snake_case
 
 ```json
 {
-  "code": "4202.21.00.00",
-  "currency": "USD",
-  "rows": [
-    { "label": "Customs value", "amount": 20000.0, "sub": "declared FOB" },
-    {
-      "label": "Duty",
-      "amount": 1800.0,
-      "sub": "9.0% MFN · 4202.21.00.00",
-      "kind": "duty"
-    },
-    {
-      "label": "MPF",
-      "amount": 69.28,
-      "sub": "0.3464%, capped at $614.35",
-      "kind": "fee"
-    },
-    {
-      "label": "HMF",
-      "amount": 25.0,
-      "sub": "0.125%, ocean only",
-      "kind": "fee"
-    },
-    { "label": "Freight", "amount": 1450.0 }
-  ],
-  "total": 23344.28,
-  "transport": "ocean",
-  "caveats": ["Section 301 not applied", "Anti-dumping not modelled"]
+  "description": "Leather handbag",
+  "declared_value_usd": 20000,
+  "freight_usd": 1450,
+  "destination": "US"
 }
 ```
 
-- `kind` (optional) lets the FE colour duty vs fees differently in a future
-  style pass. No-op today — safe to add. Enum: `duty | fee | freight | other`.
-- Drop the flat `declared_value_usd / duty_amount_usd / mpf_usd / hmf_usd /
-freight_usd / landed_cost_usd / total_fees_usd / rate_text /
-rate_source_code / duty_kind` fields. They survive only as fallback.
+`declared_value_usd` / `freight_usd` should be `declaredValueUsd` /
+`freightUsd`.
 
-**Frontend payoff**: ~25 lines deleted from `LandedCost.tsx`.
+### 3.5 `ConversationMessage.toolCalls` and `.usage` are opaque
 
-### 3.3 `search_codes`
+Currently:
 
-**Current** allows `desc_en | desc` and `fused_score | score`.
-
-**Canonical**
-
-```json
-{
-  "candidates": [
-    {
-      "code": "4202.21.00.00",
-      "description": { "en": "Handbags, with outer surface of leather" },
-      "score": 0.873,
-      "scoreComponents": { "lexical": 0.65, "semantic": 0.91 }
-    }
-  ]
-}
+```ts
+toolCalls?: { [key: string]: unknown } | null;
+usage?: { [key: string]: unknown } | null;
 ```
 
-- Single `score` (the fused one). `scoreComponents` optional, for power-user
-  inspection (drives a future tooltip).
+The FE can't rehydrate a saved thread without the typed shape. Mirror the
+SSE shapes (after § 4.5 lands) so a `GET /conversations/{id}` consumer
+gets the same structure as the live stream.
 
-### 3.4 `find_cross_rulings`
+### 3.6 `WatchSubscribeResponse` and `subscribe_watch` SSE content
 
-Already minimal. Add `excerpt: string` (≤ 240 chars) so the result card can
-show a one-liner under the subject without another fetch.
+`WatchSubscribeResponse = { subscriptions: WatchSubscription[] }` —
+clean. But the FE renderer for the `subscribe_watch` SSE tool call
+(`SubscribeConfirm.tsx`) reads `email`, `codes[]`, `sources[]`,
+`cadence`, `subscriptionId`, plus a top-level `ok`. Either:
 
-```json
-{
-  "rulings": [
-    {
-      "num": "N339192",
-      "date": "2024-03-01",
-      "subject": "Classification of leather handbag with detachable strap",
-      "codes": ["4202.21.00.00"],
-      "url": "https://rulings.cbp.gov/ruling/N339192",
-      "excerpt": "The applicable subheading for the subject merchandise will be 4202.21.00.00…"
-    }
-  ]
-}
-```
+- Drop the FE renderer's expectation that the result includes `email` /
+  `codes` / `sources` / `cadence` / `ok` (use a different shape on the
+  card), or
+- Have the SSE tool-result content for `subscribe_watch` carry those
+  fields *in addition to* (or instead of) `subscriptions`.
 
-### 3.5 `subscribe_watch`
-
-`SubscribeWatchContentT.subscriptions: unknown[]` is currently typed as
-opaque. Either remove it or spec it:
-
-```json
-{
-  "ok": true,
-  "subscriptionId": "sub_01H8E…",
-  "email": "marie@exporter.fr",
-  "codes": ["8517.13"],
-  "sources": ["CSMS", "Federal Register"],
-  "cadence": "daily",
-  "subscriptions": [
-    {
-      "id": "sub_…",
-      "email": "marie@exporter.fr",
-      "codes": ["8517.13"],
-      "sources": ["CSMS"],
-      "cadence": "daily",
-      "createdAt": "2026-04-22T09:00:00Z"
-    }
-  ]
-}
-```
-
-If `subscriptions` is "all of this user's subscriptions including the new
-one", say so in the field doc — today the FE doesn't render it because the
-shape isn't clear.
+This is the only place where the SSE tool-result shape and the REST
+shape diverge.
 
 ---
 
-## 4 · `/chat/stream` SSE protocol additions
+## 4 · `/chat/stream` SSE protocol — still pending
 
-The current chunks live in `src/lib/types.ts:21-34` and the reducer in
-`chatSlice.ts:80-130`. After § 0's camelCase pass, every `call_id`,
-`message_id`, `conversation_id`, `input_tokens`, etc. on the wire becomes
-`callId` / `messageId` / `conversationId` / `inputTokens`.
-
-Eight concrete additions:
+OpenAPI doesn't model SSE bodies, so these gaps don't show up in the spec
+roundtrip. Each one is a backend-only change.
 
 ### 4.1 `toolError` chunk (must-have)
 
-A failing tool currently never emits `tool_result`, leaving the pill stuck on
-`"in-flight"` forever. Add:
+A failing tool currently never emits `tool_result`, leaving the pill
+stuck on `"in-flight"` forever. Add:
 
 ```text
 data: {"type":"toolError","callId":"call_…","message":"Catalog index timeout","code":"upstreamTimeout"}
@@ -466,131 +384,113 @@ Reducer matches existing `toolResult` branch but flips the call to
 
 ### 4.2 `toolCallDelta` is declared but unused
 
-`ChatChunkT` has `toolCallDelta` (args streamed in pieces). The reducer
-ignores it. **Either** remove the chunk type from the protocol, **or** start
-emitting it and we'll wire a reducer to live-update `call.args` so the pill
-suffix ("Searching catalog 'leather handbag…'") populates as the model writes.
+The FE reducer ignores it. Either remove the chunk type from the
+protocol, or start emitting it and we'll wire a reducer to live-update
+`call.args` so the pill suffix populates as the model writes.
 
 ### 4.3 Carry `tool` on `toolResult`
 
-Today `toolResult` only has `callId`, so the FE has to look up the matching
-`toolCall` to figure out which renderer to use (`ResultRenderer.tsx`). Add
-`tool` (or `name`) directly:
+Today `toolResult` only has `callId`. Adding `tool` (or `name`) inline
+saves a `find` per chunk and lets us drop ToolPill→ResultCard
+cross-references:
 
 ```text
 data: {"type":"toolResult","callId":"call_…","tool":"get_code_details","content":{…}}
 ```
 
-Saves a `find` per chunk and lets us drop ToolPill→ResultCard
-cross-references.
-
 ### 4.4 `turnStart` — server-issued message id
 
-Today the FE mints `newId("a")` in `chatThunks.ts:60`. A server-issued id is
-required to persist conversations and resume them.
+Today the FE mints `newId("a")` in `chatThunks.ts:60`. A server-issued id
+is required to populate `conversationId` for follow-up turns:
 
 ```text
 data: {"type":"turnStart","messageId":"msg_…","conversationId":"conv_…"}
 ```
 
-Emit once at the top of the stream. The reducer threads `messageId` into the
-assistant message it creates.
+### 4.5 Chunk-type discriminator: camelCase
 
-### 4.5 Chunk-type discriminator: rename `tool_call` etc.
+After the camelCase pass, every chunk's `type` value goes camelCase too:
 
-After the camelCase cutover, every chunk's `type` value goes camelCase too:
+| today | new |
+|---|---|
+| `delta` | `delta` |
+| `reasoning` | `reasoning` |
+| `reasoning_delta` | `reasoningDelta` |
+| `tool_call` | `toolCall` |
+| `tool_call_delta` | `toolCallDelta` |
+| `tool_result` | `toolResult` |
+| `tool_error` *(new)* | `toolError` |
+| `turn_start` *(new)* | `turnStart` |
+| `turn_end` | `turnEnd` |
+| `error` | `error` |
+| `done` | `done` |
 
-| today                | new              |
-| -------------------- | ---------------- |
-| `delta`              | `delta`          |
-| `reasoning`          | `reasoning`      |
-| `reasoning_delta`    | `reasoningDelta` |
-| `tool_call`          | `toolCall`       |
-| `tool_call_delta`    | `toolCallDelta`  |
-| `tool_result`        | `toolResult`     |
-| `tool_error` _(new)_ | `toolError`      |
-| `turn_start` _(new)_ | `turnStart`      |
-| `turn_end`           | `turnEnd`        |
-| `error`              | `error`          |
-| `done`               | `done`           |
+The reducer in `src/lib/state/chatSlice.ts` currently switches on the
+snake_case forms — the FE will rename them in lock-step with the BE PR.
 
 ### 4.6 Heartbeat
 
 Long tool calls (CROSS rulings can take 3–5 s) plus an idle-30 s nginx /
-Cloudflare timeout = orphaned streams. Send an SSE comment frame every 15 s:
+Cloudflare timeout = orphaned streams. Send an SSE comment frame every
+15 s:
 
 ```text
 : heartbeat
 
 ```
 
-The FE's reader discards comment frames already (it splits on `\n\n` and
-parses only `data:` lines).
+The FE reader already discards comment frames.
 
 ### 4.7 Pick one home for `usage`
 
-`turnEnd` carries `usage` mandatorily; `done` carries it optionally. Drop one
-— preferably `done.usage` so `done` is just a terminator. The FE writes
-whichever arrives last so dropping `done.usage` is invisible.
+`turnEnd` carries `usage` mandatorily; `done` carries it optionally. Drop
+`done.usage` so `done` is just a terminator.
 
 ### 4.8 Abort propagation
 
-When `AbortController.abort()` fires on the FE, `chatStream.ts` cancels the
-body read. The backend should propagate the cancellation upstream (LLM
-provider) so we stop spending tokens. This is a backend-only change.
+When `AbortController.abort()` fires on the FE, `chatStream.ts` cancels
+the body read. The backend should propagate the cancellation upstream
+(LLM provider) so we stop spending tokens.
 
 ### 4.9 Echo `requestId`
 
-The FE sends `X-Request-Id` (`chatStream.ts:57`). Echo it back as a header on
-the SSE response (`X-Request-Id: <same>`) and optionally inline a `requestId`
-field on every chunk so the inspector can correlate a tool call to a
-Sentry/Loki trace without bookkeeping.
+The FE sends `X-Request-Id`. Echo it as a response header AND optionally
+inline `requestId` on every chunk so the inspector can correlate a tool
+call to a Sentry/Loki trace.
 
 ---
 
-## 5 · New per-request signals to make the UI smarter
+## 5 · New per-request signals
 
-### 5.1 Send `lang` to `/chat/stream`
+### 5.1 `lang` on `/chat/stream` — ✅ shipped & FE-wired
 
-The frontend has `tweaks.lang ∈ "en" | "fr"` but only sends `provider`
-(`chatStream.ts:60-63`). Wire it up: include `lang` in the JSON body and have
-the model honour it for reasoning + final reply. Turns the EN/FR toggle in
-the topbar from cosmetic into functional.
+Backend accepts `lang` in `ChatBody`; FE sends `tweaks.lang`. Topbar
+EN/FR toggle is now functional.
 
-```jsonc
-// POST /chat/stream body
-{
-  "messages": [
-    /* […] */
-  ],
-  "provider": "anthropic",
-  "lang": "fr",
-  "conversationId": "conv_…", // optional, for continuing a saved thread
-}
-```
+### 5.2 `conversationId` on `/chat/stream` — ✅ shipped, FE half-wired
 
-`conversationId` is also new — when present, the backend prepends the
-persisted history server-side so the FE doesn't have to round-trip the full
-thread.
+Backend accepts it; FE only sends it once a `turnStart` chunk has
+populated it (still pending — § 4.4). Until then continuing a thread
+means re-sending the full `messages` array.
 
-### 5.2 Optional `toolCall.estimatedDurationMs`
+### 5.3 Optional `toolCall.estimatedDurationMs`
 
 ```text
 data: {"type":"toolCall","callId":"…","name":"find_cross_rulings","args":{…},"estimatedDurationMs":4500}
 ```
 
-Lets the pill show a determinate progress bar instead of an indeterminate
-spinner. Skip if the model can't predict it — purely additive.
+Lets the pill show a determinate progress bar instead of an
+indeterminate spinner. Skip if the model can't predict it — purely
+additive.
 
-### 5.3 Caveats on `toolResult`, not on the assistant message
+### 5.4 Caveats on `toolResult`, not on the assistant message
 
-Today `chatSlice.ts:106-108` lifts caveats off `toolResult.content` and pins
-them to the assistant message. Only `landed_cost` actually populates them.
-Per-tool caveats should live on each tool result so the inspector can show
-them next to the relevant card. This already works structurally — just stop
-merging into the message.
+Today `chatSlice.ts:106-108` lifts caveats off `toolResult.content` and
+pins them to the assistant message. Only `landed_cost` actually
+populates them. Per-tool caveats should live on each tool result so the
+inspector can show them next to the relevant card.
 
-### 5.4 Server-side suggestion bank (optional)
+### 5.5 Server-side suggestion bank (optional)
 
 `src/lib/utils/suggestions.ts` is hardcoded. Expose:
 
@@ -599,50 +499,25 @@ GET /suggestions?lang=en
 → { "suggestions": [ { "id": "classify", "tag": "CLASSIFY", "text": "…" }, … ] }
 ```
 
-Lets you A/B prompts, localise them, and personalise (e.g. ones that use the
-user's recent codes). Pure client refactor once shipped.
+Lets you A/B prompts, localise them, and personalise.
 
 ---
 
 ## 6 · Auth + plumbing nice-to-haves
 
-### 6.1 Cookie lifetime contract
-
-`signIn` accepts `rememberMe: boolean` (post camelCase cutover) but the
-server's cookie-lifetime behaviour isn't documented anywhere accessible to
-the FE. Add a section to `docs/AUTH.md` (sentinel repo) and surface the
-resolved expiry in `/auth/me`:
-
-```json
-{
-  "session": {
-    "email": "marie@exporter.fr",
-    "expiresAt": "2026-12-31T00:00:00Z",
-    "rememberMe": true
-  }
-}
-```
-
-The FE can then warn the user before silent logout.
-
-### 6.2 `/auth/sign-in` request body — camelCase cutover
-
-Today the FE posts `{ email, password, remember_me }`. After the cutover the
-backend MUST accept `{ email, password, rememberMe }`. The FE patch is
-one-line in `auth.ts`; do them in lock-step.
-
-### 6.3 CSRF posture
+### 6.1 CSRF posture
 
 The FE sends `credentials: "include"` on every same-origin fetch. If the
-backend isn't pairing the HttpOnly `sentinelSession` cookie with a CSRF token
-(double-submit pattern, or `SameSite=Strict` + a custom header check), it
-should — current setup is implicitly trusting `SameSite=Lax`.
+backend isn't pairing the HttpOnly `sentinelSession` cookie with a CSRF
+token (double-submit pattern, or `SameSite=Strict` + a custom header
+check), it should — current setup is implicitly trusting `SameSite=Lax`.
 
 If a CSRF token is required, expose `/auth/csrf` returning
 `{ "csrfToken": "…" }` and have it accepted in either an `X-Csrf-Token`
-header or a `csrf` field. The FE wraps `buildHeaders()` in `auth.ts` to add it.
+header or a `csrf` field. The FE wraps `client.interceptors` in
+`src/lib/api/client.ts` to add it.
 
-### 6.4 `Server-Timing` headers
+### 6.2 `Server-Timing` headers
 
 On `/auth/me`, `/conversations`, `/chat/stream`. Cheap and feeds straight
 into Chrome's Network panel and any future RUM:
@@ -651,55 +526,35 @@ into Chrome's Network panel and any future RUM:
 Server-Timing: db;dur=12, llmFirstToken;dur=420, total;dur=512
 ```
 
-(Note: `Server-Timing` _names_ are a header-value convention, but per § 0 we
-camelCase them too — they end up in code as object keys.)
-
 ---
 
 ## 7 · Quick-win order
 
 If you only have an afternoon:
 
-1. **Lock down camelCase across every endpoint and chunk.** Coordinate the
-   FE PR; do not dual-serve. Without this the rest of the work introduces
-   yet another shape to support.
-2. **Ship `/conversations`, `/conversations/:id`, `/alerts`, `/catalog/stats`**
-   as real endpoints with the shapes in § 2. Kills the mocks in `queries.ts`.
-3. **Add `toolError` chunk** (§ 4.1). Fixes the worst observable bug
-   (forever-spinning pill on a tool failure).
-4. **Pick canonical names in `get_code_details` / `get_landed_cost`** (§ 3).
-   Drop the legacy aliases. ~50 lines deleted from frontend renderers.
-5. **Honour `lang` on `/chat/stream`** (§ 5.1). Activates the topbar toggle.
+1. **Fix the camelCase drift in § 3** (`Hit`, `CommodityEntry`,
+   `ClassifyBody`). Pure rename + regenerate; ~30 min of FE migration.
+2. **Add `toolError` chunk** (§ 4.1). Fixes the worst observable UI bug
+   (forever-spinning pill on tool failure).
+3. **Add `turnStart` chunk** (§ 4.4) so `conversationId` becomes useful
+   end-to-end and the rail can finally open saved threads.
+4. **Type `ConversationMessage.toolCalls` / `.usage`** (§ 3.5) — once
+   chunks are typed, the message echoes them.
+5. **Heartbeat on `/chat/stream`** (§ 4.6). One-liner, kills orphaned
+   streams.
 
 ---
 
-## Appendix A · Wire-types reference
+## Appendix · Wire-types reference
 
-The FE source of truth for every chunk + tool-result shape is
-`src/lib/types.ts`. When you ship a new shape, please update **that** file as
-the canonical contract — the renderer organisms, the slice reducer, and the
-SSE generator (`streamChat`) all import from there.
+The FE's source of truth for every chunk is `src/lib/types.ts` (plus
+imports from `src/lib/api/generated/types.gen.ts`). When you ship a new
+shape, the OpenAPI schema is the canonical contract — the FE will pick it
+up via `yarn run gen:api`.
 
-Naming convention:
+Naming convention recap:
 
-- Every TypeScript type ends in `T` (`ChatChunkT`, `ToolCallT`, …).
+- TypeScript types end in `T` (`ChatChunkT`, `ToolCallT`, …).
 - Every JSON field on the wire is `camelCase` (see § 0).
-- Tool registry identifiers (`get_code_details`, `find_cross_rulings`, …) are
-  **enum string values** the model emits, not field names. They stay
-  `snake_case` because changing them is an LLM-prompt-engineering question,
-  not a wire question. Field names that _carry_ them (`tool`, `name`) are
-  camelCase.
-
-## Appendix B · Mock-data file map
-
-These constants exist solely because the endpoints in § 2 don't yet:
-
-| Mock            | File                           | Lines |
-| --------------- | ------------------------------ | ----- |
-| `PRIOR_CONVOS`  | `src/lib/api/queries.ts`       | 17–29 |
-| `ALERTS`        | `src/lib/api/queries.ts`       | 31–53 |
-| `CATALOG_STATS` | `src/lib/api/queries.ts`       | 61–65 |
-| `SUGGESTIONS`   | `src/lib/utils/suggestions.ts` | 7–23  |
-
-Once each backend endpoint lands, the corresponding mock + the `sleep()`
-helper can be deleted.
+- Tool-registry identifiers (`get_code_details`, `find_cross_rulings`,
+  …) are `snake_case` enum string values, not field names.

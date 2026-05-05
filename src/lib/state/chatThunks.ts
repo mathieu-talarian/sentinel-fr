@@ -57,12 +57,13 @@ export const sendChat =
     dispatch(chatActions.setRunning(true));
 
     abortCtrl = new AbortController();
-    const provider = getState().tweaks.provider;
+    const { provider, lang } = getState().tweaks;
 
     try {
       for await (const chunk of streamChat(turns, {
         signal: abortCtrl.signal,
         provider,
+        lang,
       })) {
         dispatch(chatActions.applyChunk({ asstId, chunk }));
 

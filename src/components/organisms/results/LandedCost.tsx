@@ -1,10 +1,9 @@
-import type { LandedCostContentT, LandedCostRowT } from "@/lib/types";
+import type { LandedCostContentT } from "@/lib/types";
 
 import * as stylex from "@stylexjs/stylex";
 
 import { sx } from "@/lib/styles/sx";
 import { borders, colors, fonts, radii } from "@/lib/styles/tokens.stylex";
-import { formatHtsCode } from "@/lib/utils/format";
 
 const fmt = (n: number) =>
   n.toLocaleString("en-US", {
@@ -12,49 +11,8 @@ const fmt = (n: number) =>
     maximumFractionDigits: 2,
   });
 
-const sumRows = (rows: readonly LandedCostRowT[]) => {
-  let total = 0;
-  for (const r of rows) total += r.amount;
-  return total;
-};
-
-const dutySubtitle = (r: LandedCostContentT) => {
-  const parts: string[] = [];
-  if (r.rate_text) parts.push(r.rate_text);
-  if (r.code) parts.push(formatHtsCode(r.code));
-  return parts.join(" · ") || undefined;
-};
-
-const buildRows = (r: LandedCostContentT): LandedCostRowT[] => {
-  if (r.rows?.length) return r.rows;
-  const out: LandedCostRowT[] = [];
-  const declared = r.declared_value_usd ?? r.customs_value_usd;
-  if (declared != null) {
-    out.push({ label: "Customs value", amount: declared, sub: "declared FOB" });
-  }
-  if (r.duty_amount_usd != null) {
-    out.push({
-      label: "Duty",
-      amount: r.duty_amount_usd,
-      sub: dutySubtitle(r),
-    });
-  }
-  if (r.mpf_usd != null) {
-    out.push({ label: "MPF", amount: r.mpf_usd, sub: "0.3464%, capped" });
-  }
-  if (r.hmf_usd != null) {
-    out.push({ label: "HMF", amount: r.hmf_usd, sub: "0.125%, ocean only" });
-  }
-  if (r.freight_usd != null && r.freight_usd > 0) {
-    out.push({ label: "Freight", amount: r.freight_usd });
-  }
-  return out;
-};
-
 export function LandedCost(props: Readonly<{ result: LandedCostContentT }>) {
-  const rows = buildRows(props.result);
-  const total =
-    props.result.total ?? props.result.landed_cost_usd ?? sumRows(rows);
+  const { rows, total, caveats } = props.result;
 
   return (
     <div>
@@ -75,18 +33,18 @@ export function LandedCost(props: Readonly<{ result: LandedCostContentT }>) {
           </tr>
         </tbody>
       </table>
-      {props.result.caveats?.length ? (
+      {caveats.length > 0 && (
         <div {...sx(lc.caveats)}>
           <div {...sx(lc.caveatsLabel)}>Caveats</div>
           <ul {...sx(lc.caveatsList)}>
-            {props.result.caveats.map((item, i) => (
+            {caveats.map((item, i) => (
               <li key={i} {...sx(lc.caveatsItem)}>
                 {item}
               </li>
             ))}
           </ul>
         </div>
-      ) : null}
+      )}
     </div>
   );
 }
