@@ -13,6 +13,13 @@ export interface ChatStateT {
   running: boolean;
   focusedCallId: string | null;
   inspectorOpen: boolean;
+  /**
+   * Server-issued conversation id, captured from the first `turnStart`
+   * chunk of a stream. When set, `sendChat` forwards it on subsequent
+   * turns so the backend resumes server-side history instead of
+   * round-tripping the full transcript.
+   */
+  conversationId: string | null;
 }
 
 const initialState: ChatStateT = {
@@ -20,6 +27,7 @@ const initialState: ChatStateT = {
   running: false,
   focusedCallId: null,
   inspectorOpen: false,
+  conversationId: null,
 };
 
 const closeThinking = (m: AssistantMessageDataT) => {
@@ -76,18 +84,23 @@ const slice = createSlice({
       if (!m) return;
 
       switch (chunk.type) {
+        case "turnStart": {
+          state.conversationId = chunk.conversationId;
+          m.serverId = chunk.messageId;
+          return;
+        }
         case "reasoning":
-        case "reasoning_delta": {
-          const append = chunk.type === "reasoning_delta";
+        case "reasoningDelta": {
+          const append = chunk.type === "reasoningDelta";
           m.thinking = append ? m.thinking + chunk.text : chunk.text;
           m.thinkingActive = true;
           m.thinkingStartedAt ??= Date.now();
           return;
         }
-        case "tool_call": {
+        case "toolCall": {
           closeThinking(m);
           const call: ToolCallT = {
-            id: chunk.call_id,
+            id: chunk.callId,
             tool: chunk.name,
             args: chunk.args,
             status: "in-flight",
@@ -96,8 +109,23 @@ const slice = createSlice({
           m.calls.push(call);
           return;
         }
-        case "tool_result": {
-          const call = m.calls.find((c) => c.id === chunk.call_id);
+        case "toolCallDelta": {
+          // Live-update the in-flight call's args/name as the model writes.
+          // For `args` we accumulate the streamed JSON text on a private
+          // `_argsText` field on the call; once the model emits `toolResult`
+          // the `args` field is already the parsed object so this stays
+          // best-effort cosmetic.
+          const call = m.calls.find((c) => c.id === chunk.callId);
+          if (!call) return;
+          if (chunk.delta.kind === "name") {
+            call.tool = chunk.delta.name;
+          }
+          // `args` deltas are JSON fragments — we don't try to render
+          // partial JSON, just leave the existing `args` value alone.
+          return;
+        }
+        case "toolResult": {
+          const call = m.calls.find((c) => c.id === chunk.callId);
           if (call) {
             call.status = "complete";
             call.result = chunk.content;
@@ -108,12 +136,21 @@ const slice = createSlice({
           if (cav?.length) m.caveats = cav;
           return;
         }
+        case "toolError": {
+          const call = m.calls.find((c) => c.id === chunk.callId);
+          if (!call) return;
+          call.status = "failed";
+          call.durationMs = Date.now() - call.startedAt;
+          call.errorCode = chunk.code;
+          call.errorMessage = chunk.message;
+          return;
+        }
         case "delta": {
           closeThinking(m);
           m.reply += chunk.text;
           return;
         }
-        case "turn_end": {
+        case "turnEnd": {
           m.usage = chunk.usage;
           return;
         }
@@ -128,7 +165,6 @@ const slice = createSlice({
           m.streaming = false;
           m.thinkingActive = false;
           m.done = true;
-          if (chunk.usage) m.usage = chunk.usage;
           return;
         }
       }

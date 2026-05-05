@@ -45,6 +45,7 @@ import type {
   AuthSignInError,
   AuthSignInResponse,
   AuthSignOutData,
+  AuthSignOutError,
   AuthSignOutResponse,
   CatalogStatsData,
   CatalogStatsResponse2,
@@ -55,6 +56,7 @@ import type {
   ClassifyError,
   ClassifyResponse2,
   ConversationDeleteData,
+  ConversationDeleteError,
   ConversationDeleteResponse,
   ConversationGetData,
   ConversationGetError,
@@ -252,12 +254,12 @@ export const authSignOutMutation = (
   options?: Partial<Options<AuthSignOutData>>,
 ): UseMutationOptions<
   AuthSignOutResponse,
-  DefaultError,
+  AuthSignOutError,
   Options<AuthSignOutData>
 > => {
   const mutationOptions: UseMutationOptions<
     AuthSignOutResponse,
-    DefaultError,
+    AuthSignOutError,
     Options<AuthSignOutData>
   > = {
     mutationFn: async (fnOptions) => {
@@ -489,12 +491,12 @@ export const conversationDeleteMutation = (
   options?: Partial<Options<ConversationDeleteData>>,
 ): UseMutationOptions<
   ConversationDeleteResponse,
-  DefaultError,
+  ConversationDeleteError,
   Options<ConversationDeleteData>
 > => {
   const mutationOptions: UseMutationOptions<
     ConversationDeleteResponse,
-    DefaultError,
+    ConversationDeleteError,
     Options<ConversationDeleteData>
   > = {
     mutationFn: async (fnOptions) => {

@@ -46,6 +46,82 @@ export type ChatBody = {
   provider?: string | null;
 };
 
+/**
+ * One streaming chunk surfaced to the frontend over SSE. Tagged with `type`
+ * so JS clients can switch on it cleanly. The full reference for the wire
+ * format lives at `docs/CHAT_SSE_PROTOCOL.md`.
+ */
+export type ChatChunk =
+  | {
+      conversationId: string;
+      messageId: string;
+      requestId?: string | null;
+      type: "turnStart";
+    }
+  | {
+      requestId?: string | null;
+      text: string;
+      type: "delta";
+    }
+  | {
+      id?: string | null;
+      requestId?: string | null;
+      text: string;
+      type: "reasoning";
+    }
+  | {
+      id?: string | null;
+      requestId?: string | null;
+      text: string;
+      type: "reasoningDelta";
+    }
+  | {
+      args: {
+        [key: string]: unknown;
+      };
+      callId: string;
+      name: string;
+      requestId?: string | null;
+      type: "toolCall";
+    }
+  | {
+      callId: string;
+      delta: ToolCallDeltaPayload;
+      requestId?: string | null;
+      type: "toolCallDelta";
+    }
+  | {
+      callId: string;
+      content: {
+        [key: string]: unknown;
+      };
+      requestId?: string | null;
+      tool: string;
+      type: "toolResult";
+    }
+  | {
+      callId: string;
+      code: string;
+      message: string;
+      requestId?: string | null;
+      tool?: string | null;
+      type: "toolError";
+    }
+  | {
+      requestId?: string | null;
+      type: "turnEnd";
+      usage: UsageInfo;
+    }
+  | {
+      message: string;
+      requestId?: string | null;
+      type: "error";
+    }
+  | {
+      requestId?: string | null;
+      type: "done";
+    };
+
 export type ChatResponse = {
   conversationId: string;
   message: ChatTurn;
@@ -383,6 +459,19 @@ export type TariffEvent = {
   url?: string | null;
 };
 
+/**
+ * Payload of a `toolCallDelta` chunk.
+ */
+export type ToolCallDeltaPayload =
+  | {
+      kind: "name";
+      name: string;
+    }
+  | {
+      kind: "args";
+      text: string;
+    };
+
 export type ToolCallView = {
   args: {
     [key: string]: unknown;
@@ -402,6 +491,20 @@ export type ToolCallView = {
  * Transport mode for HMF determination.
  */
 export type TransportMode = "ocean" | "air" | "truck" | "rail" | "other";
+
+/**
+ * Token-usage snapshot. Surfaced on `turnEnd`. All fields are 0 when the
+ * upstream provider didn't report them.
+ */
+export type UsageInfo = {
+  /**
+   * Tokens served from prompt cache (Anthropic prompt caching, etc.).
+   */
+  cachedInputTokens: number;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+};
 
 export type UsageView = {
   cachedInputTokens: number;
@@ -618,6 +721,15 @@ export type AuthSignOutData = {
   url: "/auth/sign-out";
 };
 
+export type AuthSignOutErrors = {
+  /**
+   * CSRF header missing
+   */
+  403: Problem;
+};
+
+export type AuthSignOutError = AuthSignOutErrors[keyof AuthSignOutErrors];
+
 export type AuthSignOutResponses = {
   /**
    * Session cleared (idempotent)
@@ -655,6 +767,10 @@ export type ChatData = {
 };
 
 export type ChatErrors = {
+  /**
+   * CSRF header missing
+   */
+  403: Problem;
   /**
    * Validation failed
    */
@@ -695,6 +811,10 @@ export type ChatStreamData = {
 
 export type ChatStreamErrors = {
   /**
+   * CSRF header missing
+   */
+  403: Problem;
+  /**
    * Validation failed
    */
   422: Problem;
@@ -710,8 +830,10 @@ export type ChatStreamResponses = {
   /**
    * Server-Sent Events stream of chat chunks
    */
-  200: unknown;
+  200: ChatChunk;
 };
+
+export type ChatStreamResponse = ChatStreamResponses[keyof ChatStreamResponses];
 
 export type ClassifyData = {
   body: ClassifyBody;
@@ -821,6 +943,16 @@ export type ConversationDeleteData = {
   url: "/conversations/{id}";
 };
 
+export type ConversationDeleteErrors = {
+  /**
+   * CSRF header missing
+   */
+  403: Problem;
+};
+
+export type ConversationDeleteError =
+  ConversationDeleteErrors[keyof ConversationDeleteErrors];
+
 export type ConversationDeleteResponses = {
   /**
    * Conversation deleted
@@ -876,6 +1008,10 @@ export type ConversationRenameData = {
 };
 
 export type ConversationRenameErrors = {
+  /**
+   * CSRF header missing
+   */
+  403: Problem;
   /**
    * Validation failed
    */

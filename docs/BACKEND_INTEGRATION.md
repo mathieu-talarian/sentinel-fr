@@ -337,70 +337,68 @@ shape diverge.
 
 ---
 
-## 4 · `/chat/stream` SSE protocol — still pending
+## 4 · `/chat/stream` SSE protocol
 
-OpenAPI doesn't model SSE bodies, so these gaps don't show up in the spec
-roundtrip. Each one is a backend-only change.
+The SSE chunks are now first-class OpenAPI schemas (`ChatChunk`,
+`ToolCallDeltaPayload`, `UsageInfo`) with `/chat/stream`'s response typed
+as `text/event-stream` of `ChatChunk`. Codegen consumes them — `ChatChunkT`
+in `src/lib/types.ts` is now an alias of the generated `ChatChunk` and
+`UsageT` is `UsageInfo`.
 
-### 4.1 `toolError` chunk (must-have)
-
-A failing tool currently never emits `tool_result`, leaving the pill
-stuck on `"in-flight"` forever. Add:
-
-```text
-data: {"type":"toolError","callId":"call_…","message":"Catalog index timeout","code":"upstreamTimeout"}
-```
-
-Reducer matches existing `toolResult` branch but flips the call to
-`status: "failed"` with the message. UI changes are 5 lines.
-
-### 4.2 `toolCallDelta` is declared but unused
-
-The FE reducer ignores it. Either remove the chunk type from the
-protocol, or start emitting it and we'll wire a reducer to live-update
-`call.args` so the pill suffix populates as the model writes.
-
-### 4.3 Carry `tool` on `toolResult`
-
-Today `toolResult` only has `callId`. Adding `tool` (or `name`) inline
-saves a `find` per chunk and lets us drop ToolPill→ResultCard
-cross-references:
+### 4.1 `toolError` chunk — ✅ shipped & FE-wired
 
 ```text
-data: {"type":"toolResult","callId":"call_…","tool":"get_code_details","content":{…}}
+data: {"type":"toolError","callId":"call_…","tool":"search_codes","message":"Catalog index timeout","code":"upstreamTimeout","requestId":"req_…"}
 ```
 
-### 4.4 `turnStart` — server-issued message id
+Reducer in `chatSlice.ts` flips the call to `status: "failed"` and stores
+`code` + `message` on the call (`call.errorCode`, `call.errorMessage`).
+The UI's existing `failed` style on `ToolPill` already paints red.
 
-Today the FE mints `newId("a")` in `chatThunks.ts:60`. A server-issued id
-is required to populate `conversationId` for follow-up turns:
+### 4.2 `toolCallDelta` — ✅ shipped & FE-wired
 
-```text
-data: {"type":"turnStart","messageId":"msg_…","conversationId":"conv_…"}
-```
+`ToolCallDeltaPayload` is a clean `{kind: "name" | "args"; …}`
+discriminated union. The reducer applies `kind: "name"` deltas to
+`call.tool` immediately so the pill text live-updates; `kind: "args"`
+fragments are JSON-partial and ignored until `toolResult` arrives with
+the parsed object.
 
-### 4.5 Chunk-type discriminator: camelCase
+### 4.3 Carry `tool` on `toolResult` — ✅ shipped
 
-After the camelCase pass, every chunk's `type` value goes camelCase too:
+`ChatChunk.toolResult` now has `tool` (and `toolError` carries `tool?`),
+so the inspector can route on the chunk directly. Today the FE still
+looks the call up by `callId` because the message-side renderer needs
+the start time for `durationMs`; can switch to direct `tool` if a
+followup ever wants to render results without a matching `toolCall` on
+record.
 
-| today | new |
+### 4.4 `turnStart` — ✅ shipped & FE-wired
+
+Backend emits `{ type: "turnStart", conversationId, messageId }` at the
+top of every stream. Reducer captures `state.conversationId` and the
+assistant message's `serverId`. `sendChat` now forwards
+`state.conversationId` on every subsequent turn — the rail can finally
+resume saved threads (next FE step).
+
+### 4.5 Chunk-type discriminator: camelCase — ✅ shipped & FE-wired
+
+| chunk `type` | what it carries |
 |---|---|
-| `delta` | `delta` |
-| `reasoning` | `reasoning` |
-| `reasoning_delta` | `reasoningDelta` |
-| `tool_call` | `toolCall` |
-| `tool_call_delta` | `toolCallDelta` |
-| `tool_result` | `toolResult` |
-| `tool_error` *(new)* | `toolError` |
-| `turn_start` *(new)* | `turnStart` |
-| `turn_end` | `turnEnd` |
-| `error` | `error` |
-| `done` | `done` |
+| `turnStart` | `conversationId, messageId, requestId?` |
+| `delta` | `text, requestId?` |
+| `reasoning` | `id?, text, requestId?` |
+| `reasoningDelta` | `id?, text, requestId?` |
+| `toolCall` | `callId, name, args, requestId?` |
+| `toolCallDelta` | `callId, delta: ToolCallDeltaPayload, requestId?` |
+| `toolResult` | `callId, tool, content, requestId?` |
+| `toolError` | `callId, tool?, code, message, requestId?` |
+| `turnEnd` | `usage: UsageInfo, requestId?` |
+| `error` | `message, requestId?` |
+| `done` | `requestId?` |
 
-The reducer in `src/lib/state/chatSlice.ts` currently switches on the
-snake_case forms — the FE will rename them in lock-step with the BE PR.
+`chatSlice.ts` switches on these directly.
 
-### 4.6 Heartbeat
+### 4.6 Heartbeat — pending
 
 Long tool calls (CROSS rulings can take 3–5 s) plus an idle-30 s nginx /
 Cloudflare timeout = orphaned streams. Send an SSE comment frame every
@@ -411,24 +409,26 @@ Cloudflare timeout = orphaned streams. Send an SSE comment frame every
 
 ```
 
-The FE reader already discards comment frames.
+The FE reader already discards comment frames — the only remaining
+backend change.
 
-### 4.7 Pick one home for `usage`
+### 4.7 `usage` on `turnEnd` only — ✅ shipped
 
-`turnEnd` carries `usage` mandatorily; `done` carries it optionally. Drop
-`done.usage` so `done` is just a terminator.
+`turnEnd.usage` is mandatory; `done.usage` is gone. The FE reducer no
+longer reads usage off `done`.
 
-### 4.8 Abort propagation
+### 4.8 Abort propagation — pending
 
-When `AbortController.abort()` fires on the FE, `chatStream.ts` cancels
-the body read. The backend should propagate the cancellation upstream
-(LLM provider) so we stop spending tokens.
+FE side already cancels the body read on `AbortController.abort()`.
+Backend should propagate the cancellation upstream (LLM provider) so we
+stop spending tokens. Verify with a curl that aborts mid-stream.
 
-### 4.9 Echo `requestId`
+### 4.9 `requestId` echo — ✅ shipped
 
-The FE sends `X-Request-Id`. Echo it as a response header AND optionally
-inline `requestId` on every chunk so the inspector can correlate a tool
-call to a Sentry/Loki trace.
+Every chunk carries an optional `requestId?: string | null` matching the
+inbound `X-Request-Id`. The FE doesn't surface it in the UI yet — easy
+follow-up to render a copyable correlation id on error toasts and the
+inspector header.
 
 ---
 
@@ -439,11 +439,13 @@ call to a Sentry/Loki trace.
 Backend accepts `lang` in `ChatBody`; FE sends `tweaks.lang`. Topbar
 EN/FR toggle is now functional.
 
-### 5.2 `conversationId` on `/chat/stream` — ✅ shipped, FE half-wired
+### 5.2 `conversationId` on `/chat/stream` — ✅ end-to-end
 
-Backend accepts it; FE only sends it once a `turnStart` chunk has
-populated it (still pending — § 4.4). Until then continuing a thread
-means re-sending the full `messages` array.
+Backend accepts it in `ChatBody`. FE captures it from the `turnStart`
+chunk (§ 4.4) into `chatSlice.state.conversationId` and `sendChat`
+forwards it on every subsequent turn. Server-side history resume is
+live; "open saved thread" from the rail is the next FE step
+(`GET /conversations/{id}` is already typed and ready).
 
 ### 5.3 Optional `toolCall.estimatedDurationMs`
 
@@ -475,49 +477,48 @@ Lets you A/B prompts, localise them, and personalise.
 
 ---
 
-## 6 · Auth + plumbing nice-to-haves
+## 6 · Auth + plumbing
 
-### 6.1 CSRF posture
+### 6.1 CSRF — ✅ shipped
 
-The FE sends `credentials: "include"` on every same-origin fetch. If the
-backend isn't pairing the HttpOnly `sentinelSession` cookie with a CSRF
-token (double-submit pattern, or `SameSite=Strict` + a custom header
-check), it should — current setup is implicitly trusting `SameSite=Lax`.
+Backend enforces a custom-header check on every cookie-authenticated
+mutating route: it accepts the existing `X-Request-Id` (which the FE
+already sends — see `src/lib/api/client.ts` interceptor and
+`chatStream.ts`) or a future `X-Csrf-Token` header. Mutating routes
+(`POST /chat`, `POST /chat/stream`, `POST /auth/sign-out`,
+`DELETE /conversations/{id}`, …) now respond `403 Problem` with
+`code: "csrfHeaderMissing"` if neither header is present. No FE change
+needed today.
 
-If a CSRF token is required, expose `/auth/csrf` returning
-`{ "csrfToken": "…" }` and have it accepted in either an `X-Csrf-Token`
-header or a `csrf` field. The FE wraps `client.interceptors` in
-`src/lib/api/client.ts` to add it.
+The cookie was also renamed `sentinel_session` → `sentinelSession`
+(SameSite=Strict). Backend still reads + clears the legacy name during
+the migration window so existing sessions don't get evicted.
 
-### 6.2 `Server-Timing` headers
+### 6.2 `Server-Timing` headers — ✅ shipped
 
-On `/auth/me`, `/conversations`, `/chat/stream`. Cheap and feeds straight
-into Chrome's Network panel and any future RUM:
-
-```
-Server-Timing: db;dur=12, llmFirstToken;dur=420, total;dur=512
-```
+Backend ships `Server-Timing` on `/auth/me`, `/chat/stream`, and the
+conversation routes. Visible in Chrome's Network panel; ready for any
+future RUM hookup.
 
 ---
 
 ## 7 · Quick-win order
 
-§ 3 drift is closed. The remaining list is all SSE / wire ergonomics:
+Most of § 3 / § 4 / § 6 is closed. Remaining list:
 
-1. **Add `toolError` chunk** (§ 4.1). Fixes the worst observable UI bug
-   (forever-spinning pill on tool failure).
-2. **Add `turnStart` chunk** (§ 4.4) so `conversationId` becomes useful
-   end-to-end and the rail can finally open saved threads. § 5.2 is
-   half-wired today and waiting on this.
-3. **Document SSE chunk shapes** (§ 4.5) — the spec doesn't model them.
-   A separate JSON Schema or an `application/x-ndjson` discriminated
-   union in the OpenAPI extras would let `@hey-api/openapi-ts` generate
-   the chunk types instead of the hand-written `ChatChunkT` in
-   `src/lib/types.ts`.
-4. **Heartbeat on `/chat/stream`** (§ 4.6). One-liner, kills orphaned
+1. **Heartbeat on `/chat/stream`** (§ 4.6). One-liner, kills orphaned
    streams behind nginx / Cloudflare.
-5. **Specify `subscribe_watch` SSE content** (§ 3.6) so the last
-   hand-written tool-result type can also become a generated alias.
+2. **Verify upstream abort propagation** (§ 4.8). Curl an in-flight
+   stream and confirm the LLM call is cancelled when the FE aborts.
+3. **Specify `subscribe_watch` SSE content** (§ 3.6 — *update*: REST
+   shape was canonicalised, but confirm the SSE `toolResult.content` for
+   `subscribe_watch` carries the same `WatchSubscribeResponse`). Once
+   confirmed, no FE change.
+4. **Surface `requestId`** in the FE error UI (§ 4.9). Pure FE follow-up
+   — copy the correlation id onto error toasts + the inspector header.
+5. **Wire "open saved thread" from the rail** (§ 5.2). Backend ready;
+   FE just needs the click handler to call `conversationGet` and
+   replay `messages` into the chat slice.
 
 ---
 

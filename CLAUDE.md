@@ -33,7 +33,7 @@
 
 ## API (OpenAPI codegen via @hey-api/openapi-ts)
 
-- Backend OpenAPI spec lives at `https://localhost:8888/api-doc/openapi.json` (override with `OPENAPI_URL=` for staging/prod). Run `yarn run gen:api` to regenerate the typed SDK + TanStack Query helpers under `src/lib/api/generated/` — that dir is git-tracked but eslint-ignored (`src/lib/api/generated/**` in `eslint.config.js`)
+- Backend OpenAPI spec lives at `https://localhost:8888/api-doc/openapi.json` (override with `OPENAPI_URL=` for staging/prod). Run `yarn run gen:api` to regenerate the typed SDK + TanStack Query helpers under `src/lib/api/generated/` — that dir is git-tracked but eslint-ignored (`src/lib/api/generated/**` in `eslint.config.js`). The dev server uses a mkcert-issued cert, so codegen needs `NODE_TLS_REJECT_UNAUTHORIZED=0 yarn run gen:api` (the FE itself doesn't need this — only Node-side spec fetching)
 - Output split: `sdk.gen.ts` (typed fetch functions, e.g. `authMe()`, `conversationsList()`), `types.gen.ts` (shapes — `SessionView`, `ConversationListResponse`, `Problem`, …), `client.gen.ts` (the `client` singleton), and `@tanstack/react-query.gen.ts` (`*Options` for `useQuery`, `*Mutation` for `useMutation`, plus `*QueryKey` factories)
 - Runtime client config lives in `src/lib/api/client.ts` and runs once at boot from `main.tsx` via `configureApiClient()` — sets `baseUrl: ""` (overrides the spec-derived `https://localhost:8888` so the Vite proxy + production reverse-proxy take over), `credentials: "include"` for the HttpOnly `sentinelSession` cookie, and a per-request `X-Request-Id` interceptor
 - Consumer pattern: components import `*Options` / `*Mutation` directly from `@/lib/api/generated/@tanstack/react-query.gen` and drop them straight into `useQuery({ ...optionsFn() })` / `useMutation({ ...mutationFn(), onSuccess })`. ESLint's `no-barrel-files` blocks pure re-exports, so don't try to forward them through `src/lib/api/queries.ts`
@@ -50,6 +50,7 @@
 ## Workflow Gotchas
 
 - `yarn run format` (prettier + eslint --fix) auto-resolves import-order, blank-line, and most stylex grouping errors — always run it before manually fixing lint
+- ESLint `no-barrel-files` blocks `export type { Foo } from "..."` (and bare `export const x = imported`) even on files that do real work. Workaround: declare a local alias — `import type { Foo } from "..."; export type FooT = Foo;` — that's a definition, not a re-export, and passes the rule
 - macOS APFS is case-insensitive: renaming a directory `Foo` → `foo` is a no-op. Two-step it: `mv Foo __tmp && mv __tmp foo`
 - Paths starting with `-` (e.g. TanStack Router's `-private` folders) need `--` to disambiguate from flags: `git mv -- src/routes/-login/foo ...`. Without `--`, the command fails silently in an `&&` chain
 

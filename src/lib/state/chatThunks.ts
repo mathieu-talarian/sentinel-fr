@@ -58,23 +58,25 @@ export const sendChat =
 
     abortCtrl = new AbortController();
     const { provider, lang } = getState().tweaks;
+    const conversationId = getState().chat.conversationId ?? undefined;
 
     try {
       for await (const chunk of streamChat(turns, {
         signal: abortCtrl.signal,
         provider,
         lang,
+        conversationId,
       })) {
         dispatch(chatActions.applyChunk({ asstId, chunk }));
 
         // Auto-open inspector + focus first tool result if the user hasn't
         // disabled it. Read tweaks lazily so toggling mid-stream is honoured.
-        if (chunk.type === "tool_result") {
+        if (chunk.type === "toolResult") {
           const { tweaks, chat } = getState();
           if (tweaks.inspectorAutoOpen) {
             dispatch(chatActions.setInspectorOpen(true));
             if (chat.focusedCallId == null) {
-              dispatch(chatActions.setFocusedCall(chunk.call_id));
+              dispatch(chatActions.setFocusedCall(chunk.callId));
             }
           }
         }

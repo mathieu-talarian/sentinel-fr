@@ -1,35 +1,35 @@
 /**
- * Wire types for the Sentinel chat SSE protocol.
- * Source of truth: /Users/mathieumoullec/work/sentinel/docs/CHAT_SSE_PROTOCOL.md
+ * Wire types for the Sentinel chat. Tool-result shapes, the SSE
+ * `ChatChunk` discriminated union, and `UsageInfo` all come from the
+ * OpenAPI spec via `@/lib/api/generated/types.gen`. This file's role is
+ * down to:
+ *   - thin local aliases that feed the renderer organisms (so they
+ *     don't import generated types directly and the `no-barrel-files`
+ *     rule stays satisfied);
+ *   - the UI-side message shapes (`MessageT`, `AssistantMessageDataT`,
+ *     `UserMessageDataT`, `ToolCallT`) — those are render-state, not
+ *     wire shapes, and don't have a spec equivalent.
  *
- * Tool-result shapes that the OpenAPI spec covers (search, code details,
- * landed cost, alerts, conversations, …) are imported from
- * `@/lib/api/generated/types.gen` — those are the canonical contracts. The
- * hand-written types in this file describe the SSE chunks themselves
- * (`ChatChunkT`, `ToolCallT`, `MessageT`) which the spec doesn't model
- * (chat/stream is typed `unknown`), plus tool-result shapes that don't yet
- * have a REST mirror in the spec (`CrossRulingsContentT`,
- * `SubscribeWatchContentT`).
+ * The two remaining hand-written wire types are `RulingItemT` /
+ * `CrossRulingsContentT` — `find_cross_rulings` doesn't have a REST
+ * mirror in the spec yet.
  */
 
 import type {
   AlertItem,
   AlertsResponse,
+  ChatChunk,
   CommodityBody,
   CommodityHierarchyEntry,
   LandedCostResponse,
   LandedCostRow,
   SearchBody,
   SearchCandidate,
+  UsageInfo,
   WatchSubscribeResponse,
 } from "@/lib/api/generated/types.gen";
 
-export interface UsageT {
-  input_tokens: number;
-  output_tokens: number;
-  total_tokens: number;
-  cached_input_tokens: number;
-}
+export type UsageT = UsageInfo;
 
 export type ToolNameT =
   | "search_codes"
@@ -39,20 +39,7 @@ export type ToolNameT =
   | "subscribe_watch"
   | "list_alerts";
 
-export type ChatChunkT =
-  | { type: "delta"; text: string }
-  | { type: "reasoning"; id?: string; text: string }
-  | { type: "reasoning_delta"; id?: string; text: string }
-  | { type: "tool_call"; call_id: string; name: string; args: unknown }
-  | {
-      type: "tool_call_delta";
-      call_id: string;
-      delta: { kind: "name"; name: string } | { kind: "args"; text: string };
-    }
-  | { type: "tool_result"; call_id: string; content: unknown }
-  | { type: "turn_end"; usage: UsageT }
-  | { type: "error"; message: string }
-  | { type: "done"; usage?: UsageT };
+export type ChatChunkT = ChatChunk;
 
 export interface ChatTurnT {
   role: "user" | "assistant";
@@ -71,11 +58,21 @@ export interface ToolCallT {
   startedAt: number;
   durationMs?: number;
   result?: unknown;
+  /** Set by `toolError` chunks; a short backend-issued error code. */
+  errorCode?: string;
+  /** Set by `toolError` chunks; human-readable message. */
+  errorMessage?: string;
 }
 
 export interface AssistantMessageDataT {
   id: string;
   role: "assistant";
+  /**
+   * Server-issued message id from the `turnStart` chunk. Used for
+   * conversation persistence; the in-tree `id` stays as the FE-minted
+   * uuid so the reducer can keep finding the message.
+   */
+  serverId?: string;
   thinking: string;
   thinkingActive: boolean;
   thinkingMs?: number;

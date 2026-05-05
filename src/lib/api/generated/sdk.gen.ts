@@ -14,6 +14,7 @@ import type {
   AuthSignInErrors,
   AuthSignInResponses,
   AuthSignOutData,
+  AuthSignOutErrors,
   AuthSignOutResponses,
   CatalogStatsData,
   CatalogStatsResponses,
@@ -22,11 +23,13 @@ import type {
   ChatResponses,
   ChatStreamData,
   ChatStreamErrors,
+  ChatStreamResponse,
   ChatStreamResponses,
   ClassifyData,
   ClassifyErrors,
   ClassifyResponses,
   ConversationDeleteData,
+  ConversationDeleteErrors,
   ConversationDeleteResponses,
   ConversationGetData,
   ConversationGetErrors,
@@ -132,9 +135,11 @@ export const authSignIn = <ThrowOnError extends boolean = false>(
 export const authSignOut = <ThrowOnError extends boolean = false>(
   options?: Options<AuthSignOutData, ThrowOnError>,
 ) =>
-  (options?.client ?? client).post<AuthSignOutResponses, unknown, ThrowOnError>(
-    { url: "/auth/sign-out", ...options },
-  );
+  (options?.client ?? client).post<
+    AuthSignOutResponses,
+    AuthSignOutErrors,
+    ThrowOnError
+  >({ url: "/auth/sign-out", ...options });
 
 export const catalogStats = <ThrowOnError extends boolean = false>(
   options?: Options<CatalogStatsData, ThrowOnError>,
@@ -190,7 +195,7 @@ export const chat = <ThrowOnError extends boolean = false>(
  * - `{"type":"done"}` — terminal success marker
  */
 export const chatStream = <ThrowOnError extends boolean = false>(
-  options: Options<ChatStreamData, ThrowOnError, unknown>,
+  options: Options<ChatStreamData, ThrowOnError, ChatStreamResponse>,
 ) =>
   (options.client ?? client).sse.post<
     ChatStreamResponses,
@@ -251,7 +256,7 @@ export const conversationDelete = <ThrowOnError extends boolean = false>(
 ) =>
   (options.client ?? client).delete<
     ConversationDeleteResponses,
-    unknown,
+    ConversationDeleteErrors,
     ThrowOnError
   >({ url: "/conversations/{id}", ...options });
 
