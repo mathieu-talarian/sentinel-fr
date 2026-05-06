@@ -2,10 +2,12 @@
    colocate the `Route` config alongside the route component. */
 import type { RouterContextT } from "@/router";
 
+import * as Sentry from "@sentry/react";
 import * as stylex from "@stylexjs/stylex";
 import { Outlet, createRootRouteWithContext } from "@tanstack/react-router";
 import { Suspense, lazy, useEffect } from "react";
 
+import { ErrorFallback } from "@/components/molecules/ErrorFallback";
 import { useTweaks } from "@/lib/state/tweaks";
 import { sx } from "@/lib/styles/sx";
 import { darkTheme } from "@/lib/styles/themes";
@@ -55,9 +57,20 @@ function RootComponent() {
 
   return (
     <>
-      <div {...sx(s.app)}>
-        <Outlet />
-      </div>
+      <Sentry.ErrorBoundary
+        fallback={(p) => (
+          <ErrorFallback
+            error={p.error}
+            resetError={() => {
+              p.resetError();
+            }}
+          />
+        )}
+      >
+        <div {...sx(s.app)}>
+          <Outlet />
+        </div>
+      </Sentry.ErrorBoundary>
       <Suspense>
         <TanStackRouterDevtools />
       </Suspense>

@@ -1,5 +1,6 @@
 import { fileURLToPath } from "node:url";
 
+import { sentryVitePlugin } from "@sentry/vite-plugin";
 import stylexPlugin from "@stylexjs/unplugin/vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
@@ -12,6 +13,16 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, ".", "");
   const apiTarget = env.VITE_SENTINEL_API_BASE || "https://127.0.0.1:8888";
 
+  // Source-map upload is opt-in: any deploy that wants Sentry-readable
+  // stack traces sets all three vars; without them the plugin stays out
+  // of the pipeline so dev / fresh checkouts don't need a token.
+  const sentryAuthToken = env.SENTRY_AUTH_TOKEN;
+  const sentryOrg = env.SENTRY_ORG;
+  const sentryProject = env.SENTRY_PROJECT;
+  const uploadSentrySourceMaps = Boolean(
+    sentryAuthToken && sentryOrg && sentryProject,
+  );
+
   return {
     resolve: {
       alias: {
@@ -19,6 +30,7 @@ export default defineConfig(({ mode }) => {
       },
     },
     build: {
+      sourcemap: uploadSentrySourceMaps ? "hidden" : false,
       rolldownOptions: {
         output: {
           manualChunks: (id: string) => {
@@ -52,6 +64,20 @@ export default defineConfig(({ mode }) => {
         unstable_moduleResolution: { type: "commonJS" },
         aliases: { "@/*": [`${srcDir}/*`] },
       }),
+      uploadSentrySourceMaps &&
+        sentryVitePlugin({
+          authToken: sentryAuthToken,
+          org: sentryOrg,
+          project: sentryProject,
+          release: env.VITE_APP_RELEASE
+            ? { name: env.VITE_APP_RELEASE }
+            : undefined,
+          sourcemaps: {
+            // Strip uploaded maps from the deployed bundle so they're
+            // only readable inside Sentry, not via DevTools.
+            filesToDeleteAfterUpload: ["./dist/**/*.map"],
+          },
+        }),
     ],
   };
 });
