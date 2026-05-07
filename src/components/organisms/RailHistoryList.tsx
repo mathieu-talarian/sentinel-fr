@@ -3,6 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 
 import { RailConvoItem } from "@/components/molecules/RailConvoItem";
 import { conversationsListOptions } from "@/lib/api/generated/@tanstack/react-query.gen";
+import { loadConversation, resetChat } from "@/lib/state/chatThunks";
+import { useAppDispatch, useAppSelector } from "@/lib/state/hooks";
 import { sx } from "@/lib/styles/sx";
 import { colors, fonts } from "@/lib/styles/tokens.stylex";
 
@@ -22,18 +24,38 @@ const formatWhen = (iso: string): string => {
 
 export function RailHistoryList() {
   const convos = useQuery(conversationsListOptions());
+  const conversationId = useAppSelector((s) => s.chat.conversationId);
+  const dispatch = useAppDispatch();
   const items = convos.data?.conversations ?? [];
+
+  const onPick = (id: string) => {
+    if (id === conversationId) return;
+    dispatch(loadConversation(id)).catch(() => undefined);
+  };
+  const onNew = () => {
+    if (conversationId === null) return;
+    dispatch(resetChat);
+  };
 
   return (
     <>
       <div {...sx(s.section)}>Recent</div>
       <div {...sx(s.list)}>
-        <RailConvoItem title="New chat" when="Now" active />
+        <RailConvoItem
+          title="New chat"
+          when="Now"
+          active={conversationId === null}
+          onClick={onNew}
+        />
         {items.map((c) => (
           <RailConvoItem
             key={c.id}
             title={c.title}
             when={formatWhen(c.lastMessageAt)}
+            active={c.id === conversationId}
+            onClick={() => {
+              onPick(c.id);
+            }}
           />
         ))}
         {convos.isError && <div {...sx(s.error)}>Couldn't load history</div>}

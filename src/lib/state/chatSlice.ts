@@ -64,6 +64,16 @@ const slice = createSlice({
     reset() {
       return initialState;
     },
+    loadConversation(
+      state,
+      action: PayloadAction<{ conversationId: string; messages: MessageT[] }>,
+    ) {
+      state.messages = action.payload.messages;
+      state.conversationId = action.payload.conversationId;
+      state.running = false;
+      state.focusedCallId = null;
+      state.inspectorOpen = false;
+    },
     finalizeAssistant(
       state,
       action: PayloadAction<{ asstId: string; error?: string }>,

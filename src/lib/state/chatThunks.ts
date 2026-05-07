@@ -1,13 +1,21 @@
+import type {
+  ConversationMessage,
+  ToolCallView,
+} from "@/lib/api/generated/types.gen";
 import type { AppThunkT } from "@/lib/state/store";
 import type {
   AssistantMessageDataT,
   ChatTurnT,
+  MessageT,
+  ToolCallStatusT,
+  ToolCallT,
   UserMessageDataT,
 } from "@/lib/types";
 
 import * as Sentry from "@sentry/react";
 
 import { streamChat } from "@/lib/api/chatStream";
+import { conversationGet } from "@/lib/api/generated/sdk.gen";
 import { chatActions } from "@/lib/state/chatSlice";
 
 const newId = (prefix: string) => `${prefix}_${crypto.randomUUID()}`;
@@ -135,3 +143,69 @@ export const resetChat: AppThunkT = (dispatch, getState) => {
   if (getState().chat.running) abortCtrl?.abort();
   dispatch(chatActions.reset());
 };
+
+const callStatus = (s: string): ToolCallStatusT => {
+  if (s === "in-flight" || s === "complete" || s === "failed") return s;
+  return "complete";
+};
+
+const toFECall = (c: ToolCallView): ToolCallT => ({
+  id: c.id,
+  tool: c.tool,
+  args: c.args,
+  status: callStatus(c.status),
+  // Persisted view doesn't carry the wall-clock start; only `durationMs`
+  // matters for the rendered "(312ms)" suffix on the call pill.
+  startedAt: 0,
+  durationMs: c.durationMs ?? undefined,
+  result: c.result ?? undefined,
+  errorCode: c.code ?? undefined,
+  errorMessage: c.message ?? undefined,
+});
+
+const toFEMessage = (m: ConversationMessage): MessageT => {
+  if (m.role === "user") {
+    return { id: m.id, role: "user", text: m.content };
+  }
+  return {
+    id: m.id,
+    serverId: m.id,
+    role: "assistant",
+    thinking: "",
+    thinkingActive: false,
+    calls: (m.toolCalls ?? []).map((c) => toFECall(c)),
+    reply: m.content,
+    streaming: false,
+    done: true,
+    usage: m.usage ?? undefined,
+  };
+};
+
+/**
+ * Replace the rendered chat with a persisted conversation. Aborts any
+ * in-flight stream first so the user doesn't see deltas land into the
+ * newly-loaded thread. Subsequent `sendChat` calls append to this
+ * conversation server-side because `state.chat.conversationId` is set.
+ */
+export const loadConversation =
+  (id: string): AppThunkT<Promise<void>> =>
+  async (dispatch) => {
+    abortCtrl?.abort();
+    abortCtrl = null;
+
+    const r = await conversationGet({ path: { id }, throwOnError: false });
+    if (!r.data) {
+      const status = r.response?.status ?? 0;
+      Sentry.captureException(
+        new Error(`conversationGet failed: HTTP ${status.toString()}`),
+        {
+          tags: { source: "load-conversation" },
+          extra: { conversationId: id, httpStatus: status },
+        },
+      );
+      return;
+    }
+
+    const messages: MessageT[] = r.data.messages.map((m) => toFEMessage(m));
+    dispatch(chatActions.loadConversation({ conversationId: id, messages }));
+  };

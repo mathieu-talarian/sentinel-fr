@@ -1,20 +1,25 @@
 import * as stylex from "@stylexjs/stylex";
 
 import { sx } from "@/lib/styles/sx";
-import { borders, colors, radii } from "@/lib/styles/tokens.stylex";
+import { borders, colors, fonts, radii } from "@/lib/styles/tokens.stylex";
 
 interface RailConvoItemPropsT {
   title: string;
   when: string;
   active?: boolean;
+  onClick?: () => void;
 }
 
 export function RailConvoItem(props: Readonly<RailConvoItemPropsT>) {
   return (
-    <div {...sx(s.convo, props.active && s.convoActive)}>
+    <button
+      type="button"
+      onClick={props.onClick}
+      {...sx(s.convo, props.active && s.convoActive)}
+    >
       <span {...sx(s.title, props.active && s.titleActive)}>{props.title}</span>
       <span {...sx(s.when)}>{props.when}</span>
-    </div>
+    </button>
   );
 }
 
@@ -33,6 +38,9 @@ const s = stylex.create({
     cursor: "pointer",
     display: "flex",
     flexDirection: "column",
+    fontFamily: fonts.sans,
+    textAlign: "left",
+    width: "100%",
   },
   convoActive: {
     borderColor: colors.line,
