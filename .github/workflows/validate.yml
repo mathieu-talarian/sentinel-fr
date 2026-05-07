@@ -26,6 +26,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Corepack ships with Node 16+; running it BEFORE setup-node uses the
+      # runner's pre-installed Node to register the yarn shim. setup-node
+      # then installs Node 22, but the shim points at corepack which reads
+      # `packageManager: yarn@4.14.1` from package.json — so every later
+      # `yarn` invocation runs Yarn 4, not the runner's default Yarn 1.
+      - name: Enable Corepack
+        run: corepack enable
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -54,20 +62,25 @@ jobs:
         run: yarn run test
 
   secrets:
-    name: Secret scan (gitleaks)
+    name: Secret scan (trufflehog)
     runs-on: ubuntu-latest
     # Independent of `build` so a leaked secret blocks the PR even if the
     # build stage failed earlier (and vice versa). Cheap to run in parallel.
     steps:
       - uses: actions/checkout@v4
         with:
-          # Full history so gitleaks can inspect every commit on the PR /
+          # Full history so trufflehog can inspect every commit on the PR /
           # push range, not just the tip.
           fetch-depth: 0
 
-      - uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # GITLEAKS_LICENSE only required for Organization accounts.
-          # Add it as a repo secret if this repo is moved under an org.
-          # GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+      # `--results=verified,unknown` is TruffleHog's recommended setting:
+      # `verified` = secret tested live against the issuing API and confirmed
+      # valid; `unknown` = couldn't be verified (offline / rate-limited /
+      # detector has no verifier). Skipping `unverified` cuts the noise from
+      # false-positive regex matches that TruffleHog couldn't confirm.
+      - name: TruffleHog
+        uses: trufflesecurity/trufflehog@main
+        with:
+          extra_args: >-
+            --results=verified,unknown
+            --exclude-paths=.trufflehog-exclude

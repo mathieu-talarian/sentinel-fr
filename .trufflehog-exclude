@@ -1,0 +1,15 @@
+# TruffleHog path-exclude regex (one per line).
+# Passed as `--exclude-paths` from the Validate workflow.
+
+# Firebase web config — `apiKey: "AIzaSy..."` matches Google API-key detectors,
+# but Firebase web keys are public-by-design project identifiers, not
+# credentials. Backend access is gated by Firebase Admin SDK verifying ID
+# tokens server-side.
+src/lib/firebase/index\.ts$
+
+# Local tooling state. Already gitignored, so CI never sees these — listed
+# here so a local `trufflehog filesystem .` matches the CI behaviour.
+^\.claude/
+^\.claude-flow/
+^\.serena/
+^\.agents/
