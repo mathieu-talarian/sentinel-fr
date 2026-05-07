@@ -27,6 +27,7 @@ src/routeTree.gen.ts
 .swarm/
 .playwright-mcp/
 .mcp.json
+.agents
 
 # IDE
 .idea/
