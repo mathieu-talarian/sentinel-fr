@@ -56,7 +56,7 @@ export const POPUP_ERROR_COPY: Record<string, string> = {
 
 export const popupErrorMessage = (err: unknown): string => {
   if (err && typeof err === "object" && "code" in err) {
-    const code = (err).code;
+    const code = err.code;
     if (typeof code === "string" && code in POPUP_ERROR_COPY) {
       return POPUP_ERROR_COPY[code];
     }

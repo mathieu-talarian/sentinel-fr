@@ -56,9 +56,7 @@ export const signOut: AppThunkT<Promise<void>> = async () => {
  * user, then keep the listener for subsequent sign-in / sign-out / token
  * refresh events.
  */
-export const subscribeAuth = async (
-  dispatch: AppDispatchT,
-): Promise<void> => {
+export const subscribeAuth = async (dispatch: AppDispatchT): Promise<void> => {
   await firebaseAuth.authStateReady();
   await handleAuthChange(dispatch, firebaseAuth.currentUser);
   firebaseAuth.onAuthStateChanged((user) => {
