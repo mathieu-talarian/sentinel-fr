@@ -66,6 +66,9 @@ export default defineConfig(({ mode }) => {
       }),
       uploadSentrySourceMaps &&
         sentryVitePlugin({
+          reactComponentAnnotation: {
+            enabled: true,
+          },
           authToken: sentryAuthToken,
           org: sentryOrg,
           project: sentryProject,

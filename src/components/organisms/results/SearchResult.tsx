@@ -8,10 +8,8 @@ import { sx } from "@/lib/styles/sx";
 import { borders, colors, fonts } from "@/lib/styles/tokens.stylex";
 import { formatHtsCode } from "@/lib/utils/format";
 
-const localized = (
-  d: LocalizedDescription,
-  lang: "en" | "fr",
-): string => d[lang] ?? d.en ?? d.fr ?? "";
+const localized = (d: LocalizedDescription, lang: "en" | "fr"): string =>
+  d[lang] ?? d.en ?? d.fr ?? "";
 
 const maxScore = (candidates: readonly { score: number }[]): number => {
   let max = 0;
@@ -47,7 +45,9 @@ export function SearchResult(props: Readonly<{ result: SearchCodesContentT }>) {
                 style={{ width: `${String(norm(cand.score) * 100)}%` }}
               />
             </div>
-            <div {...sx(r.desc)}>{localized(cand.description, tweaks.lang)}</div>
+            <div {...sx(r.desc)}>
+              {localized(cand.description, tweaks.lang)}
+            </div>
           </div>
         );
       })}

@@ -47,7 +47,7 @@ Tool-registry identifiers (`get_code_details`, `find_cross_rulings`,
 `subscribe_watch`, …) are **enum string values** the model emits, not
 field names. They stay `snake_case` because changing them is an
 LLM-prompt-engineering question, not a wire question. Field names that
-*carry* them (`tool`, `name`) are camelCase as usual.
+_carry_ them (`tool`, `name`) are camelCase as usual.
 
 ### How errors look — RFC 9457 Problem Details
 
@@ -75,14 +75,14 @@ Standard members (`type`, `title`, `status`, `detail`, `instance`) keep
 their RFC-defined names. Extension members (`code`, `requestId`) follow
 § 0:
 
-- `code` *(extension)* — stable machine identifier, camelCase enum string
+- `code` _(extension)_ — stable machine identifier, camelCase enum string
   (`"upstreamTimeout"`, `"emailUnverified"`, `"stateMismatch"`).
-- `requestId` *(extension)* — echoes the inbound `X-Request-Id` header.
+- `requestId` _(extension)_ — echoes the inbound `X-Request-Id` header.
 
 Streaming errors on `/chat/stream` follow the existing `error` SSE chunk
 (`{"type":"error","message":"…"}`), not the JSON Problem shape — once the
 stream opens (`200 + text/event-stream`), problem details only apply to
-*pre-stream* failures.
+_pre-stream_ failures.
 
 ---
 
@@ -194,11 +194,11 @@ Body (`ChatBody`):
 ```jsonc
 {
   "messages": [
-    { "role": "user", "content": "What's the duty on a leather handbag?" }
+    { "role": "user", "content": "What's the duty on a leather handbag?" },
   ],
-  "provider": "anthropic",       // optional — falls back to server default
-  "lang": "fr",                  // optional — controls assistant output language
-  "conversationId": "conv_01H8E…" // optional — server prepends persisted history
+  "provider": "anthropic", // optional — falls back to server default
+  "lang": "fr", // optional — controls assistant output language
+  "conversationId": "conv_01H8E…", // optional — server prepends persisted history
 }
 ```
 
@@ -215,15 +215,15 @@ Body (`ChatBody`):
 These power the agent's tool calls; the FE doesn't call them directly
 today but the SDK is generated for future use:
 
-| Endpoint | SDK function | Notes |
-|---|---|---|
-| `GET /code/{code}` | `getCode` | ✅ canonical `CommodityBody` (§ 3.2) |
-| `POST /search` | `search` | ✅ canonical `SearchCandidate` (§ 3.1). Now POST + body — `searchOptions` became `searchMutation` |
-| `POST /landed-cost` | `landedCost` | ✅ canonical shape (§ 3.3) |
-| `GET /watch/alerts` | `watchAlerts` | List recent alerts |
-| `POST /watch/check` | `watchCheck` | One-shot alert check |
-| `POST /watch/subscribe` | `watchSubscribe` | Create an alert subscription |
-| `POST /classify` | `classify` | ✅ camelCase request body (§ 3.4) |
+| Endpoint                | SDK function     | Notes                                                                                             |
+| ----------------------- | ---------------- | ------------------------------------------------------------------------------------------------- |
+| `GET /code/{code}`      | `getCode`        | ✅ canonical `CommodityBody` (§ 3.2)                                                              |
+| `POST /search`          | `search`         | ✅ canonical `SearchCandidate` (§ 3.1). Now POST + body — `searchOptions` became `searchMutation` |
+| `POST /landed-cost`     | `landedCost`     | ✅ canonical shape (§ 3.3)                                                                        |
+| `GET /watch/alerts`     | `watchAlerts`    | List recent alerts                                                                                |
+| `POST /watch/check`     | `watchCheck`     | One-shot alert check                                                                              |
+| `POST /watch/subscribe` | `watchSubscribe` | Create an alert subscription                                                                      |
+| `POST /classify`        | `classify`       | ✅ camelCase request body (§ 3.4)                                                                 |
 
 ### 2.8 Infra endpoints
 
@@ -268,7 +268,11 @@ The generated tanstack helper is `searchMutation` (no `searchOptions`).
   "found": true,
   "description": { "en": "…", "fr": "…" },
   "hierarchy": [
-    { "code": "4202", "description": { "en": "…", "fr": "…" }, "isDeclarable": false }
+    {
+      "code": "4202",
+      "description": { "en": "…", "fr": "…" },
+      "isDeclarable": false
+    }
   ],
   "rate": { "value": "8.0%", "kind": "adValorem", "sourceCode": "MFN" },
   "unit": "kg",
@@ -319,7 +323,9 @@ Replaying a saved thread is now wire-typed end-to-end.
   "sources": ["CSMS", "Federal Register"],
   "cadence": "daily",
   "createdAt": "2026-04-22T09:00:00Z",
-  "subscriptions": [/* all of the user's WatchSubscriptionView entries */]
+  "subscriptions": [
+    /* all of the user's WatchSubscriptionView entries */
+  ]
 }
 ```
 
@@ -382,19 +388,19 @@ resume saved threads (next FE step).
 
 ### 4.5 Chunk-type discriminator: camelCase — ✅ shipped & FE-wired
 
-| chunk `type` | what it carries |
-|---|---|
-| `turnStart` | `conversationId, messageId, requestId?` |
-| `delta` | `text, requestId?` |
-| `reasoning` | `id?, text, requestId?` |
-| `reasoningDelta` | `id?, text, requestId?` |
-| `toolCall` | `callId, name, args, requestId?` |
-| `toolCallDelta` | `callId, delta: ToolCallDeltaPayload, requestId?` |
-| `toolResult` | `callId, tool, content, requestId?` |
-| `toolError` | `callId, tool?, code, message, requestId?` |
-| `turnEnd` | `usage: UsageInfo, requestId?` |
-| `error` | `message, requestId?` |
-| `done` | `requestId?` |
+| chunk `type`     | what it carries                                   |
+| ---------------- | ------------------------------------------------- |
+| `turnStart`      | `conversationId, messageId, requestId?`           |
+| `delta`          | `text, requestId?`                                |
+| `reasoning`      | `id?, text, requestId?`                           |
+| `reasoningDelta` | `id?, text, requestId?`                           |
+| `toolCall`       | `callId, name, args, requestId?`                  |
+| `toolCallDelta`  | `callId, delta: ToolCallDeltaPayload, requestId?` |
+| `toolResult`     | `callId, tool, content, requestId?`               |
+| `toolError`      | `callId, tool?, code, message, requestId?`        |
+| `turnEnd`        | `usage: UsageInfo, requestId?`                    |
+| `error`          | `message, requestId?`                             |
+| `done`           | `requestId?`                                      |
 
 `chatSlice.ts` switches on these directly.
 
@@ -510,7 +516,7 @@ Most of § 3 / § 4 / § 6 is closed. Remaining list:
    streams behind nginx / Cloudflare.
 2. **Verify upstream abort propagation** (§ 4.8). Curl an in-flight
    stream and confirm the LLM call is cancelled when the FE aborts.
-3. **Specify `subscribe_watch` SSE content** (§ 3.6 — *update*: REST
+3. **Specify `subscribe_watch` SSE content** (§ 3.6 — _update_: REST
    shape was canonicalised, but confirm the SSE `toolResult.content` for
    `subscribe_watch` carries the same `WatchSubscribeResponse`). Once
    confirmed, no FE change.
