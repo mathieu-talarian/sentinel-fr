@@ -1,0 +1,73 @@
+name: Validate
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Read-only — `packages: read` is needed to fetch the private
+# @mathieu-talarian scope from GitHub Packages.
+permissions:
+  contents: read
+  packages: read
+
+# Cancel in-flight runs of this workflow on the same ref so a force-push
+# during validation doesn't waste a runner.
+concurrency:
+  group: validate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Format · Lint · Type · Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+
+      # Yarn 4 (berry) reads scoped tokens from `npmScopes.<scope>.npmAuthToken`.
+      # We inject GITHUB_TOKEN at runtime so .yarnrc.yml stays secret-free.
+      - name: Configure private registry auth
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: yarn config set 'npmScopes.mathieu-talarian.npmAuthToken' "$NODE_AUTH_TOKEN"
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Prettier check
+        run: yarn run check
+
+      - name: ESLint
+        run: yarn run lint
+
+      - name: Typecheck
+        run: yarn run type
+
+      - name: Tests
+        run: yarn run test
+
+  secrets:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    # Independent of `build` so a leaked secret blocks the PR even if the
+    # build stage failed earlier (and vice versa). Cheap to run in parallel.
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history so gitleaks can inspect every commit on the PR /
+          # push range, not just the tip.
+          fetch-depth: 0
+
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # GITLEAKS_LICENSE only required for Organization accounts.
+          # Add it as a repo secret if this repo is moved under an org.
+          # GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
