@@ -17,20 +17,19 @@ import { EmptyState } from "@/components/organisms/EmptyState";
 import { Inspector } from "@/components/organisms/Inspector";
 import { Rail } from "@/components/organisms/Rail";
 import { TweaksPanel } from "@/components/organisms/TweaksPanel";
-import { meQueryOptions } from "@/lib/api/queries";
 import { useChatStore } from "@/lib/state/chatStore";
+import { store } from "@/lib/state/store";
 import { useTweaks } from "@/lib/state/tweaks";
 import { sx } from "@/lib/styles/sx";
 import { colors } from "@/lib/styles/tokens.stylex";
 import { suggestionTitleFor } from "@/lib/utils/suggestions";
 
 export const Route = createFileRoute("/")({
-  beforeLoad: async ({ context, location }) => {
-    const session = await context.queryClient.ensureQueryData(meQueryOptions());
-    if (!session) {
-      // `throw: true` makes redirect() throw internally — keeps the signal
-      // intact for TanStack Router without a bare `throw` at the call site.
-      // `next` lets the login form bounce the user back where they came from.
+  // `subscribeAuth` in main.tsx awaits the first onAuthStateChanged callback
+  // before mounting React, so the slice is always settled here.
+  beforeLoad: ({ location }) => {
+    const { status } = store.getState().auth;
+    if (status !== "authed") {
       redirect({
         to: "/login",
         search: { next: location.pathname + location.searchStr },

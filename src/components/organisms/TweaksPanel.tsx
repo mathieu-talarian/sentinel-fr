@@ -1,7 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
-
 import { TweaksDialogShell } from "@/components/templates/TweaksDialogShell";
-import { meQueryOptions } from "@/lib/api/queries";
+import { useAuth } from "@/lib/state/auth";
 import { useTweaks } from "@/lib/state/tweaks";
 
 import { AccountSection } from "./AccountSection";
@@ -17,7 +15,8 @@ interface TweaksPanelPropsT {
 
 export function TweaksPanel(props: Readonly<TweaksPanelPropsT>) {
   const [tweaks, setTweaks] = useTweaks();
-  const meQuery = useQuery(meQueryOptions());
+  const auth = useAuth();
+  const accountEmail = auth.profile?.email ?? auth.firebaseUser?.email ?? null;
 
   const close = () => {
     props.onOpenChange(false);
@@ -53,8 +52,8 @@ export function TweaksPanel(props: Readonly<TweaksPanelPropsT>) {
 
       <ReplaySection onReplay={props.onReplay} />
 
-      {meQuery.data && (
-        <AccountSection email={meQuery.data.email} onSignedOut={close} />
+      {accountEmail && (
+        <AccountSection email={accountEmail} onSignedOut={close} />
       )}
     </TweaksDialogShell>
   );

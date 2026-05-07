@@ -1,13 +1,11 @@
-import type { SessionT } from "@/lib/api/auth";
-
 import * as stylex from "@stylexjs/stylex";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 
 import { Button } from "@/components/atoms/Button";
 import { Section } from "@/components/molecules/Section";
-import { authSignOutMutation } from "@/lib/api/generated/@tanstack/react-query.gen";
-import { ME_QUERY_KEY } from "@/lib/api/queries";
+import { signOut } from "@/lib/state/authThunks";
+import { useAppDispatch } from "@/lib/state/hooks";
 import { sx } from "@/lib/styles/sx";
 import { borders, colors, fonts, radii } from "@/lib/styles/tokens.stylex";
 
@@ -18,20 +16,19 @@ interface AccountSectionPropsT {
 
 export function AccountSection(props: Readonly<AccountSectionPropsT>) {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
-
-  const signOutMutation = useMutation({
-    ...authSignOutMutation(),
-    onSettled: () => {
-      queryClient.setQueryData<SessionT | null>(ME_QUERY_KEY, null);
-    },
-  });
+  const dispatch = useAppDispatch();
+  const [signingOut, setSigningOut] = useState(false);
 
   const handleSignOut = () => {
+    setSigningOut(true);
     void (async () => {
-      await signOutMutation.mutateAsync({});
-      props.onSignedOut();
-      void navigate({ to: "/login" });
+      try {
+        await dispatch(signOut);
+        props.onSignedOut();
+        void navigate({ to: "/login" });
+      } finally {
+        setSigningOut(false);
+      }
     })();
   };
 
@@ -43,10 +40,10 @@ export function AccountSection(props: Readonly<AccountSectionPropsT>) {
       <Button
         variant="danger"
         fullWidth
-        disabled={signOutMutation.isPending}
+        disabled={signingOut}
         onClick={handleSignOut}
       >
-        {signOutMutation.isPending ? "Signing out…" : "Sign out"}
+        {signingOut ? "Signing out…" : "Sign out"}
       </Button>
     </Section>
   );

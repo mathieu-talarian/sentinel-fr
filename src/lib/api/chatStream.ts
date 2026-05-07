@@ -2,6 +2,8 @@ import type { ChatChunkT, ChatTurnT } from "@/lib/types";
 
 import * as Sentry from "@sentry/react";
 
+import { getIdToken } from "@/lib/firebase/auth";
+
 interface StreamOptionsT {
   provider?: "anthropic" | "openai";
   /** ISO 639-1 language code for assistant reasoning + reply (`en` | `fr`). */
@@ -64,13 +66,16 @@ export async function* streamChat(
   const base = opts.baseUrl ?? "";
   const url = `${base}/api/chat/stream`;
 
+  const headers: Record<string, string> = {
+    "content-type": "application/json",
+    "x-request-id": crypto.randomUUID(),
+  };
+  const token = await getIdToken();
+  if (token) headers.authorization = `Bearer ${token}`;
+
   const res = await fetch(url, {
     method: "POST",
-    credentials: "include",
-    headers: {
-      "content-type": "application/json",
-      "x-request-id": crypto.randomUUID(),
-    },
+    headers,
     body: JSON.stringify({
       messages,
       provider: opts.provider,

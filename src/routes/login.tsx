@@ -2,7 +2,7 @@
    colocate the `Route` config alongside the route component. */
 import * as Sentry from "@sentry/react";
 import * as stylex from "@stylexjs/stylex";
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 
@@ -11,36 +11,38 @@ import { BrandLockup } from "@/components/molecules/BrandLockup";
 import { ErrorBanner } from "@/components/molecules/ErrorBanner";
 import { ErrorFallback } from "@/components/molecules/ErrorFallback";
 import { GoogleSignInButton } from "@/components/molecules/GoogleSignInButton";
-import { LoginDivider } from "@/components/molecules/LoginDivider";
 import { LoginFooter } from "@/components/molecules/LoginFooter";
 import { LoginCard } from "@/components/organisms/LoginCard";
-import { SignInForm } from "@/components/organisms/SignInForm";
-import { oauthErrorMessage, signInWithGoogle } from "@/lib/api/auth";
-import { meQueryOptions } from "@/lib/api/queries";
+import { popupErrorMessage } from "@/lib/firebase/auth";
+import { useAuth } from "@/lib/state/auth";
+import { signInWithGoogle } from "@/lib/state/authThunks";
+import { useAppDispatch } from "@/lib/state/hooks";
+import { store } from "@/lib/state/store";
 import { sx } from "@/lib/styles/sx";
 import { colors, fonts } from "@/lib/styles/tokens.stylex";
 
 /**
- * Search params for `/login`. The `error` code lands here from
- * `/auth/google/callback` on failure (see FRONTEND_GOOGLE_AUTH.md §7).
- * `next` lets the password form remember where the user was headed.
+ * Search params for `/login`. `next` lets the page bounce the user back
+ * to wherever they came from after a successful Firebase sign-in.
  */
 const LoginSearchSchema = z.object({
-  error: z.string().optional(),
   next: z.string().optional(),
 });
 
+const safeReturnPath = (next: string | undefined): string => {
+  if (next && next.startsWith("/") && !next.startsWith("/login")) return next;
+  return "/";
+};
+
 export const Route = createFileRoute("/login")({
   validateSearch: LoginSearchSchema,
-  beforeLoad: async ({ context, search }) => {
-    const session = await context.queryClient.ensureQueryData(meQueryOptions());
-    // If a callback error came back, always show the login page so the user
-    // sees the banner — never bounce them to `/` even if a stale hint says
-    // they're signed in.
-    if (session && !search.error) {
-      // `throw: true` lets redirect() throw internally, satisfying
-      // typescript-eslint/only-throw-error at the call site.
-      redirect({ to: "/", throw: true });
+  // `subscribeAuth` in main.tsx awaits the first onAuthStateChanged callback
+  // before mounting React, so by the time `beforeLoad` runs the slice has
+  // already settled on `authed` or `anon` — never `loading`.
+  beforeLoad: ({ search }) => {
+    const { status } = store.getState().auth;
+    if (status === "authed") {
+      redirect({ to: safeReturnPath(search.next), throw: true });
     }
   },
   component: LoginPage,
@@ -48,27 +50,40 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const search = Route.useSearch();
-  const [googleSubmitting, setGoogleSubmitting] = useState(false);
+  const navigate = useNavigate();
+  const auth = useAuth();
+  const dispatch = useAppDispatch();
+  const [signingIn, setSigningIn] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // OAuth callback errors are user-visible already (via ErrorBanner), but
-  // breadcrumb them so the next captured event carries auth context.
+  // Redirect once the auth slice flips to `authed` (the popup completes
+  // asynchronously and `subscribeAuth` will dispatch `setAuthed`).
   useEffect(() => {
-    if (search.error) {
-      Sentry.addBreadcrumb({
-        category: "auth",
-        level: "warning",
-        message: "OAuth callback error",
-        data: { error: search.error },
-      });
+    if (auth.status === "authed") {
+      void navigate({ to: safeReturnPath(search.next) });
     }
-  }, [search.error]);
+  }, [auth.status, search.next, navigate]);
 
-  const handleGoogle = () => {
-    setGoogleSubmitting(true);
-    signInWithGoogle(search.next);
+  const onGoogle = () => {
+    setSigningIn(true);
+    setError(null);
+    void (async () => {
+      try {
+        await dispatch(signInWithGoogle);
+        // onAuthStateChanged finishes the rest; the useEffect above redirects.
+      } catch (error_) {
+        const msg = popupErrorMessage(error_);
+        Sentry.addBreadcrumb({
+          category: "auth",
+          level: "warning",
+          message: "Google popup error",
+          data: { error: msg },
+        });
+        setError(msg);
+        setSigningIn(false);
+      }
+    })();
   };
-
-  const errorMsg = oauthErrorMessage(search.error);
 
   return (
     <Sentry.ErrorBoundary
@@ -92,13 +107,9 @@ function LoginPage() {
           }
           subtitle="Sign in to continue."
         >
-          {errorMsg && <ErrorBanner message={errorMsg} />}
+          {error && <ErrorBanner message={error} />}
 
-          <GoogleSignInButton busy={googleSubmitting} onClick={handleGoogle} />
-
-          <LoginDivider />
-
-          <SignInForm busy={googleSubmitting} next={search.next} />
+          <GoogleSignInButton busy={signingIn} onClick={onGoogle} />
 
           <p {...sx(s.signupLine)}>
             New to Sentinel? <TextLink>Request access</TextLink>

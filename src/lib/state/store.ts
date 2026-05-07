@@ -3,6 +3,7 @@ import type { Action, ThunkAction } from "@reduxjs/toolkit";
 import { configureStore } from "@reduxjs/toolkit";
 import * as Sentry from "@sentry/react";
 
+import { authReducer } from "@/lib/state/authSlice";
 import { chatReducer } from "@/lib/state/chatSlice";
 import { persistTweaks, tweaksReducer } from "@/lib/state/tweaksSlice";
 
@@ -71,6 +72,7 @@ const sentryReduxEnhancer = Sentry.createReduxEnhancer({
 
 export const store = configureStore({
   reducer: {
+    auth: authReducer,
     tweaks: tweaksReducer,
     chat: chatReducer,
   },

@@ -14,6 +14,7 @@ import { Provider as ReduxProvider } from "react-redux";
 
 import { configureApiClient } from "@/lib/api/client";
 import { initSentry } from "@/lib/observability/sentry";
+import { subscribeAuth } from "@/lib/state/authThunks";
 import { store } from "@/lib/state/store";
 
 import { getRouter } from "./router";
@@ -54,6 +55,13 @@ const router = getRouter(queryClient);
 // tracing integration, so this runs after `getRouter` and before `render`.
 // `window.onerror` / `unhandledrejection` are auto-captured once `init` runs.
 initSentry(router);
+
+// Wait for Firebase to settle on a user (or `null`) before mounting React.
+// Route guards (`beforeLoad`) read `store.getState().auth.status`; without
+// this gate they'd see "loading" on cold start and either block or flicker.
+// The listener stays subscribed afterwards — every later sign-in / sign-out
+// / token refresh keeps syncing to Redux.
+await subscribeAuth(store.dispatch);
 
 const root = document.querySelector("#root");
 if (!root) throw new Error("Missing #root mount node");
