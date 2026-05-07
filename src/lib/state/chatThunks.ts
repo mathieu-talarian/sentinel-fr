@@ -5,6 +5,8 @@ import type {
   UserMessageDataT,
 } from "@/lib/types";
 
+import * as Sentry from "@sentry/react";
+
 import { streamChat } from "@/lib/api/chatStream";
 import { chatActions } from "@/lib/state/chatSlice";
 
@@ -27,6 +29,31 @@ const blankAssistant = (id: string): AssistantMessageDataT => ({
 const errorMessage = (error: unknown): string => {
   if (error instanceof Error) return error.message;
   return typeof error === "string" ? error : "Unknown error";
+};
+
+interface StreamErrorContextT {
+  asstId: string;
+  provider?: string;
+  lang?: string;
+  conversationId?: string;
+}
+
+// Aborts are user-driven (Stop button) so we never want them in Sentry; any
+// other stream failure ships with the call context so the breadcrumb chain
+// (network, fetch URL, conversation id) is enough to reproduce.
+const reportStreamError = (
+  error: unknown,
+  ctx: StreamErrorContextT,
+): { aborted: boolean; message: string } => {
+  const message = errorMessage(error);
+  const aborted = message === "AbortError" || message.includes("aborted");
+  if (!aborted) {
+    Sentry.captureException(error, {
+      tags: { source: "chat-stream" },
+      extra: { ...ctx },
+    });
+  }
+  return { aborted, message };
 };
 
 // AbortController is not serializable so it lives outside Redux state.
@@ -82,13 +109,16 @@ export const sendChat =
         }
       }
     } catch (error) {
-      const msg = errorMessage(error);
-      // Aborts are user-driven — surface anything else as a stream error.
-      const isAbort = msg === "AbortError" || msg.includes("aborted");
+      const { aborted, message } = reportStreamError(error, {
+        asstId,
+        provider,
+        lang,
+        conversationId,
+      });
       dispatch(
         chatActions.finalizeAssistant({
           asstId,
-          error: isAbort ? undefined : msg,
+          error: aborted ? undefined : message,
         }),
       );
     } finally {

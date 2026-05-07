@@ -1,13 +1,15 @@
 /* eslint-disable react-refresh/only-export-components -- TanStack Router files
    colocate the `Route` config alongside the route component. */
+import * as Sentry from "@sentry/react";
 import * as stylex from "@stylexjs/stylex";
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { z } from "zod";
 
 import { TextLink } from "@/components/atoms/TextLink";
 import { BrandLockup } from "@/components/molecules/BrandLockup";
 import { ErrorBanner } from "@/components/molecules/ErrorBanner";
+import { ErrorFallback } from "@/components/molecules/ErrorFallback";
 import { GoogleSignInButton } from "@/components/molecules/GoogleSignInButton";
 import { LoginDivider } from "@/components/molecules/LoginDivider";
 import { LoginFooter } from "@/components/molecules/LoginFooter";
@@ -48,6 +50,19 @@ function LoginPage() {
   const search = Route.useSearch();
   const [googleSubmitting, setGoogleSubmitting] = useState(false);
 
+  // OAuth callback errors are user-visible already (via ErrorBanner), but
+  // breadcrumb them so the next captured event carries auth context.
+  useEffect(() => {
+    if (search.error) {
+      Sentry.addBreadcrumb({
+        category: "auth",
+        level: "warning",
+        message: "OAuth callback error",
+        data: { error: search.error },
+      });
+    }
+  }, [search.error]);
+
   const handleGoogle = () => {
     setGoogleSubmitting(true);
     signInWithGoogle(search.next);
@@ -56,32 +71,43 @@ function LoginPage() {
   const errorMsg = oauthErrorMessage(search.error);
 
   return (
-    <div {...sx(s.shell)}>
-      <BrandLockup size="md" />
+    <Sentry.ErrorBoundary
+      fallback={(p) => (
+        <ErrorFallback
+          error={p.error}
+          resetError={() => {
+            p.resetError();
+          }}
+        />
+      )}
+    >
+      <div {...sx(s.shell)}>
+        <BrandLockup size="md" />
 
-      <LoginCard
-        title={
-          <>
-            <em {...sx(s.titleEm)}>Welcome</em> back
-          </>
-        }
-        subtitle="Sign in to continue."
-      >
-        {errorMsg && <ErrorBanner message={errorMsg} />}
+        <LoginCard
+          title={
+            <>
+              <em {...sx(s.titleEm)}>Welcome</em> back
+            </>
+          }
+          subtitle="Sign in to continue."
+        >
+          {errorMsg && <ErrorBanner message={errorMsg} />}
 
-        <GoogleSignInButton busy={googleSubmitting} onClick={handleGoogle} />
+          <GoogleSignInButton busy={googleSubmitting} onClick={handleGoogle} />
 
-        <LoginDivider />
+          <LoginDivider />
 
-        <SignInForm busy={googleSubmitting} next={search.next} />
+          <SignInForm busy={googleSubmitting} next={search.next} />
 
-        <p {...sx(s.signupLine)}>
-          New to Sentinel? <TextLink>Request access</TextLink>
-        </p>
-      </LoginCard>
+          <p {...sx(s.signupLine)}>
+            New to Sentinel? <TextLink>Request access</TextLink>
+          </p>
+        </LoginCard>
 
-      <LoginFooter />
-    </div>
+        <LoginFooter />
+      </div>
+    </Sentry.ErrorBoundary>
   );
 }
 

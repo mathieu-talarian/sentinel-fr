@@ -2,10 +2,12 @@
    colocate the `Route` config alongside the route component. */
 import type { SuggestionT } from "@/lib/utils/suggestions";
 
+import * as Sentry from "@sentry/react";
 import * as stylex from "@stylexjs/stylex";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useMemo, useRef, useState } from "react";
 
+import { ErrorFallback } from "@/components/molecules/ErrorFallback";
 import { UserBubble } from "@/components/molecules/UserBubble";
 import { AssistantMessage } from "@/components/organisms/AssistantMessage";
 import { ChatThread } from "@/components/organisms/ChatThread";
@@ -82,7 +84,16 @@ function ChatPage() {
   };
 
   return (
-    <>
+    <Sentry.ErrorBoundary
+      fallback={(p) => (
+        <ErrorFallback
+          error={p.error}
+          resetError={() => {
+            p.resetError();
+          }}
+        />
+      )}
+    >
       <Rail
         onNewChat={() => {
           chat.reset();
@@ -165,7 +176,7 @@ function ChatPage() {
           });
         }}
       />
-    </>
+    </Sentry.ErrorBoundary>
   );
 }
 

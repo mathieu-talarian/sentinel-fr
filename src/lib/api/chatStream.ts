@@ -1,5 +1,7 @@
 import type { ChatChunkT, ChatTurnT } from "@/lib/types";
 
+import * as Sentry from "@sentry/react";
+
 interface StreamOptionsT {
   provider?: "anthropic" | "openai";
   /** ISO 639-1 language code for assistant reasoning + reply (`en` | `fr`). */
@@ -32,6 +34,15 @@ function parseEvent(evt: string): ChatChunkT | null {
   try {
     return JSON.parse(line.slice(6)) as ChatChunkT;
   } catch {
+    // Don't capture — malformed SSE frames happen on truncated reads and
+    // shouldn't page anyone. Breadcrumb so the next captured event has
+    // context if the corruption is upstream of an actual failure.
+    Sentry.addBreadcrumb({
+      category: "sse",
+      level: "warning",
+      message: "Malformed SSE data line",
+      data: { preview: line.slice(0, 120) },
+    });
     return null;
   }
 }
