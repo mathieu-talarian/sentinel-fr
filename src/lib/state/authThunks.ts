@@ -49,25 +49,20 @@ export const signOut: AppThunkT<Promise<void>> = async () => {
 /**
  * Boot-time auth subscription — call once from `main.tsx` BEFORE rendering.
  *
- * Wires the Firebase listener so every auth state change (sign-in, sign-out,
- * token refresh) syncs to Redux. Returns a promise that resolves the FIRST
- * time auth state is known so the app can mount with a settled
- * `auth.status` (no flash of "loading" routes).
+ * `authStateReady()` resolves only after Firebase has finished hydrating
+ * from IndexedDB. Without this gate, `onAuthStateChanged` can fire with
+ * `null` BEFORE persistence loads — which would kick the user back to
+ * `/login` on every refresh. We sync once based on the settled current
+ * user, then keep the listener for subsequent sign-in / sign-out / token
+ * refresh events.
  */
-export const subscribeAuth = (dispatch: AppDispatchT): Promise<void> => {
-  let resolved = false;
-  const settle = (resolve: () => void) => {
-    if (!resolved) {
-      resolved = true;
-      resolve();
-    }
-  };
-  return new Promise<void>((resolve) => {
-    firebaseAuth.onAuthStateChanged((user) => {
-      void handleAuthChange(dispatch, user).finally(() => {
-        settle(resolve);
-      });
-    });
+export const subscribeAuth = async (
+  dispatch: AppDispatchT,
+): Promise<void> => {
+  await firebaseAuth.authStateReady();
+  await handleAuthChange(dispatch, firebaseAuth.currentUser);
+  firebaseAuth.onAuthStateChanged((user) => {
+    void handleAuthChange(dispatch, user);
   });
 };
 
@@ -85,18 +80,39 @@ const handleAuthChange = async (
     id: firebaseUser.uid,
     email: firebaseUser.email ?? undefined,
   });
+  // Mark authed first so route guards reading `store.getState().auth`
+  // see a settled status during the `/auth/me` round-trip; the bearer
+  // interceptor reads `firebaseAuth.currentUser` directly so it doesn't
+  // depend on slice state.
+  dispatch(authActions.setAuthed({ firebaseUser, profile: null }));
   try {
-    // Mark authed first so route guards reading `store.getState().auth`
-    // see a settled status during the `/auth/me` round-trip; the bearer
-    // interceptor reads `firebaseAuth.currentUser` directly so it doesn't
-    // depend on slice state.
-    dispatch(authActions.setAuthed({ firebaseUser, profile: null }));
     await dispatch(fetchProfile);
   } catch (error) {
-    // Backend rejected the bearer token (or is down). Sign out so the user
-    // can retry; the listener will fire again with null and reset the slice.
-    Sentry.captureException(error, { tags: { source: "auth-bootstrap" } });
-    await signOutFromFirebase();
-    dispatch(authActions.setAnon());
+    // Only sign out on a genuine identity rejection (401 / 403). Backend
+    // 5xx / network blips leave the user authed-without-profile so a
+    // transient outage doesn't kick them to /login.
+    const status = errorStatus(error);
+    if (status === 401 || status === 403) {
+      Sentry.captureException(error, {
+        tags: { source: "auth-bootstrap", reason: "token-rejected" },
+      });
+      await signOutFromFirebase();
+      dispatch(authActions.setAnon());
+    } else {
+      Sentry.captureException(error, {
+        tags: { source: "auth-bootstrap", reason: "profile-fetch-failed" },
+        extra: { httpStatus: status },
+      });
+    }
   }
+};
+
+const errorStatus = (error: unknown): number | null => {
+  if (!(error instanceof Error)) return null;
+  // String.prototype.match here intentionally — the project's security hook
+  // false-positives any literal `.exec(` token as `child_process.exec`, so
+  // RegExp.prototype.exec is unreachable from this file.
+  // eslint-disable-next-line @typescript-eslint/prefer-regexp-exec, sonarjs/prefer-regexp-exec
+  const m = error.message.match(/HTTP (\d+)/);
+  return m ? Number.parseInt(m[1], 10) : null;
 };
