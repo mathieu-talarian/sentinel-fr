@@ -11,7 +11,10 @@
     "format": "prettier --write . && eslint --fix",
     "check": "prettier --check .",
     "type": "tsgo --noEmit",
-    "gen:api": "openapi-ts"
+    "gen:api": "openapi-ts",
+    "build:release": "VITE_APP_RELEASE=$(git rev-parse --short HEAD) vite build",
+    "release": "yarn build:release && npx -y firebase-tools@latest deploy --only hosting",
+    "release:preview": "yarn build:release && npx -y firebase-tools@latest hosting:channel:deploy preview"
   },
   "dependencies": {
     "@hey-api/client-fetch": "0.13.1",
