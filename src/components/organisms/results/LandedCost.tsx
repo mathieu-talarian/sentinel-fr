@@ -18,8 +18,8 @@ export function LandedCost(props: Readonly<{ result: LandedCostContentT }>) {
     <div>
       <table {...sx(lc.table)}>
         <tbody>
-          {rows.map((row, i) => (
-            <tr key={i}>
+          {rows.map((row) => (
+            <tr key={row.label}>
               <td {...sx(lc.cell, lc.cellLeft)}>
                 {row.label}
                 {row.sub && <span {...sx(lc.sub)}>{row.sub}</span>}
@@ -37,8 +37,8 @@ export function LandedCost(props: Readonly<{ result: LandedCostContentT }>) {
         <div {...sx(lc.caveats)}>
           <div {...sx(lc.caveatsLabel)}>Caveats</div>
           <ul {...sx(lc.caveatsList)}>
-            {caveats.map((item, i) => (
-              <li key={i} {...sx(lc.caveatsItem)}>
+            {caveats.map((item) => (
+              <li key={item} {...sx(lc.caveatsItem)}>
                 {item}
               </li>
             ))}

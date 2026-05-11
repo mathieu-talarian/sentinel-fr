@@ -7,8 +7,8 @@ import { rl } from "./Rulings";
 export function AlertList(props: Readonly<{ result: AlertsContentT }>) {
   return (
     <div>
-      {props.result.alerts.map((a, i) => (
-        <div key={i} {...sx(rl.ruling)}>
+      {props.result.alerts.map((a) => (
+        <div key={a.status} {...sx(rl.ruling)}>
           <div {...sx(rl.row1)}>
             <span {...sx(rl.num)}>{a.source}</span>
             <span {...sx(rl.date)}>{a.date}</span>

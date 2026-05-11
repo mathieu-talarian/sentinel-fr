@@ -12,8 +12,8 @@ export function MessageCaveats(props: Readonly<MessageCaveatsPropsT>) {
     <div {...sx(s.caveats)}>
       <div {...sx(s.label)}>Caveats</div>
       <ul {...sx(s.list)}>
-        {props.items.map((c, i) => (
-          <li key={i} {...sx(s.item)}>
+        {props.items.map((c) => (
+          <li key={c} {...sx(s.item)}>
             {c}
           </li>
         ))}

@@ -27,7 +27,7 @@ export function ThinkingPanel(props: Readonly<ThinkingPanelPropsT>) {
   useEffect(() => {
     // Auto-collapse once thinking finishes — the close is a one-shot side
     // effect, not a render-derived value, so calling setOpen here is correct.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // eslint-disable-next-line react-hooks/set-state-in-effect,@eslint-react/set-state-in-effect
     if (props.autoCollapse && !props.active && !userToggled) setOpen(false);
   }, [props.autoCollapse, props.active, userToggled]);
 
