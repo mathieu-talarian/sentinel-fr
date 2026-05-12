@@ -1,4 +1,4 @@
-import type { SessionView } from "@/lib/api/generated/types.gen";
+import type { UserView } from "@/lib/api/generated/types.gen";
 import type { FirebaseUserT } from "@/lib/firebase/auth";
 import type { PayloadAction } from "@reduxjs/toolkit";
 
@@ -14,7 +14,7 @@ export interface AuthStateT {
    */
   firebaseUser: FirebaseUserT | null;
   /** Backend `/auth/me` response — populated after Firebase sign-in. */
-  profile: SessionView | null;
+  profile: UserView | null;
 }
 
 const INITIAL: AuthStateT = {
@@ -34,14 +34,14 @@ const slice = createSlice({
       state,
       action: PayloadAction<{
         firebaseUser: FirebaseUserT;
-        profile: SessionView | null;
+        profile: UserView | null;
       }>,
     ) {
       state.status = "authed";
       state.firebaseUser = action.payload.firebaseUser;
       state.profile = action.payload.profile;
     },
-    setProfile(state, action: PayloadAction<SessionView | null>) {
+    setProfile(state, action: PayloadAction<UserView | null>) {
       state.profile = action.payload;
     },
     setAnon(state) {

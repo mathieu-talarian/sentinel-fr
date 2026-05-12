@@ -18,6 +18,7 @@
 import type {
   AlertItem,
   AlertsResponse,
+  AppliedSurcharge,
   ChatChunk,
   CommodityBody,
   CommodityHierarchyEntry,
@@ -110,6 +111,7 @@ export type CodeDetailsContentT = CommodityBody;
 
 export type LandedCostContentT = LandedCostResponse;
 export type LandedCostRowT = LandedCostRow;
+export type AppliedSurchargeT = AppliedSurcharge;
 
 export type AlertItemT = AlertItem;
 export type AlertsContentT = AlertsResponse;

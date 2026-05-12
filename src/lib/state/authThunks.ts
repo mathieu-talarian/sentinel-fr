@@ -14,7 +14,7 @@ import { authActions } from "@/lib/state/authSlice";
 
 /**
  * Calls `/api/auth/me` once the bearer token is in place and stashes the
- * SessionView projection in the auth slice. The endpoint also doubles as
+ * UserView projection in the auth slice. The endpoint also doubles as
  * the user-registration trigger on the backend (first-time callers get a
  * row created in the DB).
  */
@@ -24,7 +24,7 @@ export const fetchProfile: AppThunkT<Promise<void>> = async (dispatch) => {
     const status = r.response?.status ?? 0;
     throw new Error(`auth/me failed: HTTP ${status.toString()}`);
   }
-  dispatch(authActions.setProfile(r.data.session));
+  dispatch(authActions.setProfile(r.data.user));
 };
 
 /**
@@ -50,17 +50,24 @@ export const signOut: AppThunkT<Promise<void>> = async () => {
  * Boot-time auth subscription — call once from `main.tsx` BEFORE rendering.
  *
  * `authStateReady()` resolves only after Firebase has finished hydrating
- * from IndexedDB. Without this gate, `onAuthStateChanged` can fire with
- * `null` BEFORE persistence loads — which would kick the user back to
- * `/login` on every refresh. We sync once based on the settled current
- * user, then keep the listener for subsequent sign-in / sign-out / token
- * refresh events.
+ * from IndexedDB; only then is it safe to register `onAuthStateChanged`,
+ * which fires once on subscribe with the persisted user. The outer promise
+ * resolves after that first invocation's `handleAuthChange` settles so
+ * route guards in `__root.tsx`/`login.tsx`/`index.tsx` see a stable
+ * `auth.status` before React mounts. The listener stays attached for
+ * subsequent sign-in / sign-out / token-refresh events.
  */
 export const subscribeAuth = async (dispatch: AppDispatchT): Promise<void> => {
   await firebaseAuth.authStateReady();
-  await handleAuthChange(dispatch, firebaseAuth.currentUser);
-  firebaseAuth.onAuthStateChanged((user) => {
-    void handleAuthChange(dispatch, user);
+  await new Promise<void>((resolve) => {
+    let resolved = false;
+    firebaseAuth.onAuthStateChanged((user) => {
+      const settled = handleAuthChange(dispatch, user);
+      if (!resolved) {
+        resolved = true;
+        void settled.then(resolve, resolve);
+      }
+    });
   });
 };
 

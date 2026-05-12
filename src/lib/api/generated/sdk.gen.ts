@@ -3,19 +3,12 @@
 import type { Client, Options as Options2, TDataShape } from "./client";
 import { client } from "./client.gen";
 import type {
-  AuthGoogleCallbackData,
-  AuthGoogleCallbackErrors,
-  AuthGoogleStartData,
-  AuthGoogleStartErrors,
+  AdminRefreshTriggerData,
+  AdminRefreshTriggerErrors,
+  AdminRefreshTriggerResponses,
   AuthMeData,
   AuthMeErrors,
   AuthMeResponses,
-  AuthSignInData,
-  AuthSignInErrors,
-  AuthSignInResponses,
-  AuthSignOutData,
-  AuthSignOutErrors,
-  AuthSignOutResponses,
   CatalogStatsData,
   CatalogStatsResponses,
   ChatData,
@@ -29,7 +22,6 @@ import type {
   ClassifyErrors,
   ClassifyResponses,
   ConversationDeleteData,
-  ConversationDeleteErrors,
   ConversationDeleteResponses,
   ConversationGetData,
   ConversationGetErrors,
@@ -49,9 +41,14 @@ import type {
   GetCodeResponses,
   HealthData,
   HealthResponses,
+  HealthzData,
+  HealthzResponses,
   LandedCostData,
   LandedCostErrors,
   LandedCostResponses,
+  RefreshStatusData,
+  RefreshStatusErrors,
+  RefreshStatusResponses,
   SearchData,
   SearchErrors,
   SearchResponses,
@@ -83,6 +80,26 @@ export type Options<
   meta?: Record<string, unknown>;
 };
 
+/**
+ * Dispatch a manual catalog refresh.
+ *
+ * Returns 202 (Accepted) once the actor's mailbox has accepted the message;
+ * the actual fetch + diff happens asynchronously, mirroring the behaviour of
+ * the periodic ticks. Use `GET /db/refresh-status` to observe completion.
+ *
+ * Requires:
+ * * a verified Firebase ID token via `Authorization: Bearer <token>`,
+ * * `SENTINEL_REFRESH_ENABLED=1` at server boot — otherwise 503.
+ */
+export const adminRefreshTrigger = <ThrowOnError extends boolean = false>(
+  options?: Options<AdminRefreshTriggerData, ThrowOnError>,
+) =>
+  (options?.client ?? client).post<
+    AdminRefreshTriggerResponses,
+    AdminRefreshTriggerErrors,
+    ThrowOnError
+  >({ url: "/admin/refresh", ...options });
+
 export const frontendAlerts = <ThrowOnError extends boolean = false>(
   options?: Options<FrontendAlertsData, ThrowOnError>,
 ) =>
@@ -92,22 +109,19 @@ export const frontendAlerts = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({ url: "/alerts", ...options });
 
-export const authGoogleCallback = <ThrowOnError extends boolean = false>(
-  options?: Options<AuthGoogleCallbackData, ThrowOnError>,
-) =>
-  (options?.client ?? client).get<
-    unknown,
-    AuthGoogleCallbackErrors,
-    ThrowOnError
-  >({ url: "/auth/google/callback", ...options });
-
-export const authGoogleStart = <ThrowOnError extends boolean = false>(
-  options?: Options<AuthGoogleStartData, ThrowOnError>,
-) =>
-  (options?.client ?? client).get<unknown, AuthGoogleStartErrors, ThrowOnError>(
-    { url: "/auth/google/start", ...options },
-  );
-
+/**
+ * Verify the caller's Firebase ID token, register the user in the local
+ * database (idempotent — first call materialises the row), and return
+ * the profile.
+ *
+ * Auth contract:
+ * * Caller supplies `Authorization: Bearer <firebase_id_token>`.
+ * * Token must be RS256-signed by Google with `iss=https://securetoken.google.com/<project_id>`,
+ * `aud=<project_id>`, `exp` in the future, and `email_verified=true`
+ * (relaxable via `FIREBASE_REQUIRE_VERIFIED_EMAIL=0`).
+ * * 401 on missing/invalid token; 503 when the server has no
+ * `FIREBASE_PROJECT_ID` configured.
+ */
 export const authMe = <ThrowOnError extends boolean = false>(
   options?: Options<AuthMeData, ThrowOnError>,
 ) =>
@@ -115,31 +129,6 @@ export const authMe = <ThrowOnError extends boolean = false>(
     url: "/auth/me",
     ...options,
   });
-
-export const authSignIn = <ThrowOnError extends boolean = false>(
-  options: Options<AuthSignInData, ThrowOnError>,
-) =>
-  (options.client ?? client).post<
-    AuthSignInResponses,
-    AuthSignInErrors,
-    ThrowOnError
-  >({
-    url: "/auth/sign-in",
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
-  });
-
-export const authSignOut = <ThrowOnError extends boolean = false>(
-  options?: Options<AuthSignOutData, ThrowOnError>,
-) =>
-  (options?.client ?? client).post<
-    AuthSignOutResponses,
-    AuthSignOutErrors,
-    ThrowOnError
-  >({ url: "/auth/sign-out", ...options });
 
 export const catalogStats = <ThrowOnError extends boolean = false>(
   options?: Options<CatalogStatsData, ThrowOnError>,
@@ -213,7 +202,7 @@ export const chatStream = <ThrowOnError extends boolean = false>(
 /**
  * Classify a free-text product description into a 10-digit HTS code.
  *
- * Runs an LLM agent loop (Anthropic or OpenAI) using hybrid search +
+ * Runs an LLM agent loop (Anthropic or `OpenAI`) using hybrid search +
  * CROSS rulings + landed-cost tools. Wall-clock 8-35s per agent budget.
  */
 export const classify = <ThrowOnError extends boolean = false>(
@@ -256,7 +245,7 @@ export const conversationDelete = <ThrowOnError extends boolean = false>(
 ) =>
   (options.client ?? client).delete<
     ConversationDeleteResponses,
-    ConversationDeleteErrors,
+    unknown,
     ThrowOnError
   >({ url: "/conversations/{id}", ...options });
 
@@ -286,7 +275,7 @@ export const conversationRename = <ThrowOnError extends boolean = false>(
   });
 
 /**
- * Confirms the SurrealDB connection is alive.
+ * Confirms the `SurrealDB` connection is alive.
  */
 export const dbInfo = <ThrowOnError extends boolean = false>(
   options?: Options<DbInfoData, ThrowOnError>,
@@ -297,6 +286,18 @@ export const dbInfo = <ThrowOnError extends boolean = false>(
   });
 
 /**
+ * Latest 5 catalog-refresh-worker runs, newest first.
+ */
+export const refreshStatus = <ThrowOnError extends boolean = false>(
+  options?: Options<RefreshStatusData, ThrowOnError>,
+) =>
+  (options?.client ?? client).get<
+    RefreshStatusResponses,
+    RefreshStatusErrors,
+    ThrowOnError
+  >({ url: "/db/refresh-status", ...options });
+
+/**
  * Liveness check.
  */
 export const health = <ThrowOnError extends boolean = false>(
@@ -304,6 +305,20 @@ export const health = <ThrowOnError extends boolean = false>(
 ) =>
   (options?.client ?? client).get<HealthResponses, unknown, ThrowOnError>({
     url: "/health",
+    ...options,
+  });
+
+/**
+ * Liveness check, Kubernetes-convention alias. External monitoring tools
+ * (GCP uptime checks, Sentry cron probes, etc.) default to `/healthz` —
+ * keeping both `/health` (used by Cloud Run probes in cloudrun-service.yaml)
+ * and `/healthz` (used by everything else) avoids 404s in dashboards.
+ */
+export const healthz = <ThrowOnError extends boolean = false>(
+  options?: Options<HealthzData, ThrowOnError>,
+) =>
+  (options?.client ?? client).get<HealthzResponses, unknown, ThrowOnError>({
+    url: "/healthz",
     ...options,
   });
 

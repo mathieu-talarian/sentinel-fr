@@ -10,11 +10,8 @@ import {
 
 import { client } from "../client.gen";
 import {
-  authGoogleCallback,
-  authGoogleStart,
+  adminRefreshTrigger,
   authMe,
-  authSignIn,
-  authSignOut,
   catalogStats,
   chat,
   classify,
@@ -26,27 +23,22 @@ import {
   frontendAlerts,
   getCode,
   health,
+  healthz,
   landedCost,
   type Options,
+  refreshStatus,
   search,
   watchAlerts,
   watchCheck,
   watchSubscribe,
 } from "../sdk.gen";
 import type {
-  AuthGoogleCallbackData,
-  AuthGoogleCallbackError,
-  AuthGoogleStartData,
-  AuthGoogleStartError,
+  AdminRefreshTriggerData,
+  AdminRefreshTriggerError,
+  AdminRefreshTriggerResponse,
   AuthMeData,
   AuthMeError,
   AuthMeResponse,
-  AuthSignInData,
-  AuthSignInError,
-  AuthSignInResponse,
-  AuthSignOutData,
-  AuthSignOutError,
-  AuthSignOutResponse,
   CatalogStatsData,
   CatalogStatsResponse2,
   ChatData,
@@ -56,7 +48,6 @@ import type {
   ClassifyError,
   ClassifyResponse2,
   ConversationDeleteData,
-  ConversationDeleteError,
   ConversationDeleteResponse,
   ConversationGetData,
   ConversationGetError,
@@ -76,9 +67,14 @@ import type {
   GetCodeResponse,
   HealthData,
   HealthResponse,
+  HealthzData,
+  HealthzResponse,
   LandedCostData,
   LandedCostError,
   LandedCostResponse2,
+  RefreshStatusData,
+  RefreshStatusError,
+  RefreshStatusResponse,
   SearchData,
   SearchError,
   SearchResponse,
@@ -91,6 +87,41 @@ import type {
   WatchSubscribeError,
   WatchSubscribeResponse2,
 } from "../types.gen";
+
+/**
+ * Dispatch a manual catalog refresh.
+ *
+ * Returns 202 (Accepted) once the actor's mailbox has accepted the message;
+ * the actual fetch + diff happens asynchronously, mirroring the behaviour of
+ * the periodic ticks. Use `GET /db/refresh-status` to observe completion.
+ *
+ * Requires:
+ * * a verified Firebase ID token via `Authorization: Bearer <token>`,
+ * * `SENTINEL_REFRESH_ENABLED=1` at server boot — otherwise 503.
+ */
+export const adminRefreshTriggerMutation = (
+  options?: Partial<Options<AdminRefreshTriggerData>>,
+): UseMutationOptions<
+  AdminRefreshTriggerResponse,
+  AdminRefreshTriggerError,
+  Options<AdminRefreshTriggerData>
+> => {
+  const mutationOptions: UseMutationOptions<
+    AdminRefreshTriggerResponse,
+    AdminRefreshTriggerError,
+    Options<AdminRefreshTriggerData>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await adminRefreshTrigger({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
 
 export type QueryKey<TOptions extends Options> = [
   Pick<TOptions, "baseUrl" | "body" | "headers" | "path" | "query"> & {
@@ -154,59 +185,22 @@ export const frontendAlertsOptions = (options?: Options<FrontendAlertsData>) =>
     queryKey: frontendAlertsQueryKey(options),
   });
 
-export const authGoogleCallbackQueryKey = (
-  options?: Options<AuthGoogleCallbackData>,
-) => createQueryKey("authGoogleCallback", options);
-
-export const authGoogleCallbackOptions = (
-  options?: Options<AuthGoogleCallbackData>,
-) =>
-  queryOptions<
-    unknown,
-    AuthGoogleCallbackError,
-    unknown,
-    ReturnType<typeof authGoogleCallbackQueryKey>
-  >({
-    queryFn: async ({ queryKey, signal }) => {
-      const { data } = await authGoogleCallback({
-        ...options,
-        ...queryKey[0],
-        signal,
-        throwOnError: true,
-      });
-      return data;
-    },
-    queryKey: authGoogleCallbackQueryKey(options),
-  });
-
-export const authGoogleStartQueryKey = (
-  options?: Options<AuthGoogleStartData>,
-) => createQueryKey("authGoogleStart", options);
-
-export const authGoogleStartOptions = (
-  options?: Options<AuthGoogleStartData>,
-) =>
-  queryOptions<
-    unknown,
-    AuthGoogleStartError,
-    unknown,
-    ReturnType<typeof authGoogleStartQueryKey>
-  >({
-    queryFn: async ({ queryKey, signal }) => {
-      const { data } = await authGoogleStart({
-        ...options,
-        ...queryKey[0],
-        signal,
-        throwOnError: true,
-      });
-      return data;
-    },
-    queryKey: authGoogleStartQueryKey(options),
-  });
-
 export const authMeQueryKey = (options?: Options<AuthMeData>) =>
   createQueryKey("authMe", options);
 
+/**
+ * Verify the caller's Firebase ID token, register the user in the local
+ * database (idempotent — first call materialises the row), and return
+ * the profile.
+ *
+ * Auth contract:
+ * * Caller supplies `Authorization: Bearer <firebase_id_token>`.
+ * * Token must be RS256-signed by Google with `iss=https://securetoken.google.com/<project_id>`,
+ * `aud=<project_id>`, `exp` in the future, and `email_verified=true`
+ * (relaxable via `FIREBASE_REQUIRE_VERIFIED_EMAIL=0`).
+ * * 401 on missing/invalid token; 503 when the server has no
+ * `FIREBASE_PROJECT_ID` configured.
+ */
 export const authMeOptions = (options?: Options<AuthMeData>) =>
   queryOptions<
     AuthMeResponse,
@@ -225,54 +219,6 @@ export const authMeOptions = (options?: Options<AuthMeData>) =>
     },
     queryKey: authMeQueryKey(options),
   });
-
-export const authSignInMutation = (
-  options?: Partial<Options<AuthSignInData>>,
-): UseMutationOptions<
-  AuthSignInResponse,
-  AuthSignInError,
-  Options<AuthSignInData>
-> => {
-  const mutationOptions: UseMutationOptions<
-    AuthSignInResponse,
-    AuthSignInError,
-    Options<AuthSignInData>
-  > = {
-    mutationFn: async (fnOptions) => {
-      const { data } = await authSignIn({
-        ...options,
-        ...fnOptions,
-        throwOnError: true,
-      });
-      return data;
-    },
-  };
-  return mutationOptions;
-};
-
-export const authSignOutMutation = (
-  options?: Partial<Options<AuthSignOutData>>,
-): UseMutationOptions<
-  AuthSignOutResponse,
-  AuthSignOutError,
-  Options<AuthSignOutData>
-> => {
-  const mutationOptions: UseMutationOptions<
-    AuthSignOutResponse,
-    AuthSignOutError,
-    Options<AuthSignOutData>
-  > = {
-    mutationFn: async (fnOptions) => {
-      const { data } = await authSignOut({
-        ...options,
-        ...fnOptions,
-        throwOnError: true,
-      });
-      return data;
-    },
-  };
-  return mutationOptions;
-};
 
 export const catalogStatsQueryKey = (options?: Options<CatalogStatsData>) =>
   createQueryKey("catalogStats", options);
@@ -328,7 +274,7 @@ export const chatMutation = (
 /**
  * Classify a free-text product description into a 10-digit HTS code.
  *
- * Runs an LLM agent loop (Anthropic or OpenAI) using hybrid search +
+ * Runs an LLM agent loop (Anthropic or `OpenAI`) using hybrid search +
  * CROSS rulings + landed-cost tools. Wall-clock 8-35s per agent budget.
  */
 export const classifyMutation = (
@@ -491,12 +437,12 @@ export const conversationDeleteMutation = (
   options?: Partial<Options<ConversationDeleteData>>,
 ): UseMutationOptions<
   ConversationDeleteResponse,
-  ConversationDeleteError,
+  DefaultError,
   Options<ConversationDeleteData>
 > => {
   const mutationOptions: UseMutationOptions<
     ConversationDeleteResponse,
-    ConversationDeleteError,
+    DefaultError,
     Options<ConversationDeleteData>
   > = {
     mutationFn: async (fnOptions) => {
@@ -562,7 +508,7 @@ export const dbInfoQueryKey = (options?: Options<DbInfoData>) =>
   createQueryKey("dbInfo", options);
 
 /**
- * Confirms the SurrealDB connection is alive.
+ * Confirms the `SurrealDB` connection is alive.
  */
 export const dbInfoOptions = (options?: Options<DbInfoData>) =>
   queryOptions<
@@ -581,6 +527,31 @@ export const dbInfoOptions = (options?: Options<DbInfoData>) =>
       return data;
     },
     queryKey: dbInfoQueryKey(options),
+  });
+
+export const refreshStatusQueryKey = (options?: Options<RefreshStatusData>) =>
+  createQueryKey("refreshStatus", options);
+
+/**
+ * Latest 5 catalog-refresh-worker runs, newest first.
+ */
+export const refreshStatusOptions = (options?: Options<RefreshStatusData>) =>
+  queryOptions<
+    RefreshStatusResponse,
+    RefreshStatusError,
+    RefreshStatusResponse,
+    ReturnType<typeof refreshStatusQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await refreshStatus({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: refreshStatusQueryKey(options),
   });
 
 export const healthQueryKey = (options?: Options<HealthData>) =>
@@ -606,6 +577,34 @@ export const healthOptions = (options?: Options<HealthData>) =>
       return data;
     },
     queryKey: healthQueryKey(options),
+  });
+
+export const healthzQueryKey = (options?: Options<HealthzData>) =>
+  createQueryKey("healthz", options);
+
+/**
+ * Liveness check, Kubernetes-convention alias. External monitoring tools
+ * (GCP uptime checks, Sentry cron probes, etc.) default to `/healthz` —
+ * keeping both `/health` (used by Cloud Run probes in cloudrun-service.yaml)
+ * and `/healthz` (used by everything else) avoids 404s in dashboards.
+ */
+export const healthzOptions = (options?: Options<HealthzData>) =>
+  queryOptions<
+    HealthzResponse,
+    DefaultError,
+    HealthzResponse,
+    ReturnType<typeof healthzQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await healthz({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: healthzQueryKey(options),
   });
 
 /**
