@@ -3,10 +3,13 @@ import { useQuery } from "@tanstack/react-query";
 
 import { Icon } from "@/components/atoms/Icons";
 import { catalogStatsOptions } from "@/lib/api/generated/@tanstack/react-query.gen";
+import { useTweaks } from "@/lib/state/tweaks";
 import { sx } from "@/lib/styles/sx";
 import { colors, fonts } from "@/lib/styles/tokens.stylex";
+import { formatInteger } from "@/lib/utils/intl";
 
 export function CatalogStatsStrip() {
+  const [tweaks] = useTweaks();
   const stats = useQuery(catalogStatsOptions());
 
   if (!stats.data) return null;
@@ -15,14 +18,15 @@ export function CatalogStatsStrip() {
   return (
     <div {...sx(s.meta)}>
       <span {...sx(s.item)}>
-        <Icon.Customs /> {d.htsCodesIndexed.toLocaleString("en-US")} HTS codes
-        indexed
+        <Icon.Customs /> {formatInteger(d.htsCodesIndexed, tweaks.lang)} HTS
+        codes indexed
       </span>
       <span {...sx(s.item)}>
-        <Icon.Scroll /> CBP CROSS rulings since {d.crossRulingsSince}
+        <Icon.Scroll /> CBP CROSS rulings since{" "}
+        {formatInteger(d.crossRulingsSince, tweaks.lang)}
       </span>
       <span {...sx(s.item)}>
-        <Icon.Bell /> {d.activeAlerts} active alerts
+        <Icon.Bell /> {formatInteger(d.activeAlerts, tweaks.lang)} active alerts
       </span>
     </div>
   );

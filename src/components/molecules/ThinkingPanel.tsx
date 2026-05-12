@@ -3,8 +3,10 @@ import { useEffect, useRef, useState } from "react";
 
 import { Icon } from "@/components/atoms/Icons";
 import { Pulse } from "@/components/atoms/Pulse";
+import { useTweaks } from "@/lib/state/tweaks";
 import { sx } from "@/lib/styles/sx";
 import { borders, colors, fonts, radii } from "@/lib/styles/tokens.stylex";
+import { formatInteger, formatSeconds } from "@/lib/utils/intl";
 
 interface ThinkingPanelPropsT {
   text: string;
@@ -14,12 +16,11 @@ interface ThinkingPanelPropsT {
   defaultOpen: boolean;
 }
 
-const formatMs = (ms: number) => `${(ms / 1000).toFixed(1)}s`;
-
 const tokenCount = (text: string): number | undefined =>
   text ? Math.round(text.length / 3.5) : undefined;
 
 export function ThinkingPanel(props: Readonly<ThinkingPanelPropsT>) {
+  const [tweaks] = useTweaks();
   const [open, setOpen] = useState(props.defaultOpen);
   const [userToggled, setUserToggled] = useState(false);
   const bodyRef = useRef<HTMLDivElement | null>(null);
@@ -59,8 +60,12 @@ export function ThinkingPanel(props: Readonly<ThinkingPanelPropsT>) {
           </span>
         </span>
         <span {...sx(t.stats)}>
-          {props.ms != null && <>{formatMs(props.ms)}</>}
-          {tokens != null && <> · {tokens} tokens</>}
+          {props.ms != null && (
+            <>{formatSeconds(props.ms / 1000, tweaks.lang)}</>
+          )}
+          {tokens != null && (
+            <> · {formatInteger(tokens, tweaks.lang)} tokens</>
+          )}
         </span>
       </div>
       {open && (

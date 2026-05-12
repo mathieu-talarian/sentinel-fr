@@ -5,24 +5,27 @@ import { RailConvoItem } from "@/components/molecules/RailConvoItem";
 import { conversationsListOptions } from "@/lib/api/generated/@tanstack/react-query.gen";
 import { loadConversation, resetChat } from "@/lib/state/chatThunks";
 import { useAppDispatch, useAppSelector } from "@/lib/state/hooks";
+import { useTweaks } from "@/lib/state/tweaks";
 import { sx } from "@/lib/styles/sx";
 import { colors, fonts } from "@/lib/styles/tokens.stylex";
+import { formatMonthDay, formatRelativeDays } from "@/lib/utils/intl";
 
 const ONE_DAY_MS = 86_400_000;
 
-// Format an ISO timestamp into a rail-friendly relative label.
-// "Today" / "Yesterday" for the most recent two days, otherwise short
-// month-day. The backend serves UTC ISO 8601; toLocaleDateString picks the
-// browser's locale.
-const formatWhen = (iso: string): string => {
+// Format an ISO timestamp into a rail-friendly label. The most recent two
+// days get the natural-language relative form via `Intl.RelativeTimeFormat`
+// ("today" / "yesterday" in en, "aujourd'hui" / "hier" in fr); older items
+// fall back to a short month-day via `Intl.DateTimeFormat`. The backend
+// serves UTC ISO 8601.
+const formatWhen = (iso: string, lang: "en" | "fr"): string => {
   const d = new Date(iso);
   const days = Math.floor((Date.now() - d.getTime()) / ONE_DAY_MS);
-  if (days <= 0) return "Today";
-  if (days === 1) return "Yesterday";
-  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  if (days <= 1) return formatRelativeDays(-Math.max(days, 0), lang);
+  return formatMonthDay(d, lang);
 };
 
 export function RailHistoryList() {
+  const [tweaks] = useTweaks();
   const convos = useQuery(conversationsListOptions());
   const conversationId = useAppSelector((s) => s.chat.conversationId);
   const dispatch = useAppDispatch();
@@ -51,7 +54,7 @@ export function RailHistoryList() {
           <RailConvoItem
             key={c.id}
             title={c.title}
-            when={formatWhen(c.lastMessageAt)}
+            when={formatWhen(c.lastMessageAt, tweaks.lang)}
             active={c.id === conversationId}
             onClick={() => {
               onPick(c.id);

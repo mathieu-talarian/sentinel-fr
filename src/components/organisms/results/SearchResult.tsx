@@ -11,18 +11,11 @@ import { formatHtsCode } from "@/lib/utils/format";
 const localized = (d: LocalizedDescription, lang: "en" | "fr"): string =>
   d[lang] ?? d.en ?? d.fr ?? "";
 
-const maxScore = (candidates: readonly { score: number }[]): number => {
-  let max = 0;
-  for (const c of candidates) {
-    if (c.score > max) max = c.score;
-  }
-  return max || 1;
-};
-
 export function SearchResult(props: Readonly<{ result: SearchCodesContentT }>) {
   const [tweaks] = useTweaks();
   const candidates = props.result.candidates;
-  const max = maxScore(candidates);
+  // Trailing `1` is the empty-list fallback so we never divide by zero in `norm`.
+  const max = Math.max(1, ...candidates.map((c) => c.score));
   const norm = (v: number) => Math.max(0, Math.min(1, v / max));
 
   return (
