@@ -28,6 +28,12 @@ src/routeTree.gen.ts
 .playwright-mcp/
 .mcp.json
 .agents
+.serena/
+ruvector.db
+skills-lock.json
+
+# Firebase Hosting deploy cache
+.firebase/
 
 # IDE
 .idea/
