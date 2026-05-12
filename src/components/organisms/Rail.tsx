@@ -3,6 +3,7 @@ import * as stylex from "@stylexjs/stylex";
 import { RailFooter } from "@/components/molecules/RailFooter";
 import { RailHeader } from "@/components/molecules/RailHeader";
 import { RailNewChatButton } from "@/components/molecules/RailNewChatButton";
+import { useAuth } from "@/lib/state/auth";
 import { sx } from "@/lib/styles/sx";
 import { borders, colors } from "@/lib/styles/tokens.stylex";
 
@@ -14,14 +15,15 @@ interface RailPropsT {
 }
 
 export function Rail(props: Readonly<RailPropsT>) {
+  const auth = useAuth();
   return (
     <aside {...sx(s.rail)}>
       <RailHeader version="v1.4" />
       <RailNewChatButton onClick={props.onNewChat} />
       <RailHistoryList />
       <RailFooter
-        initial="M"
-        name="Marie L."
+        initial={auth.firebaseUser?.displayName?.[0].toUpperCase() ?? "M"}
+        name={auth.firebaseUser?.displayName ?? "Marie L."}
         org="Atelier Vague · ops"
         onOpenSettings={props.onOpenSettings}
       />

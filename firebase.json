@@ -10,7 +10,7 @@
     ],
     "headers": [
       {
-        "source": "/index.html",
+        "source": "**/!(*.@(js|css|woff2|woff|ttf|otf|svg|png|jpg|jpeg|webp|avif|ico|map|json))",
         "headers": [
           {
             "key": "Cache-Control",
