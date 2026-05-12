@@ -1,6 +1,7 @@
 import type { ChatChunkT, ChatTurnT } from "@/lib/types";
 
 import * as Sentry from "@sentry/react";
+import { EventSourceParserStream } from "eventsource-parser/stream";
 
 import { API_BASE_URL } from "@/lib/api/client";
 import { getIdToken } from "@/lib/firebase/auth";
@@ -31,11 +32,9 @@ async function readProblem(res: Response): Promise<string> {
   }
 }
 
-function parseEvent(evt: string): ChatChunkT | null {
-  const line = evt.split("\n").find((l) => l.startsWith("data: "));
-  if (!line) return null;
+const parseChunk = (data: string): ChatChunkT | null => {
   try {
-    return JSON.parse(line.slice(6)) as ChatChunkT;
+    return JSON.parse(data) as ChatChunkT;
   } catch {
     // Don't capture — malformed SSE frames happen on truncated reads and
     // shouldn't page anyone. Breadcrumb so the next captured event has
@@ -44,18 +43,22 @@ function parseEvent(evt: string): ChatChunkT | null {
       category: "sse",
       level: "warning",
       message: "Malformed SSE data line",
-      data: { preview: line.slice(0, 120) },
+      data: { preview: data.slice(0, 120) },
     });
     return null;
   }
-}
+};
 
 /**
  * POST /chat/stream — Server-Sent Events over fetch.
  *
  * EventSource isn't an option (we need POST), so we read the response body
- * by hand. Yields parsed `ChatChunk` events one by one until the stream
- * finishes (`done` or `error`) or the `signal` aborts.
+ * as a stream. The body is piped through `TextDecoderStream` → spec-compliant
+ * `EventSourceParserStream` (multi-line `data:` continuations, `event:`/`id:`
+ * fields, comments, CRLF normalization — all handled by the parser).
+ *
+ * Yields parsed `ChatChunk` events one by one until the stream finishes
+ * (`done` or `error`) or the `signal` aborts.
  *
  * Usage:
  *   for await (const chunk of streamChat(turns, { signal })) { ... }
@@ -89,20 +92,16 @@ export async function* streamChat(
   if (!res.ok) throw new Error(await readProblem(res));
   if (!res.body) throw new Error("Empty response body from /chat/stream");
 
-  const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
-  let buf = "";
+  const reader = res.body
+    .pipeThrough(new TextDecoderStream())
+    .pipeThrough(new EventSourceParserStream())
+    .getReader();
   try {
     for (;;) {
       const { value, done } = await reader.read();
       if (done) return;
-      buf += value;
-      // SSE event boundary is "\n\n"
-      const events = buf.split("\n\n");
-      buf = events.pop() ?? "";
-      for (const evt of events) {
-        const chunk = parseEvent(evt);
-        if (chunk) yield chunk;
-      }
+      const chunk = parseChunk(value.data);
+      if (chunk) yield chunk;
     }
   } finally {
     // Releases the underlying lock so an aborted/cancelled stream doesn't
