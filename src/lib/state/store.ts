@@ -4,6 +4,7 @@ import { configureStore } from "@reduxjs/toolkit";
 import * as Sentry from "@sentry/react";
 
 import { authReducer } from "@/lib/state/authSlice";
+import { casesReducer, persistActiveCaseId } from "@/lib/state/casesSlice";
 import { chatReducer } from "@/lib/state/chatSlice";
 import { persistTweaks, tweaksReducer } from "@/lib/state/tweaksSlice";
 
@@ -75,6 +76,7 @@ export const store = configureStore({
     auth: authReducer,
     tweaks: tweaksReducer,
     chat: chatReducer,
+    cases: casesReducer,
   },
   // RTK's `enhancers` callback must return a `Tuple` — `concat` preserves
   // that branded type, whereas `[...spread]` would degrade to a plain array.
@@ -82,14 +84,19 @@ export const store = configureStore({
   enhancers: (getDefault) => getDefault().concat(sentryReduxEnhancer),
 });
 
-// Mirror tweaks → localStorage on every change. Cheap reference check — only
-// writes when the slice's value identity actually moved.
+// Mirror tweaks + cases.activeCaseId → localStorage on every change. Cheap
+// reference checks — only writes when the relevant slice value moved.
 let lastTweaks = store.getState().tweaks;
+let lastActiveCaseId = store.getState().cases.activeCaseId;
 store.subscribe(() => {
-  const next = store.getState().tweaks;
-  if (next !== lastTweaks) {
-    lastTweaks = next;
-    persistTweaks(next);
+  const next = store.getState();
+  if (next.tweaks !== lastTweaks) {
+    lastTweaks = next.tweaks;
+    persistTweaks(next.tweaks);
+  }
+  if (next.cases.activeCaseId !== lastActiveCaseId) {
+    lastActiveCaseId = next.cases.activeCaseId;
+    persistActiveCaseId(lastActiveCaseId);
   }
 });
 

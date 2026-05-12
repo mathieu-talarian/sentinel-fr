@@ -22,8 +22,15 @@ import type {
   ChatChunk,
   CommodityBody,
   CommodityHierarchyEntry,
+  CreateCaseBody,
+  CreateLineItemBody,
+  ImportCaseLineItemResponse,
+  ImportCaseResponse,
+  ImportCaseSummary,
   LandedCostResponse,
   LandedCostRow,
+  PatchCaseBody,
+  PatchLineItemBody,
   SearchBody,
   SearchCandidate,
   UsageInfo,
@@ -131,3 +138,52 @@ export interface RulingItemT {
 export interface CrossRulingsContentT {
   rulings: RulingItemT[];
 }
+
+/* ---------- Import-case shapes (backend Phase 2) ---------- */
+
+export type ImportCaseSummaryT = ImportCaseSummary;
+export type ImportCaseT = ImportCaseResponse;
+export type ImportCaseLineItemT = ImportCaseLineItemResponse;
+export type CreateCaseBodyT = CreateCaseBody;
+export type PatchCaseBodyT = PatchCaseBody;
+export type CreateLineItemBodyT = CreateLineItemBody;
+export type PatchLineItemBodyT = PatchLineItemBody;
+
+/**
+ * Server-persisted case status (backend spec §4.2). This is the user's
+ * filing decision, set explicitly via `PATCH /import-cases/{id}`.
+ *
+ * Distinct from `ImportCaseStatusT` (the 7-value FE-derived UI status) —
+ * see `selectCaseStatus` in `src/lib/state/caseStatus.ts`.
+ */
+export type ImportCasePersistedStatusT =
+  | "draft"
+  | "ready_for_review"
+  | "archived";
+
+/**
+ * Client-derived case status used by the workbench UI. Computed from line
+ * classification state, quote presence, and risk results — except when the
+ * persisted status is `archived`, which always wins (decision 4).
+ *
+ * Defined per `FRONTEND_IMPORT_CASE_WORKBENCH.md` §Case Status Model.
+ */
+export type ImportCaseStatusT =
+  | "draft"
+  | "classifying"
+  | "readyForQuote"
+  | "quoted"
+  | "needsReview"
+  | "readyForBroker"
+  | "archived";
+
+/**
+ * Line-item classification state surfaced from the backend (`string` on the
+ * wire — narrowed here to the known enum). Order mirrors the FE doc:
+ *   unclassified → candidates → selected → needsReview.
+ */
+export type LineItemClassificationStateT =
+  | "unclassified"
+  | "candidates"
+  | "selected"
+  | "needsReview";

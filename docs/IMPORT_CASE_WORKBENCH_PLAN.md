@@ -15,11 +15,12 @@ This doc is the frontend-side mirror: which existing files change, which new fil
 
 Snapshot of what's shipped against this plan. Tied to backend rollout.
 
-| Phase | Backend dep   | FE status   | Notes                                                                                                                                          |
-| ----- | ------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0     | none          | not started | `caseWorkbench` flag + `VITE_FEATURE_CASE_WORKBENCH` not yet introduced. Will land alongside Phase 2 plumbing.                                 |
-| 1     | Step 1 (fees) | **done**    | Backend exposed structured surcharges (not fee-schedule metadata); FE renders them with source attribution. See §1.1 for what shipped vs plan. |
-| 2-9   | per the table | not started |                                                                                                                                                |
+| Phase | Backend dep    | FE status   | Notes                                                                                                                                          |
+| ----- | -------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0     | none           | **done**    | `caseWorkbench: boolean` on `tweaksSlice` (default `false`, persisted). `src/lib/features.ts` OR-es it with `VITE_FEATURE_CASE_WORKBENCH`.     |
+| 1     | Step 1 (fees)  | **done**    | Backend exposed structured surcharges (not fee-schedule metadata); FE renders them with source attribution. See §1.1 for what shipped vs plan. |
+| 2     | Step 2 (cases) | **done**    | Wire-type aliases, `casesSlice` (`activeCaseId` only), facade (`useCases`, `useActiveCase`, …), `selectCaseStatus` selector. See §1.2.         |
+| 3-9   | per the table  | not started |                                                                                                                                                |
 
 Cross-cutting work landed alongside Phase 1 (not tied to any single workbench phase):
 
@@ -47,6 +48,21 @@ What did ship — and what FE now renders — is the **surcharge layer** (`Lande
 Empty surcharge array renders the verbatim copy from the workbench FE doc: `"No verified surcharge rule matched this case."` Caveats block unchanged.
 
 Deferred to Phase 5 (quote panel) until backend exposes `feeMetadata` on the wire: MPF/HMF cap display, stale-data chip.
+
+### 1.2 Phase 2 — what shipped vs the plan
+
+Backend Phase 2 shipped `/api/import-cases` (list/create/get/patch/delete) + line-item CRUD. SDK regen brought `ImportCaseSummary`, `ImportCaseResponse`, `ImportCaseLineItemResponse`, `CreateCaseBody`, `PatchCaseBody`, `CreateLineItemBody`, `PatchLineItemBody`, and TanStack helpers (`importCaseListOptions`, `importCaseGetOptions`, `importCaseCreateMutation`, etc.).
+
+**Note:** the case response carries `lastQuotedAt` / `lastRiskScreenedAt` timestamps only — the full quote / risk summaries don't ship until backend Phase 3 / Phase 5. `selectCaseStatus` treats the timestamps as "ran successfully" for now; Phase 7 will tighten this when the risk summary lands.
+
+**Slice scope intentionally narrowed.** The plan listed three slice fields (`activeCaseId`, `draftLineEdits`, `pendingPatches`). Only `activeCaseId` ships now — the other two have no Phase 2 consumer and adding empty scaffolding without a consumer is exactly the anti-pattern CLAUDE.md flags. Pulled forward when their consumers arrive:
+
+- `draftLineEdits` → Phase 4 (`CaseLinesPanel` inline editing).
+- `pendingPatches` → Phase 6 (`casePatchSuggestion` SSE events).
+
+**Thunks deferred.** The plan listed `casesThunks.ts` for case + line-item CRUD. Skipped for Phase 2 — TanStack `useMutation({ ...importCaseCreateMutation(), onSuccess })` already gives components an ergonomic call site, and `onSuccess` is the natural place to invalidate the list cache + dispatch `setActiveCaseId`. A `casesThunks` file becomes useful in Phase 6 when SSE chunks need to refetch the active case from a non-React context; revisit then with a hoisted `QueryClient` singleton.
+
+**Chat thread keying deferred.** Plan listed refactoring `chatSlice.threads: Record<caseId, …>` as Phase 2 work. Deferred to Phase 6 (case-aware chat) when there's a real consumer — refactoring chat state without a UI to validate it is churn-without-benefit.
 
 ## 2. Constraints
 

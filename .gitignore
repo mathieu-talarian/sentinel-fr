@@ -41,3 +41,6 @@ skills-lock.json
 # Yarn runtime
 .yarn/install-state.gz
 
+# @hey-api/openapi-ts crash dumps from gen:api failures
+openapi-ts-error-*.log
+

@@ -21,7 +21,7 @@ export default defineConfig({
   input: SPEC_URL,
   output: {
     path: "src/lib/api/generated",
-    format: "prettier",
+    postProcess: ["eslint", "prettier"],
   },
   plugins: [
     // Typed `<svc>.gen.ts` SDK functions, e.g. `getConversations({ query })`.
