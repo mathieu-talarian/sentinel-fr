@@ -4,13 +4,6 @@
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [
       {
-        "source": "/api/**",
-        "run": {
-          "serviceId": "sentinel-api",
-          "region": "europe-west1"
-        }
-      },
-      {
         "source": "**",
         "destination": "/index.html"
       }
@@ -19,8 +12,14 @@
       {
         "source": "/index.html",
         "headers": [
-          { "key": "Cache-Control", "value": "no-cache" },
-          { "key": "Document-Policy", "value": "js-profiling" }
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          },
+          {
+            "key": "Document-Policy",
+            "value": "js-profiling"
+          }
         ]
       },
       {

@@ -2,6 +2,7 @@ import type { ChatChunkT, ChatTurnT } from "@/lib/types";
 
 import * as Sentry from "@sentry/react";
 
+import { API_BASE_URL } from "@/lib/api/client";
 import { getIdToken } from "@/lib/firebase/auth";
 
 interface StreamOptionsT {
@@ -63,8 +64,8 @@ export async function* streamChat(
   messages: ChatTurnT[],
   opts: StreamOptionsT = {},
 ): AsyncGenerator<ChatChunkT, void, undefined> {
-  const base = opts.baseUrl ?? "";
-  const url = `${base}/api/chat/stream`;
+  const base = opts.baseUrl ?? API_BASE_URL;
+  const url = `${base}/chat/stream`;
 
   const headers: Record<string, string> = {
     "content-type": "application/json",

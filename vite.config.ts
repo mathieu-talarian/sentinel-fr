@@ -1,3 +1,4 @@
+import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 import { sentryVitePlugin } from "@sentry/vite-plugin";
@@ -9,9 +10,16 @@ import mkcert from "vite-plugin-mkcert";
 
 const srcDir = fileURLToPath(new URL("src", import.meta.url));
 
+// Sentry release name is the package.json version — the same string is
+// injected into the runtime SDK via `define` below so source-map uploads
+// at build time match `Sentry.init({ release })` at runtime.
+const require = createRequire(import.meta.url);
+const { version: appVersion } = require("./package.json") as {
+  version: string;
+};
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, ".", "");
-  const apiTarget = env.VITE_SENTINEL_API_BASE || "https://127.0.0.1:8888";
 
   // Source-map upload is opt-in: any deploy that wants Sentry-readable
   // stack traces sets all three vars; without them the plugin stays out
@@ -29,6 +37,9 @@ export default defineConfig(({ mode }) => {
         "@": srcDir,
       },
     },
+    define: {
+      __APP_VERSION__: JSON.stringify(appVersion),
+    },
     build: {
       sourcemap: uploadSentrySourceMaps ? "hidden" : false,
       rolldownOptions: {
@@ -45,14 +56,6 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: 3000,
-      proxy: {
-        "/api": {
-          target: apiTarget,
-          changeOrigin: true,
-          secure: false,
-          ws: false,
-        },
-      },
     },
     plugins: [
       mkcert(),
@@ -63,23 +66,20 @@ export default defineConfig(({ mode }) => {
         unstable_moduleResolution: { type: "commonJS" },
         aliases: { "@/*": [`${srcDir}/*`] },
       }),
-      uploadSentrySourceMaps &&
-        sentryVitePlugin({
-          reactComponentAnnotation: {
-            enabled: true,
-          },
-          authToken: sentryAuthToken,
-          org: sentryOrg,
-          project: sentryProject,
-          release: env.VITE_APP_RELEASE
-            ? { name: env.VITE_APP_RELEASE }
-            : undefined,
-          sourcemaps: {
-            // Strip uploaded maps from the deployed bundle so they're
-            // only readable inside Sentry, not via DevTools.
-            filesToDeleteAfterUpload: ["./dist/**/*.map"],
-          },
-        }),
+      sentryVitePlugin({
+        reactComponentAnnotation: {
+          enabled: true,
+        },
+        authToken: sentryAuthToken,
+        org: sentryOrg,
+        project: sentryProject,
+        release: { name: appVersion },
+        sourcemaps: {
+          // Strip uploaded maps from the deployed bundle so they're
+          // only readable inside Sentry, not via DevTools.
+          filesToDeleteAfterUpload: ["./dist/**/*.map"],
+        },
+      }),
     ],
   };
 });

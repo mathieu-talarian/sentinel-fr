@@ -6,21 +6,28 @@ import * as Sentry from "@sentry/react";
 // `vite/client`, which trips `no-unsafe-*`. Cast once at the boundary.
 const env = import.meta.env as unknown as Record<string, string | undefined>;
 
+// Injected by Vite's `define` from package.json version — see vite.config.ts.
+// Keeping build-time (source-map upload) and runtime release names identical
+// is what lets Sentry resolve uploaded maps for a given event.
+declare const __APP_VERSION__: string;
+
 const num = (raw: string | undefined, fallback: number): number => {
   const n = raw == null ? Number.NaN : Number.parseFloat(raw);
   return Number.isFinite(n) ? n : fallback;
 };
 
-// Same-origin `/api/...` calls always need trace propagation so frontend
-// transactions stitch to backend ones. Cross-origin prod backends (different
-// host than the SPA) override via `VITE_SENTRY_TRACE_TARGETS`, comma-
-// separated. The default regex matches `/api/...` after Vite proxy /
-// reverse-proxy routing.
+// The Rust backend lives on a separate origin (Cloud Run), so the SDK
+// needs the hostname in its allow-list before it'll attach the
+// `sentry-trace` / `baggage` headers that stitch frontend transactions
+// to backend ones. Override via `VITE_SENTRY_TRACE_TARGETS` (comma-
+// separated) for staging or local backends.
 const tracePropagationTargets = (): (string | RegExp)[] => {
   const fromEnv = env.VITE_SENTRY_TRACE_TARGETS?.split(",")
     .map((s) => s.trim())
     .filter(Boolean);
-  return fromEnv && fromEnv.length > 0 ? fromEnv : [/^\/api\//];
+  return fromEnv && fromEnv.length > 0
+    ? fromEnv
+    : [/^https:\/\/sentinel-server-356994978667\.europe-west1\.run\.app\//];
 };
 
 // Drop noise that pollutes the issue feed without ever being actionable:
@@ -74,7 +81,7 @@ export function initSentry(router: AnyRouter): void {
     // /api/<projectId>/envelope/`.
     tunnel: env.VITE_SENTRY_TUNNEL,
     environment: import.meta.env.MODE,
-    release: env.VITE_APP_RELEASE,
+    release: __APP_VERSION__,
     sendDefaultPii: true,
     beforeSend,
     integrations: [
