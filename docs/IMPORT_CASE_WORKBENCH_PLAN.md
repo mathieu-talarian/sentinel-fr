@@ -15,18 +15,18 @@ This doc is the frontend-side mirror: which existing files change, which new fil
 
 Snapshot of what's shipped against this plan. Tied to backend rollout.
 
-| Phase | Backend dep      | FE status   | Notes                                                                                                                                             |
-| ----- | ---------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0     | none             | **done**    | `caseWorkbench: boolean` on `tweaksSlice` (default `false`, persisted). `src/lib/features.ts` OR-es it with `VITE_FEATURE_CASE_WORKBENCH`.        |
-| 1     | Step 1 (fees)    | **done**    | Backend exposed structured surcharges (not fee-schedule metadata); FE renders them with source attribution. See §1.1 for what shipped vs plan.    |
-| 2     | Step 2 (cases)   | **done**    | Wire-type aliases, `casesSlice` (`activeCaseId` only), facade (`useCases`, `useActiveCase`, …), `selectCaseStatus` selector. See §1.2.            |
-| 3     | Step 2           | **done**    | `/cases`, `/cases/new`, `/cases/$caseId` routes. `Rail` flag-aware. `RailCaseList` + `RailCaseItem` + `CaseStatusChip` + `NewCaseForm`. See §1.3. |
-| 4     | + classify       | **done**    | `CaseInspector` (Radix Tabs) + `CaseFactsPanel` (PATCH-on-blur) + `CaseLinesPanel` (add/remove + per-line `importCaseLineClassify`). See §1.4.    |
-| 5     | Step 3 (quotes)  | **done**    | `CaseQuotePanel` (run / re-run / latest), `QuoteSummaryTable`, `QuoteLineRow` (expandable + surcharges + caveats), `FeeRow`. See §1.5.            |
-| 6     | Step 4 (chat)    | **done**    | Keyed `chatSlice` (per-thread), `streamChat` `caseId` routing, `casePatchSuggestion` → `CasePatchTray`, `CaseChatSurface`. See §1.7.              |
-| 7     | Step 5 (risk)    | **done**    | `CaseRiskPanel` (`importCaseRiskScreen*`), `RiskFlagRow` + severity tokens, "Cost estimate only" gate in `CaseQuotePanel`. See §1.8.              |
-| 8     | Step 6 (rulings) | **done**    | `CaseEvidencePanel` (supports / conflicts / reference groups), `CaseRulingCard`, `RulingsSearchDialog` (Radix). See §1.9.                         |
-| 9     | none             | not started |                                                                                                                                                   |
+| Phase | Backend dep      | FE status   | Notes                                                                                                                                              |
+| ----- | ---------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0     | none             | **done**    | `caseWorkbench: boolean` on `tweaksSlice` (default `false`, persisted). `src/lib/features.ts` OR-es it with `VITE_FEATURE_CASE_WORKBENCH`.         |
+| 1     | Step 1 (fees)    | **done**    | Backend exposed structured surcharges (not fee-schedule metadata); FE renders them with source attribution. See §1.1 for what shipped vs plan.     |
+| 2     | Step 2 (cases)   | **done**    | Wire-type aliases, `casesSlice` (`activeCaseId` only), facade (`useCases`, `useActiveCase`, …), `selectCaseStatus` selector. See §1.2.             |
+| 3     | Step 2           | **done**    | `/cases`, `/cases/new`, `/cases/$caseId` routes. `Rail` flag-aware. `RailCaseList` + `RailCaseItem` + `CaseStatusChip` + `NewCaseForm`. See §1.3.  |
+| 4     | + classify       | **done**    | `CaseInspector` (Radix Tabs) + `CaseFactsPanel` (PATCH-on-blur) + `CaseLinesPanel` (add/remove + per-line `importCaseLineClassify`). See §1.4.     |
+| 5     | Step 3 (quotes)  | **done**    | `CaseQuotePanel` (run / re-run / latest), `QuoteSummaryTable`, `QuoteLineRow` (expandable + surcharges + caveats), `FeeRow`. See §1.5.             |
+| 6     | Step 4 (chat)    | **done**    | Keyed `chatSlice` (per-thread), `streamChat` `caseId` routing, `casePatchSuggestion` → `CasePatchTray`, `CaseChatSurface`. See §1.7.               |
+| 7     | Step 5 (risk)    | **done**    | `CaseRiskPanel` (`importCaseRiskScreen*`), `RiskFlagRow` + severity tokens, "Cost estimate only" gate in `CaseQuotePanel`. See §1.8.               |
+| 8     | Step 6 (rulings) | **done**    | `CaseEvidencePanel` (supports / conflicts / reference groups), `CaseRulingCard`, `RulingsSearchDialog` (Radix). See §1.9.                          |
+| 9     | none             | **partial** | Workbench header now uses `selectCaseStatus(case, risk)` + Archive/Unarchive button. Sentry tags via `mutation.meta`. See §1.10 for ops deferrals. |
 
 Cross-cutting work landed alongside Phase 1 (not tied to any single workbench phase):
 
@@ -227,6 +227,30 @@ New organisms:
 - **Pin-to-line on attach.** `AttachRulingBodyT` accepts an optional `lineItemId`; Phase 8 always attaches at the case level. A line-item picker on the search dialog row is a Phase 8.5 enhancement when there's UX demand. Card already shows "Pinned to line #N" when the backend reports one.
 - **Match-note on attach.** Same — `matchNote` slot is rendered on the card when present (Phase 6 patch suggestions or backend-side auto-notes can fill it) but the search dialog doesn't yet collect one.
 - **Refresh action.** `importCaseRulingRefresh` is in the SDK; we haven't surfaced a refresh button on the card. Add when a ruling that's been updated upstream becomes a real workflow.
+
+### 1.10 Phase 9 — what shipped vs the plan
+
+Pure FE polish from the Phase 9 list landed; ops-side items wait on product / release decisions.
+
+**Header status chip now reflects real risk verdicts.** `cases.$caseId.tsx` fetches `importCaseRiskScreenLatest` and passes the result to `selectCaseStatus(case, riskScreen)`. The chip flips `quoted` → `needsReview` (amber) or `readyForBroker` (green) immediately after the panel's "Run screen" finishes, no refresh needed. 404 / no screen yet falls through to the timestamp-only path the selector already handled.
+
+**Archive / Unarchive lifecycle.** New inline `WorkbenchHeader` subcomponent renders next to the title with a single Archive ↔ Unarchive button. PATCHes `status` between `archived` and `ready_for_review` via `importCasePatchMutation`. Invalidates both the case-detail and list queries so the rail row repaints. Read-only flag (`case.status === "archived"`) was already wired through every panel from Phase 4; this just gives the user a way to flip it.
+
+**Sentry case tagging via `mutation.meta`.** `main.tsx` mutation cache now merges `mutation.options.meta?.tags` into the `Sentry.captureException` tags. Every case-aware mutation in the workbench (`CaseFactsPanel`, `CaseLinesPanel` × 3, `CaseQuotePanel`, `CaseRiskPanel`, `CaseEvidencePanel`, `RulingsSearchDialog`, and the new archive mutation in the header) sets `meta: { tags: { "import_case.id": case_.id } }`. Every failure that bubbles up to Sentry now carries the case id without each panel touching Sentry directly. `chatThunks.reportStreamError` also tags `import_case.id` when the thread is case-scoped.
+
+The remaining ops-side items from the plan are deliberately out of scope here:
+
+- **Flip `VITE_FEATURE_CASE_WORKBENCH=true` as build default + remove `tweaks.caseWorkbench`** — release-time decision; flipping the flag is a config change, not a code change. The flag plumbing supports both modes today.
+- **French copy pass** — no translation system in the repo; copy lives inline. Defer until a real `lang` consumer (props, i18n lib) lands and the workbench has enough static copy to translate consistently.
+- **Demote `/` to flagged scratchpad** — same as above; happens at the moment the env flag becomes default-on. The existing redirect in `routes/index.tsx` already handles authed users when the flag is on.
+
+Smaller deferrals still pending across Phases 4-8 (intentionally not pulled into Phase 9):
+
+- `MissingFieldChip` click-to-scroll into the matching inspector field.
+- Quote history dropdown + "what changed since last quote" diff inside `CaseQuotePanel`.
+- `CaseTimeline` chronological merge in `CaseChatSurface`.
+- `RulingsSearchDialog`: line-item pin + match-note collection.
+- `importCaseRulingRefresh` button on `CaseRulingCard`.
 
 ## 2. Constraints
 

@@ -100,6 +100,7 @@ export function CaseQuotePanel(props: Readonly<CaseQuotePanelPropsT>) {
 
   const runQuote = useMutation({
     ...importCaseQuoteCreateMutation(),
+    meta: { tags: { "import_case.id": case_.id } },
     onSuccess: async () => {
       setError(null);
       await Promise.all([

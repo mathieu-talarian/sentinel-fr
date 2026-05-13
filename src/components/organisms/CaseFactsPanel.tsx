@@ -44,6 +44,7 @@ export function CaseFactsPanel(props: Readonly<CaseFactsPanelPropsT>) {
 
   const patch = useMutation({
     ...importCasePatchMutation(),
+    meta: { tags: { "import_case.id": case_.id } },
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({

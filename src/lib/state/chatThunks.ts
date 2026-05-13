@@ -60,8 +60,10 @@ const reportStreamError = (
   const message = errorMessage(error);
   const aborted = message === "AbortError" || message.includes("aborted");
   if (!aborted) {
+    const tags: Record<string, string> = { source: "chat-stream" };
+    if (ctx.caseId) tags["import_case.id"] = ctx.caseId;
     Sentry.captureException(error, {
-      tags: { source: "chat-stream" },
+      tags,
       extra: { ...ctx },
     });
   }

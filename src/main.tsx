@@ -36,8 +36,15 @@ const queryClient = new QueryClient({
   }),
   mutationCache: new MutationCache({
     onError: (error, _vars, _ctx, mutation) => {
+      // Per-mutation context comes through `meta.tags` (set by case-aware
+      // panels, e.g. `meta: { tags: { "import_case.id": case_.id } }`).
+      // Merging here means every case-scoped failure carries the case id
+      // without each panel touching Sentry directly.
+      const meta = mutation.options.meta as
+        | { tags?: Record<string, string> }
+        | undefined;
       Sentry.captureException(error, {
-        tags: { source: "react-query-mutation" },
+        tags: { source: "react-query-mutation", ...meta?.tags },
         extra: { mutationKey: mutation.options.mutationKey },
       });
     },

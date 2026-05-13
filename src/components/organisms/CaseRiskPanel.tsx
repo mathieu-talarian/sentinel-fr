@@ -95,6 +95,7 @@ export function CaseRiskPanel(props: Readonly<CaseRiskPanelPropsT>) {
 
   const runMut = useMutation({
     ...importCaseRiskScreenRunMutation(),
+    meta: { tags: { "import_case.id": case_.id } },
     onSuccess: async () => {
       setError(null);
       await Promise.all([

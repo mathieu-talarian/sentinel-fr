@@ -69,6 +69,7 @@ export function RulingsSearchDialog(
 
   const attachMut = useMutation({
     ...importCaseRulingAttachMutation(),
+    meta: { tags: { "import_case.id": caseId } },
     onSuccess: async (_data, variables) => {
       setError(null);
       setAttachedNumbers((prev) =>

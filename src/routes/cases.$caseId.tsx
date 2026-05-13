@@ -1,13 +1,16 @@
 /* eslint-disable react-refresh/only-export-components -- TanStack Router files
    colocate the `Route` config alongside the route component. */
 import type { CaseInspectorTabT } from "@/components/organisms/CaseInspector";
+import type { ImportCaseResponseT } from "@/lib/api/generated/types.gen";
 
 import * as Sentry from "@sentry/react";
 import * as stylex from "@stylexjs/stylex";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { z } from "zod";
 
+import { Button } from "@/components/atoms/Button";
 import { Heading } from "@/components/atoms/Heading";
 import { CaseStatusChip } from "@/components/molecules/CaseStatusChip";
 import { ErrorFallback } from "@/components/molecules/ErrorFallback";
@@ -18,6 +21,12 @@ import {
   asInspectorTab,
 } from "@/components/organisms/CaseInspector";
 import { Rail } from "@/components/organisms/Rail";
+import {
+  importCaseGetQueryKey,
+  importCaseListQueryKey,
+  importCasePatchMutation,
+  importCaseRiskScreenLatestOptions,
+} from "@/lib/api/generated/@tanstack/react-query.gen";
 import {
   selectCaseStatus,
   selectMissingCaseFacts,
@@ -58,6 +67,15 @@ function CaseWorkbenchPage() {
   const setActive = useSetActiveCase();
   const activeCase = useActiveCase();
 
+  // Latest risk screen fed into `selectCaseStatus` so the header chip
+  // flips on real verdicts (`needsReview` / `readyForBroker`) once Phase 7
+  // backend has weighed in. 404 = no screen yet — treat as null.
+  const riskScreenQ = useQuery({
+    ...importCaseRiskScreenLatestOptions({ path: { caseId } }),
+    throwOnError: false,
+    enabled: activeCase.data != null,
+  });
+
   const currentTab = asInspectorTab(search.tab);
   const onTabChange = (tab: CaseInspectorTabT) => {
     void navigate({
@@ -97,20 +115,11 @@ function CaseWorkbenchPage() {
         )}
         {data && (
           <>
-            <header {...sx(s.head)}>
-              <div {...sx(s.titleCol)}>
-                <Heading level="h1" size="md">
-                  {data.title}
-                </Heading>
-                <div {...sx(s.subline)}>
-                  <CaseStatusChip status={selectCaseStatus(data)} />
-                  <span {...sx(s.id)}>{data.id}</span>
-                </div>
-              </div>
-            </header>
-
+            <WorkbenchHeader
+              case_={data}
+              riskScreen={riskScreenQ.data ?? null}
+            />
             <MissingFactsStrip case_={data} />
-
             <CaseChatSurface case_={data} isReadOnly={isReadOnly} />
           </>
         )}
@@ -127,6 +136,69 @@ function CaseWorkbenchPage() {
     </Sentry.ErrorBoundary>
   );
 }
+
+interface WorkbenchHeaderPropsT {
+  case_: ImportCaseResponseT;
+  riskScreen: Parameters<typeof selectCaseStatus>[1];
+}
+
+function WorkbenchHeader(props: Readonly<WorkbenchHeaderPropsT>) {
+  const { case_ } = props;
+  const queryClient = useQueryClient();
+  const archived = case_.status === "archived";
+
+  const archiveMut = useMutation({
+    ...importCasePatchMutation(),
+    meta: { tags: { "import_case.id": case_.id } },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: importCaseGetQueryKey({ path: { caseId: case_.id } }),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: importCaseListQueryKey(),
+        }),
+      ]);
+    },
+  });
+
+  const toggleArchive = () => {
+    archiveMut.mutate({
+      body: { status: archived ? "ready_for_review" : "archived" },
+      path: { caseId: case_.id },
+    });
+  };
+
+  const status = selectCaseStatus(case_, props.riskScreen);
+  const archiveLabel = pickArchiveLabel(archiveMut.isPending, archived);
+
+  return (
+    <header {...sx(s.head)}>
+      <div {...sx(s.titleCol)}>
+        <Heading level="h1" size="md">
+          {case_.title}
+        </Heading>
+        <div {...sx(s.subline)}>
+          <CaseStatusChip status={status} />
+          <span {...sx(s.id)}>{case_.id}</span>
+        </div>
+      </div>
+      <Button
+        variant="secondary"
+        onClick={toggleArchive}
+        disabled={archiveMut.isPending}
+      >
+        {archiveLabel}
+      </Button>
+    </header>
+  );
+}
+
+const pickArchiveLabel = (busy: boolean, archived: boolean): string => {
+  if (busy) return "Saving…";
+  if (archived) return "Unarchive";
+  return "Archive";
+};
 
 function MissingFactsStrip(
   props: Readonly<{ case_: Parameters<typeof selectMissingCaseFacts>[0] }>,
@@ -160,21 +232,9 @@ const s = stylex.create({
     display: "flex",
     justifyContent: "space-between",
   },
-  titleCol: {
-    gap: 6,
-    display: "flex",
-    flexDirection: "column",
-  },
-  subline: {
-    gap: 10,
-    alignItems: "center",
-    display: "flex",
-  },
-  id: {
-    color: colors.ink4,
-    fontFamily: fonts.mono,
-    fontSize: 11,
-  },
+  titleCol: { gap: 6, display: "flex", flexDirection: "column" },
+  subline: { gap: 10, alignItems: "center", display: "flex" },
+  id: { color: colors.ink4, fontFamily: fonts.mono, fontSize: 11 },
   missingStrip: {
     padding: "8px 12px",
     borderColor: colors.warnSoft,
@@ -194,14 +254,6 @@ const s = stylex.create({
     letterSpacing: "0.04em",
     textTransform: "uppercase",
   },
-  note: {
-    color: colors.ink3,
-    fontSize: 13,
-    fontStyle: "italic",
-  },
-  error: {
-    color: colors.err,
-    fontFamily: fonts.mono,
-    fontSize: 12,
-  },
+  note: { color: colors.ink3, fontSize: 13, fontStyle: "italic" },
+  error: { color: colors.err, fontFamily: fonts.mono, fontSize: 12 },
 });

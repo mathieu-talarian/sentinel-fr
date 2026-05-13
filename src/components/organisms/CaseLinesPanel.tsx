@@ -56,6 +56,7 @@ export function CaseLinesPanel(props: Readonly<CaseLinesPanelPropsT>) {
 
   const addLine = useMutation({
     ...importCaseAddLineItemMutation(),
+    meta: { tags: { "import_case.id": case_.id } },
     onSuccess: async () => {
       setNewDescription("");
       await invalidateCase();
@@ -74,6 +75,7 @@ export function CaseLinesPanel(props: Readonly<CaseLinesPanelPropsT>) {
 
   const deleteLine = useMutation({
     ...importCaseDeleteLineItemMutation(),
+    meta: { tags: { "import_case.id": case_.id } },
     onSuccess: () => invalidateCase(),
     onError: (e) => {
       setError(errorMessage(e));
@@ -82,6 +84,7 @@ export function CaseLinesPanel(props: Readonly<CaseLinesPanelPropsT>) {
 
   const classifyLine = useMutation({
     ...importCaseLineClassifyMutation(),
+    meta: { tags: { "import_case.id": case_.id } },
     onSettled: () => {
       setClassifyingId(null);
     },

@@ -73,6 +73,7 @@ export function CaseEvidencePanel(props: Readonly<CaseEvidencePanelPropsT>) {
 
   const detachMut = useMutation({
     ...importCaseRulingDetachMutation(),
+    meta: { tags: { "import_case.id": case_.id } },
     onSuccess: async () => {
       setError(null);
       await queryClient.invalidateQueries({
