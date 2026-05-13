@@ -1,29 +1,19 @@
 import type { BulkClassifyResponseT } from "@/lib/api/generated/types.gen";
 
-import * as Sentry from "@sentry/react";
 import * as stylex from "@stylexjs/stylex";
-import { useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
 
 import { Button } from "@/components/atoms/Button";
-import { importCaseGetQueryKey } from "@/lib/api/generated/@tanstack/react-query.gen";
-import { importCaseClassifyBulk } from "@/lib/api/generated/sdk.gen";
 import { sx } from "@/lib/styles/sx";
 import { borders, colors, fonts, radii } from "@/lib/styles/tokens.stylex";
 
 interface BulkClassifyBarPropsT {
-  caseId: string;
+  running: boolean;
+  result: BulkClassifyResponseT | null;
   unclassifiedCount: number;
   isReadOnly: boolean;
-  /** Bubble user-facing failures up to the panel's `ErrorBanner`. */
-  onError: (msg: string) => void;
+  onClassify: () => void;
+  onCancel: () => void;
 }
-
-const errorMessage = (e: unknown): string => {
-  if (e instanceof Error) return e.message;
-  if (typeof e === "string") return e;
-  return "Bulk classify failed.";
-};
 
 const countResults = (
   result: BulkClassifyResponseT,
@@ -45,52 +35,15 @@ const labelFor = (running: boolean, unclassifiedCount: number): string => {
   return `${unclassifiedCount.toString()} unclassified ${noun}`;
 };
 
-/**
- * The "Classify all" bar inside `CaseLinesPanel`. Bulk classify is a
- * single POST whose response carries per-line results, so progress is
- * just a spinner; the user can `Cancel` mid-flight via an
- * AbortController. Per-line failures surface as a small summary below
- * the bar after the run settles; transport-level errors bubble through
- * `onError` to the panel's existing ErrorBanner.
- */
 export function BulkClassifyBar(props: Readonly<BulkClassifyBarPropsT>) {
-  const { caseId, unclassifiedCount, isReadOnly } = props;
-  const queryClient = useQueryClient();
-  const [running, setRunning] = useState(false);
-  const [result, setResult] = useState<BulkClassifyResponseT | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
-
-  const onClassify = async () => {
-    setResult(null);
-    const controller = new AbortController();
-    abortRef.current = controller;
-    setRunning(true);
-    try {
-      const res = await importCaseClassifyBulk({
-        body: { onlyUnclassified: true, attachCandidates: true },
-        path: { caseId },
-        signal: controller.signal,
-        throwOnError: true,
-      });
-      setResult(res.data);
-      await queryClient.invalidateQueries({
-        queryKey: importCaseGetQueryKey({ path: { caseId } }),
-      });
-    } catch (error) {
-      if (controller.signal.aborted) return;
-      const msg = errorMessage(error);
-      Sentry.addBreadcrumb({
-        category: "cases",
-        level: "warning",
-        message: "bulk-classify failed",
-        data: { detail: msg },
-      });
-      props.onError(msg);
-    } finally {
-      abortRef.current = null;
-      setRunning(false);
-    }
-  };
+  const {
+    running,
+    result,
+    unclassifiedCount,
+    isReadOnly,
+    onClassify,
+    onCancel,
+  } = props;
 
   if (!running && !result && unclassifiedCount === 0) return null;
 
@@ -102,20 +55,13 @@ export function BulkClassifyBar(props: Readonly<BulkClassifyBarPropsT>) {
       <div {...sx(s.bar)}>
         <span {...sx(s.label)}>{labelFor(running, unclassifiedCount)}</span>
         {running ? (
-          <Button
-            variant="secondary"
-            onClick={() => {
-              abortRef.current?.abort();
-            }}
-          >
+          <Button variant="secondary" onClick={onCancel}>
             Cancel
           </Button>
         ) : (
           <Button
             variant="primary"
-            onClick={() => {
-              void onClassify();
-            }}
+            onClick={onClassify}
             disabled={isReadOnly || unclassifiedCount === 0}
           >
             Classify all

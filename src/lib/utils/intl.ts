@@ -13,7 +13,7 @@
  * relative dates follow the UI locale.
  */
 
-type LangT = "en" | "fr";
+export type LangT = "en" | "fr";
 
 const numberCache = new Map<string, Intl.NumberFormat>();
 const dateCache = new Map<string, Intl.DateTimeFormat>();

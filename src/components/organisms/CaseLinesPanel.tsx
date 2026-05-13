@@ -11,9 +11,9 @@ import { useState } from "react";
 import { Button } from "@/components/atoms/Button";
 import { FieldLabel } from "@/components/atoms/FieldLabel";
 import { Textarea } from "@/components/atoms/Textarea";
-import { BulkClassifyBar } from "@/components/molecules/BulkClassifyBar";
 import { CaseLineItemRow } from "@/components/molecules/CaseLineItemRow";
 import { ErrorBanner } from "@/components/molecules/ErrorBanner";
+import { BulkClassifyBarContainer } from "@/components/organisms/BulkClassifyBarContainer";
 import { CandidatesReviewDialog } from "@/components/organisms/CandidatesReviewDialog";
 import {
   importCaseAddLineItemMutation,
@@ -131,7 +131,7 @@ export function CaseLinesPanel(props: Readonly<CaseLinesPanelPropsT>) {
     <div {...sx(s.panel)}>
       {error && <ErrorBanner message={error} />}
 
-      <BulkClassifyBar
+      <BulkClassifyBarContainer
         caseId={case_.id}
         unclassifiedCount={unclassifiedCount}
         isReadOnly={isReadOnly}

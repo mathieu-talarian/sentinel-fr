@@ -7,8 +7,8 @@ import { MessageActions } from "@/components/molecules/MessageActions";
 import { MessageCaveats } from "@/components/molecules/MessageCaveats";
 import { MessageError } from "@/components/molecules/MessageError";
 import { Reply } from "@/components/molecules/Reply";
-import { ThinkingPanel } from "@/components/molecules/ThinkingPanel";
 import { ToolPill } from "@/components/molecules/ToolPill";
+import { ThinkingPanelContainer } from "@/components/organisms/ThinkingPanelContainer";
 import { sx } from "@/lib/styles/sx";
 
 interface AssistantMessagePropsT {
@@ -28,7 +28,7 @@ export function AssistantMessage(props: Readonly<AssistantMessagePropsT>) {
       <AssistantAvatar />
       <div {...sx(s.body)}>
         {showThinking && (
-          <ThinkingPanel
+          <ThinkingPanelContainer
             text={props.msg.thinking}
             active={props.msg.thinkingActive}
             ms={props.msg.thinkingMs}

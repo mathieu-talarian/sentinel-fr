@@ -1,32 +1,35 @@
+import type { LangT } from "@/lib/utils/intl";
+
 import * as stylex from "@stylexjs/stylex";
-import { useQuery } from "@tanstack/react-query";
+
 
 import { Icon } from "@/components/atoms/Icons";
-import { catalogStatsOptions } from "@/lib/api/generated/@tanstack/react-query.gen";
-import { useTweaks } from "@/lib/state/tweaks";
 import { sx } from "@/lib/styles/sx";
 import { colors, fonts } from "@/lib/styles/tokens.stylex";
 import { formatInteger } from "@/lib/utils/intl";
 
-export function CatalogStatsStrip() {
-  const [tweaks] = useTweaks();
-  const stats = useQuery(catalogStatsOptions());
+interface CatalogStatsStripPropsT {
+  htsCodesIndexed: number;
+  crossRulingsSince: number;
+  activeAlerts: number;
+  lang: LangT;
+}
 
-  if (!stats.data) return null;
-  const d = stats.data;
+export function CatalogStatsStrip(props: Readonly<CatalogStatsStripPropsT>) {
+  const { htsCodesIndexed, crossRulingsSince, activeAlerts, lang } = props;
 
   return (
     <div {...sx(s.meta)}>
       <span {...sx(s.item)}>
-        <Icon.Customs /> {formatInteger(d.htsCodesIndexed, tweaks.lang)} HTS
-        codes indexed
+        <Icon.Customs /> {formatInteger(htsCodesIndexed, lang)} HTS codes
+        indexed
       </span>
       <span {...sx(s.item)}>
         <Icon.Scroll /> CBP CROSS rulings since{" "}
-        {formatInteger(d.crossRulingsSince, tweaks.lang)}
+        {formatInteger(crossRulingsSince, lang)}
       </span>
       <span {...sx(s.item)}>
-        <Icon.Bell /> {formatInteger(d.activeAlerts, tweaks.lang)} active alerts
+        <Icon.Bell /> {formatInteger(activeAlerts, lang)} active alerts
       </span>
     </div>
   );
