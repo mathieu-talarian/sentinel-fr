@@ -114,20 +114,6 @@ const slice = createSlice({
     reset(state, action: PayloadAction<{ threadId: string }>) {
       state.threads[action.payload.threadId] = initialThread();
     },
-    loadConversation(
-      state,
-      action: PayloadAction<{
-        threadId: string;
-        conversationId: string;
-        messages: MessageT[];
-      }>,
-    ) {
-      state.threads[action.payload.threadId] = {
-        ...initialThread(),
-        messages: action.payload.messages,
-        conversationId: action.payload.conversationId,
-      };
-    },
     finalizeAssistant(
       state,
       action: PayloadAction<{

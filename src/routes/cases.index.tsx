@@ -91,7 +91,7 @@ function CasesIndexPage() {
         />
       )}
     >
-      <Rail onNewChat={() => undefined} onOpenSettings={() => undefined} />
+      <Rail />
 
       <main {...sx(s.main)}>
         <header {...sx(s.head)}>

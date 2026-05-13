@@ -15,18 +15,18 @@ This doc is the frontend-side mirror: which existing files change, which new fil
 
 Snapshot of what's shipped against this plan. Tied to backend rollout.
 
-| Phase | Backend dep      | FE status   | Notes                                                                                                                                              |
-| ----- | ---------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0     | none             | **done**    | `FEATURE_CASE_WORKBENCH_ENV` defaults to **on**; set `VITE_FEATURE_CASE_WORKBENCH=false` to roll back. `tweaks.caseWorkbench` toggle still ORs on. |
-| 1     | Step 1 (fees)    | **done**    | Backend exposed structured surcharges (not fee-schedule metadata); FE renders them with source attribution. See §1.1 for what shipped vs plan.     |
-| 2     | Step 2 (cases)   | **done**    | Wire-type aliases, `casesSlice` (`activeCaseId` only), facade (`useCases`, `useActiveCase`, …), `selectCaseStatus` selector. See §1.2.             |
-| 3     | Step 2           | **done**    | `/cases`, `/cases/new`, `/cases/$caseId` routes. `Rail` flag-aware. `RailCaseList` + `RailCaseItem` + `CaseStatusChip` + `NewCaseForm`. See §1.3.  |
-| 4     | + classify       | **done**    | `CaseInspector` (Radix Tabs) + `CaseFactsPanel` (PATCH-on-blur) + `CaseLinesPanel` (add/remove + per-line `importCaseLineClassify`). See §1.4.     |
-| 5     | Step 3 (quotes)  | **done**    | `CaseQuotePanel` (run / re-run / latest), `QuoteSummaryTable`, `QuoteLineRow` (expandable + surcharges + caveats), `FeeRow`. See §1.5.             |
-| 6     | Step 4 (chat)    | **done**    | Keyed `chatSlice` (per-thread), `streamChat` `caseId` routing, `casePatchSuggestion` → `CasePatchTray`, `CaseChatSurface`. See §1.7.               |
-| 7     | Step 5 (risk)    | **done**    | `CaseRiskPanel` (`importCaseRiskScreen*`), `RiskFlagRow` + severity tokens, "Cost estimate only" gate in `CaseQuotePanel`. See §1.8.               |
-| 8     | Step 6 (rulings) | **done**    | `CaseEvidencePanel` (supports / conflicts / reference groups), `CaseRulingCard`, `RulingsSearchDialog` (Radix). See §1.9.                          |
-| 9     | none             | **partial** | Workbench header now uses `selectCaseStatus(case, risk)` + Archive/Unarchive button. Sentry tags via `mutation.meta`. See §1.10 for ops deferrals. |
+| Phase | Backend dep      | FE status   | Notes                                                                                                                                                        |
+| ----- | ---------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 0     | none             | **done**    | `FEATURE_CASE_WORKBENCH_ENV` defaults to **on**. Legacy chat surface deleted; the env var is preserved as a future rollback hook but is a runtime no-op now. |
+| 1     | Step 1 (fees)    | **done**    | Backend exposed structured surcharges (not fee-schedule metadata); FE renders them with source attribution. See §1.1 for what shipped vs plan.               |
+| 2     | Step 2 (cases)   | **done**    | Wire-type aliases, `casesSlice` (`activeCaseId` only), facade (`useCases`, `useActiveCase`, …), `selectCaseStatus` selector. See §1.2.                       |
+| 3     | Step 2           | **done**    | `/cases`, `/cases/new`, `/cases/$caseId` routes. `Rail` flag-aware. `RailCaseList` + `RailCaseItem` + `CaseStatusChip` + `NewCaseForm`. See §1.3.            |
+| 4     | + classify       | **done**    | `CaseInspector` (Radix Tabs) + `CaseFactsPanel` (PATCH-on-blur) + `CaseLinesPanel` (add/remove + per-line `importCaseLineClassify`). See §1.4.               |
+| 5     | Step 3 (quotes)  | **done**    | `CaseQuotePanel` (run / re-run / latest), `QuoteSummaryTable`, `QuoteLineRow` (expandable + surcharges + caveats), `FeeRow`. See §1.5.                       |
+| 6     | Step 4 (chat)    | **done**    | Keyed `chatSlice` (per-thread), `streamChat` `caseId` routing, `casePatchSuggestion` → `CasePatchTray`, `CaseChatSurface`. See §1.7.                         |
+| 7     | Step 5 (risk)    | **done**    | `CaseRiskPanel` (`importCaseRiskScreen*`), `RiskFlagRow` + severity tokens, "Cost estimate only" gate in `CaseQuotePanel`. See §1.8.                         |
+| 8     | Step 6 (rulings) | **done**    | `CaseEvidencePanel` (supports / conflicts / reference groups), `CaseRulingCard`, `RulingsSearchDialog` (Radix). See §1.9.                                    |
+| 9     | none             | **partial** | Workbench header now uses `selectCaseStatus(case, risk)` + Archive/Unarchive button. Sentry tags via `mutation.meta`. See §1.10 for ops deferrals.           |
 
 Cross-cutting work landed alongside Phase 1 (not tied to any single workbench phase):
 
@@ -240,9 +240,24 @@ Pure FE polish from the Phase 9 list landed; ops-side items wait on product / re
 
 The remaining ops-side items from the plan are deliberately out of scope here:
 
-- **Flip `VITE_FEATURE_CASE_WORKBENCH=true` as build default + remove `tweaks.caseWorkbench`** — shipped. `FEATURE_CASE_WORKBENCH_ENV` now defaults to `true`; rollback path is `VITE_FEATURE_CASE_WORKBENCH=false`. The Tweaks panel toggle hides automatically because `BehaviourSection` keys it off `!FEATURE_CASE_WORKBENCH_ENV`. The slice field stays around for the moment as a dev escape hatch (OR-ed in by `selectFeatureCaseWorkbench`); future cleanup can delete it.
+- **Flip `VITE_FEATURE_CASE_WORKBENCH=true` as build default + remove `tweaks.caseWorkbench`** — shipped. The slice field has been removed entirely (no longer in `TweaksT`). `selectFeatureCaseWorkbench` / `useFeatureCaseWorkbench` deleted alongside the legacy callers. `FEATURE_CASE_WORKBENCH_ENV` constant is kept as an env hook for a future rollback / scratchpad mode, but is a runtime no-op — no UI branches on it.
 - **French copy pass** — no translation system in the repo; copy lives inline. Defer until a real `lang` consumer (props, i18n lib) lands and the workbench has enough static copy to translate consistently.
-- **Demote `/` to flagged scratchpad** — happens automatically with the flag flip. The existing redirect in `routes/index.tsx` now always fires for authed users; the legacy `ChatPage` component is reachable only when someone runs a build with `VITE_FEATURE_CASE_WORKBENCH=false`. A follow-up can delete the now-dead legacy chat surface (`ChatPage`, `Inspector`, `RailHistoryList`, `RailNewChatButton`) once the rollback escape hatch is no longer needed.
+- **Demote `/` to flagged scratchpad** — collapsed into a hard redirect. `routes/index.tsx` is now just a `beforeLoad` that bounces authed users to `/cases/$activeCaseId` (or `/cases`); unauthed users hit `/login`. No component, no chat surface.
+
+### 1.11 Legacy chat surface deletion
+
+The Phase 9 flag flip made the legacy chat unreachable at runtime; this cleanup removes the dead code. Deleted:
+
+- **Route component**: `routes/index.tsx` shrinks from ~200 lines of `ChatPage` to a redirect-only `Route` config.
+- **Organisms**: `Inspector` (legacy tool-result inspector), `ChatTopbar`, `EmptyState`, `RailHistoryList`, `ResultCard`, `ResultRenderer`, `ReplaySection`, and every renderer under `organisms/results/` (`AlertList`, `CodeDetails`, `LandedCost`, `Rulings`, `SearchResult`, `SubscribeConfirm`).
+- **Molecules**: `RailNewChatButton`, `RailConvoItem`, `EmptyStateHero`, `SuggestionCard`, `InspectorHeader`, `InspectorEmpty`, `InspectorToggleButton`.
+- **Lib**: `loadConversation` thunk + `chatActions.loadConversation` reducer (only the conversation-replay path used them); `selectFeatureCaseWorkbench` / `useFeatureCaseWorkbench`; `src/lib/utils/suggestions.ts`.
+- **`Rail`**: drops the `caseWorkbench` flag branch and the `onNewChat` / `onOpenSettings` props — it now owns the `TweaksPanel` mount internally. Route call sites simplified to `<Rail />`.
+- **`TweaksPanel`**: drops the `onReplay` prop + `ReplaySection`; theme/density/behaviour/sign-out remain accessible via the rail footer's settings button in every case route.
+- **`tweaksSlice`**: drops the `caseWorkbench` field; `BehaviourSection` no longer has the preview toggle.
+- **`chatThunks`**: drops `loadConversation`, `toFECall`, `toFEMessage`, `callStatus`, and the no-longer-needed `conversationGet` import. `LEGACY_THREAD_ID` stays as a constant but the only path that resolves to it is the `caseId ?? undefined` branch in `streamChat` — kept for safety in case a future surface needs a non-case chat.
+
+Net: 18 deleted files, ~1500 fewer lines of FE code, single mounted chat path (case-aware) site-wide. The `LEGACY_THREAD_ID` constant + `FEATURE_CASE_WORKBENCH_ENV` env hook are the two intentional stubs left behind so a future scratchpad / rollback mode can grow back without re-introducing plumbing.
 
 Smaller deferrals still pending across Phases 4-8 (intentionally not pulled into Phase 9):
 

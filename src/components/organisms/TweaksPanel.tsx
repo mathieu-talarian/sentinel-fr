@@ -9,7 +9,6 @@ import { borders, colors, fonts } from "@/lib/styles/tokens.stylex";
 import { AccountSection } from "./AccountSection";
 import { AppearanceSection } from "./AppearanceSection";
 import { BehaviourSection } from "./BehaviourSection";
-import { ReplaySection } from "./ReplaySection";
 
 // Injected by Vite's `define` from package.json — see vite.config.ts.
 declare const __APP_VERSION__: string;
@@ -17,7 +16,6 @@ declare const __APP_VERSION__: string;
 interface TweaksPanelPropsT {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onReplay: (text: string) => void;
 }
 
 export function TweaksPanel(props: Readonly<TweaksPanelPropsT>) {
@@ -49,19 +47,13 @@ export function TweaksPanel(props: Readonly<TweaksPanelPropsT>) {
       <BehaviourSection
         showThinkingByDefault={tweaks.showThinkingByDefault}
         inspectorAutoOpen={tweaks.inspectorAutoOpen}
-        caseWorkbench={tweaks.caseWorkbench}
         onShowThinkingChange={(showThinkingByDefault) => {
           setTweaks({ showThinkingByDefault });
         }}
         onInspectorAutoOpenChange={(inspectorAutoOpen) => {
           setTweaks({ inspectorAutoOpen });
         }}
-        onCaseWorkbenchChange={(caseWorkbench) => {
-          setTweaks({ caseWorkbench });
-        }}
       />
-
-      <ReplaySection onReplay={props.onReplay} />
 
       {accountEmail && (
         <AccountSection email={accountEmail} onSignedOut={close} />

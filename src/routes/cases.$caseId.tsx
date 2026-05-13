@@ -106,7 +106,7 @@ function CaseWorkbenchPage() {
         />
       )}
     >
-      <Rail onNewChat={() => undefined} onOpenSettings={() => undefined} />
+      <Rail />
 
       <main {...sx(s.main)}>
         {activeCase.isLoading && <div {...sx(s.note)}>Loading…</div>}

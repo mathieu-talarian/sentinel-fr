@@ -38,7 +38,7 @@ function NewCasePage() {
         />
       )}
     >
-      <Rail onNewChat={() => undefined} onOpenSettings={() => undefined} />
+      <Rail />
 
       <main {...sx(s.main)}>
         <Heading level="h1" size="md">

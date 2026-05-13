@@ -11,13 +11,6 @@ export interface TweaksT {
   inspectorAutoOpen: boolean;
   lang: "en" | "fr";
   provider: ProviderT;
-  /**
-   * Dev-side toggle for the import-case workbench surface. OR-ed with
-   * `VITE_FEATURE_CASE_WORKBENCH` at the build-time env layer — see
-   * `src/lib/features.ts` for the resolver. Defaults to `false`; flip in
-   * the Tweaks panel to test new routes/UI without rebuilding.
-   */
-  caseWorkbench: boolean;
 }
 
 const DEFAULT: TweaksT = {
@@ -27,7 +20,6 @@ const DEFAULT: TweaksT = {
   inspectorAutoOpen: true,
   lang: "en",
   provider: "anthropic",
-  caseWorkbench: false,
 };
 
 const STORAGE_KEY = "sentinel.tweaks.v1";

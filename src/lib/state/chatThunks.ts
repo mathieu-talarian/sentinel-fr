@@ -1,14 +1,8 @@
-import type {
-  ConversationMessageT,
-  ToolCallViewT,
-} from "@/lib/api/generated/types.gen";
 import type { AppThunkT, RootStateT } from "@/lib/state/store";
 import type {
   AssistantMessageDataT,
   ChatTurnT,
   MessageT,
-  ToolCallStatusT,
-  ToolCallT,
   UserMessageDataT,
 } from "@/lib/types";
 import type { Dispatch } from "@reduxjs/toolkit";
@@ -16,7 +10,6 @@ import type { Dispatch } from "@reduxjs/toolkit";
 import * as Sentry from "@sentry/react";
 
 import { streamChat } from "@/lib/api/chatStream";
-import { conversationGet } from "@/lib/api/generated/sdk.gen";
 import { casesActions } from "@/lib/state/casesSlice";
 import { LEGACY_THREAD_ID, chatActions } from "@/lib/state/chatSlice";
 
@@ -183,73 +176,4 @@ export const resetChat =
     const thread = getState().chat.threads[threadId];
     if (thread?.running) abortCtrl?.abort();
     dispatch(chatActions.reset({ threadId }));
-  };
-
-const callStatus = (s: string): ToolCallStatusT => {
-  if (s === "in-flight" || s === "complete" || s === "failed") return s;
-  return "complete";
-};
-
-const toFECall = (c: ToolCallViewT): ToolCallT => ({
-  id: c.id,
-  tool: c.tool,
-  args: c.args,
-  status: callStatus(c.status),
-  startedAt: 0,
-  durationMs: c.durationMs ?? undefined,
-  result: c.result ?? undefined,
-  errorCode: c.code ?? undefined,
-  errorMessage: c.message ?? undefined,
-});
-
-const toFEMessage = (m: ConversationMessageT): MessageT => {
-  if (m.role === "user") {
-    return { id: m.id, role: "user", text: m.content };
-  }
-  return {
-    id: m.id,
-    serverId: m.id,
-    role: "assistant",
-    thinking: "",
-    thinkingActive: false,
-    calls: (m.toolCalls ?? []).map((c) => toFECall(c)),
-    reply: m.content,
-    streaming: false,
-    done: true,
-    usage: m.usage ?? undefined,
-  };
-};
-
-/**
- * Replace the rendered chat with a persisted conversation. Aborts any
- * in-flight stream first. Used by the legacy `/` route only; case
- * threads don't have server-side conversation persistence yet.
- */
-export const loadConversation =
-  (threadId: string, id: string): AppThunkT<Promise<void>> =>
-  async (dispatch) => {
-    abortCtrl?.abort();
-    abortCtrl = null;
-
-    const r = await conversationGet({ path: { id }, throwOnError: false });
-    if (!r.data) {
-      const status = r.response?.status ?? 0;
-      Sentry.captureException(
-        new Error(`conversationGet failed: HTTP ${status.toString()}`),
-        {
-          tags: { source: "load-conversation" },
-          extra: { conversationId: id, httpStatus: status },
-        },
-      );
-      return;
-    }
-
-    const messages: MessageT[] = r.data.messages.map((m) => toFEMessage(m));
-    dispatch(
-      chatActions.loadConversation({
-        threadId,
-        conversationId: id,
-        messages,
-      }),
-    );
   };
