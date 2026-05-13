@@ -1,4 +1,4 @@
-import type { RiskScreenStatusT } from "@/lib/types";
+import type { RiskScreenStatusT } from "@/lib/api/generated/types.gen";
 
 import * as stylex from "@stylexjs/stylex";
 

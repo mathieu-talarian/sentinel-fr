@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components -- the tab union
    type and the `asInspectorTab` parser are colocated with the inspector
    because the route file needs the same parser to validate `?tab=`. */
-import type { ImportCaseT } from "@/lib/types";
+import type { ImportCaseResponseT } from "@/lib/api/generated/types.gen";
 
 import * as stylex from "@stylexjs/stylex";
 import { Tabs } from "radix-ui";
@@ -35,7 +35,7 @@ export const asInspectorTab = (s: string | undefined): CaseInspectorTabT =>
     : "facts";
 
 interface CaseInspectorPropsT {
-  case_: ImportCaseT;
+  case_: ImportCaseResponseT;
   isReadOnly: boolean;
   tab: CaseInspectorTabT;
   onTabChange: (tab: CaseInspectorTabT) => void;

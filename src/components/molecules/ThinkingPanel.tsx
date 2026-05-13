@@ -49,7 +49,12 @@ export function ThinkingPanel(props: Readonly<ThinkingPanelPropsT>) {
 
   return (
     <div {...sx(t.root)}>
-      <div {...sx(t.head)} onClick={handleToggle}>
+      <button
+        type="button"
+        onClick={handleToggle}
+        aria-expanded={open}
+        {...sx(t.head)}
+      >
         <span {...sx(t.chev, open && t.chevOpen)}>
           <Icon.Chevron />
         </span>
@@ -67,7 +72,7 @@ export function ThinkingPanel(props: Readonly<ThinkingPanelPropsT>) {
             <> · {formatInteger(tokens, tweaks.lang)} tokens</>
           )}
         </span>
-      </div>
+      </button>
       {open && (
         <div ref={bodyRef} {...sx(t.body)}>
           {props.text}
@@ -88,16 +93,23 @@ const t = stylex.create({
     fontSize: 13,
   },
   head: {
+    font: "inherit",
     padding: "8px 12px",
+    borderColor: "transparent",
+    borderStyle: "none",
+    borderWidth: 0,
     gap: 10,
     alignItems: "center",
+    backgroundColor: "transparent",
     color: {
       default: colors.ink3,
       ":hover": colors.ink,
     },
     cursor: "pointer",
     display: "flex",
+    textAlign: "left",
     userSelect: "none",
+    width: "100%",
   },
   chev: {
     transition: "transform 180ms",

@@ -1,12 +1,12 @@
 import type {
-  ImportCaseLineItemT,
-  ImportCaseStatusT,
-  ImportCaseT,
-  RiskScreenT,
-} from "@/lib/types";
+  ImportCaseLineItemResponseT,
+  ImportCaseResponseT,
+  RiskScreenResponseT,
+} from "@/lib/api/generated/types.gen";
+import type { ImportCaseStatusT } from "@/lib/types";
 
 /**
- * Derive the 7-value FE-only `ImportCaseStatusT` from a server `ImportCaseT`.
+ * Derive the 7-value FE-only `ImportCaseStatusT` from a server `ImportCaseResponseT`.
  *
  * Persisted status (`draft | ready_for_review | archived`) is the user's
  * filing decision; the derived value reflects pipeline progress.
@@ -31,14 +31,15 @@ import type {
  * A line is "ready for quote" when it has a selected HTS code AND a customs
  * value. The backend will reject a quote request when either is missing.
  */
-const lineIsQuotable = (line: ImportCaseLineItemT): boolean =>
+const lineIsQuotable = (line: ImportCaseLineItemResponseT): boolean =>
   Boolean(line.selectedHtsCode) && line.customsValueUsd != null;
 
-const lineIsClassifying = (line: ImportCaseLineItemT): boolean =>
+const lineIsClassifying = (line: ImportCaseLineItemResponseT): boolean =>
   line.classificationState === "candidates";
 
-const lineNeedsClassificationReview = (line: ImportCaseLineItemT): boolean =>
-  line.classificationState === "needsReview";
+const lineNeedsClassificationReview = (
+  line: ImportCaseLineItemResponseT,
+): boolean => line.classificationState === "needsReview";
 
 export type MissingCaseFactKeyT =
   | "transport"
@@ -52,7 +53,9 @@ export type MissingLineFactKeyT = "selectedHtsCode" | "customsValueUsd";
  * Returns the case-level facts that haven't been filled in yet. Drives
  * the "missing fields" chips in the workbench header + `CaseFactsPanel`.
  */
-export function selectMissingCaseFacts(c: ImportCaseT): MissingCaseFactKeyT[] {
+export function selectMissingCaseFacts(
+  c: ImportCaseResponseT,
+): MissingCaseFactKeyT[] {
   const missing: MissingCaseFactKeyT[] = [];
   if (!c.transport) missing.push("transport");
   if (!c.countryOfOrigin) missing.push("countryOfOrigin");
@@ -66,7 +69,7 @@ export function selectMissingCaseFacts(c: ImportCaseT): MissingCaseFactKeyT[] {
  * quotable when it has a selected HTS code AND a customs value.
  */
 export function selectMissingLineFacts(
-  line: ImportCaseLineItemT,
+  line: ImportCaseLineItemResponseT,
 ): MissingLineFactKeyT[] {
   const missing: MissingLineFactKeyT[] = [];
   if (!line.selectedHtsCode) missing.push("selectedHtsCode");
@@ -74,12 +77,12 @@ export function selectMissingLineFacts(
   return missing;
 }
 
-const isMissingCaseFacts = (c: ImportCaseT): boolean =>
+const isMissingCaseFacts = (c: ImportCaseResponseT): boolean =>
   selectMissingCaseFacts(c).length > 0;
 
 export function selectCaseStatus(
-  c: ImportCaseT,
-  riskScreen?: RiskScreenT | null,
+  c: ImportCaseResponseT,
+  riskScreen?: RiskScreenResponseT | null,
 ): ImportCaseStatusT {
   // Persisted "archived" always wins — case is read-only regardless of data.
   // Other persisted values (`draft`, `ready_for_review`) are informational;

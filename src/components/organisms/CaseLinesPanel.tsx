@@ -1,4 +1,7 @@
-import type { CreateLineItemBodyT, ImportCaseT } from "@/lib/types";
+import type {
+  CreateLineItemBodyT,
+  ImportCaseResponseT,
+} from "@/lib/api/generated/types.gen";
 
 import * as Sentry from "@sentry/react";
 import * as stylex from "@stylexjs/stylex";
@@ -20,7 +23,7 @@ import { sx } from "@/lib/styles/sx";
 import { colors, fonts } from "@/lib/styles/tokens.stylex";
 
 interface CaseLinesPanelPropsT {
-  case_: ImportCaseT;
+  case_: ImportCaseResponseT;
   isReadOnly: boolean;
 }
 

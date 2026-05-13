@@ -1,5 +1,7 @@
-import type { LocalizedDescriptionT } from "@/lib/api/generated/types.gen";
-import type { CodeDetailsContentT } from "@/lib/types";
+import type {
+  CommodityBodyT,
+  LocalizedDescriptionT,
+} from "@/lib/api/generated/types.gen";
 
 import * as stylex from "@stylexjs/stylex";
 
@@ -13,7 +15,7 @@ const localized = (
   lang: "en" | "fr",
 ): string => d?.[lang] ?? d?.en ?? d?.fr ?? "";
 
-export function CodeDetails(props: Readonly<{ result: CodeDetailsContentT }>) {
+export function CodeDetails(props: Readonly<{ result: CommodityBodyT }>) {
   const [tweaks] = useTweaks();
   const { code, description, hierarchy, rate, unit, section301 } = props.result;
 

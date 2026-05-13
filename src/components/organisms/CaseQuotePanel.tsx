@@ -1,4 +1,7 @@
-import type { ImportCaseT, LandedCostQuoteT } from "@/lib/types";
+import type {
+  ImportCaseResponseT,
+  LandedCostQuoteResponseT,
+} from "@/lib/api/generated/types.gen";
 
 import * as Sentry from "@sentry/react";
 import * as stylex from "@stylexjs/stylex";
@@ -28,7 +31,7 @@ import { formatRelativeDays } from "@/lib/utils/intl";
 const ONE_DAY_MS = 86_400_000;
 
 interface CaseQuotePanelPropsT {
-  case_: ImportCaseT;
+  case_: ImportCaseResponseT;
   isReadOnly: boolean;
 }
 
@@ -128,7 +131,7 @@ export function CaseQuotePanel(props: Readonly<CaseQuotePanelPropsT>) {
     runQuote.mutate({ body: {}, path: { caseId: case_.id } });
   };
 
-  const quote: LandedCostQuoteT | undefined = latestQuote.data;
+  const quote: LandedCostQuoteResponseT | undefined = latestQuote.data;
   const buttonLabel = pickButtonLabel(runQuote.isPending, quote != null);
   const screen = riskScreen.data;
 

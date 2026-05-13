@@ -1,5 +1,7 @@
-import type { LocalizedDescriptionT } from "@/lib/api/generated/types.gen";
-import type { SearchCodesContentT } from "@/lib/types";
+import type {
+  LocalizedDescriptionT,
+  SearchBodyT,
+} from "@/lib/api/generated/types.gen";
 
 import * as stylex from "@stylexjs/stylex";
 
@@ -11,7 +13,7 @@ import { formatHtsCode } from "@/lib/utils/format";
 const localized = (d: LocalizedDescriptionT, lang: "en" | "fr"): string =>
   d[lang] ?? d.en ?? d.fr ?? "";
 
-export function SearchResult(props: Readonly<{ result: SearchCodesContentT }>) {
+export function SearchResult(props: Readonly<{ result: SearchBodyT }>) {
   const [tweaks] = useTweaks();
   const candidates = props.result.candidates;
   // Trailing `1` is the empty-list fallback so we never divide by zero in `norm`.

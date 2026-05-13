@@ -1,4 +1,4 @@
-import type { LandedCostQuoteSummaryT } from "@/lib/types";
+import type { QuoteSummaryT } from "@/lib/api/generated/types.gen";
 
 import * as stylex from "@stylexjs/stylex";
 
@@ -7,7 +7,7 @@ import { borders, colors, fonts } from "@/lib/styles/tokens.stylex";
 import { formatUsd } from "@/lib/utils/intl";
 
 interface QuoteSummaryTablePropsT {
-  summary: LandedCostQuoteSummaryT;
+  summary: QuoteSummaryT;
   /** When false (no ocean transport), the HMF row is suppressed. */
   showHmf?: boolean;
 }

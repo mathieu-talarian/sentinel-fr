@@ -1,4 +1,4 @@
-import type { ImportCaseLineItemT } from "@/lib/types";
+import type { ImportCaseLineItemResponseT } from "@/lib/api/generated/types.gen";
 
 import * as stylex from "@stylexjs/stylex";
 
@@ -12,7 +12,7 @@ import { borders, colors, fonts, radii } from "@/lib/styles/tokens.stylex";
 import { formatUsd } from "@/lib/utils/intl";
 
 interface CaseLineItemRowPropsT {
-  line: ImportCaseLineItemT;
+  line: ImportCaseLineItemResponseT;
   /** When set, the row shows the case-level CoO in muted text as a hint. */
   caseCountryOfOrigin?: string | null;
   classifying: boolean;

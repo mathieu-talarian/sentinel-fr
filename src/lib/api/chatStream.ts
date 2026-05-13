@@ -1,4 +1,5 @@
-import type { ChatChunkT, ChatTurnT } from "@/lib/types";
+import type { ChatChunkT } from "@/lib/api/generated/types.gen";
+import type { ChatTurnT } from "@/lib/types";
 
 import * as Sentry from "@sentry/react";
 import { EventSourceParserStream } from "eventsource-parser/stream";

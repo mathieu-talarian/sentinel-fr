@@ -1,56 +1,17 @@
 /**
- * Wire types for the Sentinel chat. Tool-result shapes, the SSE
- * `ChatChunk` discriminated union, and `UsageInfo` all come from the
- * OpenAPI spec via `@/lib/api/generated/types.gen`. This file's role is
- * down to:
- *   - thin local aliases that feed the renderer organisms (so they
- *     don't import generated types directly and the `no-barrel-files`
- *     rule stays satisfied);
- *   - the UI-side message shapes (`MessageT`, `AssistantMessageDataT`,
- *     `UserMessageDataT`, `ToolCallT`) — those are render-state, not
- *     wire shapes, and don't have a spec equivalent.
+ * Sentinel chat UI types — render-state shapes that have no wire
+ * equivalent. Wire types come straight from `@/lib/api/generated/types.gen`;
+ * consumers import them directly.
  *
- * The two remaining hand-written wire types are `RulingItemT` /
- * `CrossRulingsContentT` — `find_cross_rulings` doesn't have a REST
- * mirror in the spec yet.
+ * `find_cross_rulings` has no REST mirror in the spec yet, so
+ * `RulingItemT` / `CrossRulingsContentT` stay hand-written here.
+ *
+ * `ImportCasePersistedStatusT`, `ImportCaseStatusT`, and
+ * `LineItemClassificationStateT` are FE-only enums narrowed from the
+ * server's free-form `string` fields.
  */
 
-import type {
-  AlertItemT as AlertItemGen,
-  AlertsResponseT as AlertsResponseGen,
-  AppliedSurchargeT as AppliedSurchargeGen,
-  CasePatchT as CasePatchGen,
-  ChatChunkT as ChatChunkGen,
-  CommodityBodyT as CommodityBodyGen,
-  CommodityHierarchyEntryT as CommodityHierarchyEntryGen,
-  CreateCaseBodyT as CreateCaseBodyGen,
-  CreateLineItemBodyT as CreateLineItemBodyGen,
-  CreateQuoteBodyT as CreateQuoteBodyGen,
-  FeeScheduleRefViewT as FeeScheduleRefViewGen,
-  ImportCaseLineItemResponseT as ImportCaseLineItemResponseGen,
-  ImportCaseResponseT as ImportCaseResponseGen,
-  ImportCaseSummaryT as ImportCaseSummaryGen,
-  LandedCostQuoteLineResponseT as LandedCostQuoteLineResponseGen,
-  LandedCostQuoteResponseT as LandedCostQuoteResponseGen,
-  LandedCostQuoteSummaryItemT as LandedCostQuoteSummaryItemGen,
-  LandedCostResponseT as LandedCostResponseGen,
-  LandedCostRowT as LandedCostRowGen,
-  PatchCaseBodyT as PatchCaseBodyGen,
-  PatchLineItemBodyT as PatchLineItemBodyGen,
-  QuoteSummaryT as QuoteSummaryGen,
-  RiskFlagCodeT as RiskFlagCodeGen,
-  RiskFlagT as RiskFlagGen,
-  RiskScreenResponseT as RiskScreenResponseGen,
-  RiskScreenStatusT as RiskScreenStatusGen,
-  RiskSeverityT as RiskSeverityGen,
-  SearchBodyT as SearchBodyGen,
-  SearchCandidateT as SearchCandidateGen,
-  SourceRefT as SourceRefGen,
-  UsageInfoT as UsageInfoGen,
-  WatchSubscribeResponseT as WatchSubscribeResponseGen,
-} from "@/lib/api/generated/types.gen";
-
-export type UsageT = UsageInfoGen;
+import type { UsageInfoT } from "@/lib/api/generated/types.gen";
 
 export type ToolNameT =
   | "search_codes"
@@ -60,8 +21,10 @@ export type ToolNameT =
   | "subscribe_watch"
   | "list_alerts";
 
-export type ChatChunkT = ChatChunkGen;
-
+/**
+ * Stricter `role` than the generated `ChatTurnT` (which is `string` on
+ * the wire). Used by the streaming request-body builder.
+ */
 export interface ChatTurnT {
   role: "user" | "assistant";
   content: string;
@@ -104,7 +67,7 @@ export interface AssistantMessageDataT {
   caveats?: string[];
   done: boolean;
   error?: string;
-  usage?: UsageT;
+  usage?: UsageInfoT;
 }
 
 export interface UserMessageDataT {
@@ -114,29 +77,6 @@ export interface UserMessageDataT {
 }
 
 export type MessageT = UserMessageDataT | AssistantMessageDataT;
-
-/* ---------- Tool-result content shapes ----------
- *
- * Aliases of the OpenAPI-generated types. The backend ships these same
- * shapes via REST (e.g. `POST /search`, `GET /code/{code}`) AND inside
- * SSE `tool_result.content`. Local aliases avoid the `no-barrel-files`
- * rule that blocks pure `export … from` re-exports.
- */
-
-export type SearchCandidateT = SearchCandidateGen;
-export type SearchCodesContentT = SearchBodyGen;
-
-export type HierarchyNodeT = CommodityHierarchyEntryGen;
-export type CodeDetailsContentT = CommodityBodyGen;
-
-export type LandedCostContentT = LandedCostResponseGen;
-export type LandedCostRowT = LandedCostRowGen;
-export type AppliedSurchargeT = AppliedSurchargeGen;
-
-export type AlertItemT = AlertItemGen;
-export type AlertsContentT = AlertsResponseGen;
-
-export type SubscribeWatchContentT = WatchSubscribeResponseGen;
 
 /* ---------- Tool-result shapes not yet in the OpenAPI spec ---------- */
 
@@ -152,15 +92,7 @@ export interface CrossRulingsContentT {
   rulings: RulingItemT[];
 }
 
-/* ---------- Import-case shapes (backend Phase 2) ---------- */
-
-export type ImportCaseSummaryT = ImportCaseSummaryGen;
-export type ImportCaseT = ImportCaseResponseGen;
-export type ImportCaseLineItemT = ImportCaseLineItemResponseGen;
-export type CreateCaseBodyT = CreateCaseBodyGen;
-export type PatchCaseBodyT = PatchCaseBodyGen;
-export type CreateLineItemBodyT = CreateLineItemBodyGen;
-export type PatchLineItemBodyT = PatchLineItemBodyGen;
+/* ---------- FE-only narrowed enums ---------- */
 
 /**
  * Server-persisted case status (backend spec §4.2). This is the user's
@@ -200,25 +132,3 @@ export type LineItemClassificationStateT =
   | "candidates"
   | "selected"
   | "needsReview";
-
-/* ---------- Landed-cost quote shapes (backend Step 3) ---------- */
-
-export type LandedCostQuoteT = LandedCostQuoteResponseGen;
-export type LandedCostQuoteLineT = LandedCostQuoteLineResponseGen;
-export type LandedCostQuoteSummaryT = QuoteSummaryGen;
-export type LandedCostQuoteSummaryItemT = LandedCostQuoteSummaryItemGen;
-export type CreateQuoteBodyT = CreateQuoteBodyGen;
-export type FeeScheduleRefT = FeeScheduleRefViewGen;
-
-/* ---------- Case-aware chat patch suggestions (backend Step 4) ---------- */
-
-export type CasePatchT = CasePatchGen;
-
-/* ---------- Risk screen (backend Step 5) ---------- */
-
-export type RiskFlagT = RiskFlagGen;
-export type RiskFlagCodeT = RiskFlagCodeGen;
-export type RiskScreenT = RiskScreenResponseGen;
-export type RiskScreenStatusT = RiskScreenStatusGen;
-export type RiskSeverityT = RiskSeverityGen;
-export type SourceRefT = SourceRefGen;

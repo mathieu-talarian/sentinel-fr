@@ -56,6 +56,9 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: 3000,
+      headers: {
+        "Document-Policy": "js-profiling",
+      },
     },
     plugins: [
       mkcert(),

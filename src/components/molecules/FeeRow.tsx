@@ -1,4 +1,4 @@
-import type { FeeScheduleRefT } from "@/lib/types";
+import type { FeeScheduleRefViewT } from "@/lib/api/generated/types.gen";
 
 import * as stylex from "@stylexjs/stylex";
 
@@ -19,12 +19,12 @@ interface FeeRowPropsT {
    * Optional source-schedule attribution. Named `schedule` (not `ref`)
    * because React reserves the `ref` prop name for component refs.
    */
-  schedule?: FeeScheduleRefT;
+  schedule?: FeeScheduleRefViewT;
 }
 
 /**
  * Entry-level fee row used in the quote panel's "Entry fees" section.
- * Pairs the per-fee amount with the `FeeScheduleRefT` (effective date +
+ * Pairs the per-fee amount with the `FeeScheduleRefViewT` (effective date +
  * source URL) so the user can audit which `fee_schedule` row was used.
  */
 export function FeeRow(props: Readonly<FeeRowPropsT>) {

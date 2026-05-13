@@ -1,4 +1,4 @@
-import type { LandedCostQuoteLineT } from "@/lib/types";
+import type { LandedCostQuoteLineResponseT } from "@/lib/api/generated/types.gen";
 
 import * as stylex from "@stylexjs/stylex";
 import { useState } from "react";
@@ -10,7 +10,7 @@ import { borders, colors, fonts, radii } from "@/lib/styles/tokens.stylex";
 import { formatUsd } from "@/lib/utils/intl";
 
 interface QuoteLineRowPropsT {
-  line: LandedCostQuoteLineT;
+  line: LandedCostQuoteLineResponseT;
   lang: "en" | "fr";
 }
 

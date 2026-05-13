@@ -14,7 +14,7 @@ interface TextLinkPropsT extends Omit<ComponentProps<"a">, "style"> {
 }
 
 export function TextLink(props: Readonly<TextLinkPropsT>) {
-  const { tone, style, href, onClick, ...rest } = props;
+  const { tone, style, href, onClick, children, ...rest } = props;
 
   const handleClick = (e: MouseEvent<HTMLAnchorElement>) => {
     if (!href || href === "#") e.preventDefault();
@@ -27,7 +27,9 @@ export function TextLink(props: Readonly<TextLinkPropsT>) {
       href={href ?? "#"}
       {...sx(s.link, tone === "accent" ? s.accent : s.def, style)}
       onClick={handleClick}
-    />
+    >
+      {children}
+    </a>
   );
 }
 

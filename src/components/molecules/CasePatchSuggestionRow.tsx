@@ -1,4 +1,4 @@
-import type { CasePatchT } from "@/lib/types";
+import type { CasePatchT } from "@/lib/api/generated/types.gen";
 
 import * as stylex from "@stylexjs/stylex";
 

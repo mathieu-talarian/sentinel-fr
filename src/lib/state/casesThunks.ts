@@ -1,9 +1,9 @@
-import type { AppThunkT } from "@/lib/state/store";
 import type {
   CasePatchT,
   PatchCaseBodyT,
   PatchLineItemBodyT,
-} from "@/lib/types";
+} from "@/lib/api/generated/types.gen";
+import type { AppThunkT } from "@/lib/state/store";
 import type { QueryClient } from "@tanstack/react-query";
 
 import * as Sentry from "@sentry/react";

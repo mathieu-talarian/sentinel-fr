@@ -1,4 +1,4 @@
-import type { CreateCaseBodyT } from "@/lib/types";
+import type { CreateCaseBodyT } from "@/lib/api/generated/types.gen";
 
 import * as Sentry from "@sentry/react";
 import * as stylex from "@stylexjs/stylex";
@@ -130,6 +130,7 @@ export function NewCaseForm() {
               if (titleError) setTitleError(null);
             }}
             placeholder="Cotton shirts to New York"
+            // eslint-disable-next-line jsx-a11y/no-autofocus -- intake form's first field; nothing competes for focus.
             autoFocus
           />
           {titleError && <FieldError message={titleError} />}

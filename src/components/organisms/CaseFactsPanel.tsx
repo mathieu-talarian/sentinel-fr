@@ -1,4 +1,7 @@
-import type { ImportCaseT, PatchCaseBodyT } from "@/lib/types";
+import type {
+  ImportCaseResponseT,
+  PatchCaseBodyT,
+} from "@/lib/api/generated/types.gen";
 
 import * as stylex from "@stylexjs/stylex";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -23,7 +26,7 @@ import { colors } from "@/lib/styles/tokens.stylex";
 const TRANSPORT_OPTIONS = ["ocean", "air", "truck", "rail", "other"] as const;
 
 interface CaseFactsPanelPropsT {
-  case_: ImportCaseT;
+  case_: ImportCaseResponseT;
   isReadOnly: boolean;
 }
 

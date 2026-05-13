@@ -1,4 +1,4 @@
-import type { AppliedSurchargeT } from "@/lib/types";
+import type { AppliedSurchargeT } from "@/lib/api/generated/types.gen";
 
 import * as stylex from "@stylexjs/stylex";
 

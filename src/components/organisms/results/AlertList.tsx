@@ -1,10 +1,10 @@
-import type { AlertsContentT } from "@/lib/types";
+import type { AlertsResponseT } from "@/lib/api/generated/types.gen";
 
 import { sx } from "@/lib/styles/sx";
 
 import { rl } from "./Rulings";
 
-export function AlertList(props: Readonly<{ result: AlertsContentT }>) {
+export function AlertList(props: Readonly<{ result: AlertsResponseT }>) {
   return (
     <div>
       {props.result.alerts.map((a) => (

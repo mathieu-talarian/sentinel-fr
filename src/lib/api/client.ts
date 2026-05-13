@@ -6,8 +6,7 @@ import { getIdToken } from "@/lib/firebase/auth";
  * SDK's baseUrl and re-exported for hand-rolled fetches (e.g. SSE streaming
  * in `chatStream.ts`) so every HTTP call lands on the same origin.
  */
-export const API_BASE_URL =
-  "https://sentinel-server-356994978667.europe-west1.run.app/api";
+export const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL as string}/api`;
 
 /**
  * Bootstrap for the generated `@hey-api/client-ky` runtime.

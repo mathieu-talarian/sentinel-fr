@@ -1,4 +1,4 @@
-import type { SubscribeWatchContentT } from "@/lib/types";
+import type { WatchSubscribeResponseT } from "@/lib/api/generated/types.gen";
 
 import * as stylex from "@stylexjs/stylex";
 
@@ -7,7 +7,7 @@ import { sx } from "@/lib/styles/sx";
 import { borders, colors, fonts, radii } from "@/lib/styles/tokens.stylex";
 
 export function SubscribeConfirm(
-  props: Readonly<{ result: SubscribeWatchContentT }>,
+  props: Readonly<{ result: WatchSubscribeResponseT }>,
 ) {
   const showTech = !!props.result.cadence || !!props.result.subscriptionId;
 

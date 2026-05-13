@@ -1,4 +1,8 @@
-import type { ImportCaseT, RiskFlagT, RiskSeverityT } from "@/lib/types";
+import type {
+  ImportCaseResponseT,
+  RiskFlagT,
+  RiskSeverityT,
+} from "@/lib/api/generated/types.gen";
 
 import * as Sentry from "@sentry/react";
 import * as stylex from "@stylexjs/stylex";
@@ -25,7 +29,7 @@ const ONE_DAY_MS = 86_400_000;
 const SEVERITY_ORDER: RiskSeverityT[] = ["blocking", "review", "info"];
 
 interface CaseRiskPanelPropsT {
-  case_: ImportCaseT;
+  case_: ImportCaseResponseT;
   isReadOnly: boolean;
 }
 

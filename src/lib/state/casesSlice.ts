@@ -1,4 +1,4 @@
-import type { CasePatchT } from "@/lib/types";
+import type { CasePatchT } from "@/lib/api/generated/types.gen";
 import type { PayloadAction } from "@reduxjs/toolkit";
 
 import { createSlice } from "@reduxjs/toolkit";

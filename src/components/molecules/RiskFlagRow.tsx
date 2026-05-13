@@ -1,4 +1,4 @@
-import type { RiskFlagT } from "@/lib/types";
+import type { RiskFlagT } from "@/lib/api/generated/types.gen";
 
 import * as stylex from "@stylexjs/stylex";
 

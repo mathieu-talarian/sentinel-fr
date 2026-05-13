@@ -1,9 +1,5 @@
-import type {
-  AssistantMessageDataT,
-  ChatChunkT,
-  MessageT,
-  ToolCallT,
-} from "@/lib/types";
+import type { ChatChunkT } from "@/lib/api/generated/types.gen";
+import type { AssistantMessageDataT, MessageT, ToolCallT } from "@/lib/types";
 import type { PayloadAction } from "@reduxjs/toolkit";
 
 import { createSlice } from "@reduxjs/toolkit";

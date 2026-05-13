@@ -7,6 +7,7 @@ import {
   stylex,
   rules,
   strictTsConfigTypeChecked,
+  a11y,
 } from "@mathieu-talarian/eslint-config";
 import { defineConfig, globalIgnores } from "eslint/config";
 
@@ -25,6 +26,7 @@ export default defineConfig([
       "prettier.config.js",
     ],
   },
+  a11y,
   base,
   strictTsConfigTypeChecked,
   react,

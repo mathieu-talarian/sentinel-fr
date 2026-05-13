@@ -1,4 +1,7 @@
-import type { AppliedSurchargeT, LandedCostContentT } from "@/lib/types";
+import type {
+  AppliedSurchargeT,
+  LandedCostResponseT,
+} from "@/lib/api/generated/types.gen";
 
 import * as stylex from "@stylexjs/stylex";
 
@@ -55,7 +58,7 @@ function SurchargeRow(
   );
 }
 
-export function LandedCost(props: Readonly<{ result: LandedCostContentT }>) {
+export function LandedCost(props: Readonly<{ result: LandedCostResponseT }>) {
   const [tweaks] = useTweaks();
   const { rows, total, caveats, surcharges } = props.result;
 

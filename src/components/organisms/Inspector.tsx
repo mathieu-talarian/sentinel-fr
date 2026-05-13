@@ -31,17 +31,19 @@ export function Inspector(props: Readonly<InspectorPropsT>) {
           <InspectorEmpty />
         ) : (
           completed.map((call) => (
-            <div
+            <button
               key={call.id}
+              type="button"
               onClick={() => {
                 props.onFocusCall(call.id);
               }}
+              {...sx(s.callButton)}
             >
               <ResultCard
                 call={call}
                 highlight={call.id === props.focusedCallId}
               />
-            </div>
+            </button>
           ))
         )}
       </div>
@@ -79,5 +81,18 @@ const s = stylex.create({
     display: "flex",
     flexDirection: "column",
     overflowY: "auto",
+  },
+  callButton: {
+    font: "inherit",
+    padding: 0,
+    borderColor: "transparent",
+    borderStyle: "none",
+    borderWidth: 0,
+    backgroundColor: "transparent",
+    color: "inherit",
+    cursor: "pointer",
+    display: "block",
+    textAlign: "left",
+    width: "100%",
   },
 });

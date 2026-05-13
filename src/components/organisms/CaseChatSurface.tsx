@@ -1,4 +1,4 @@
-import type { ImportCaseT } from "@/lib/types";
+import type { ImportCaseResponseT } from "@/lib/api/generated/types.gen";
 
 import * as stylex from "@stylexjs/stylex";
 import { useRef, useState } from "react";
@@ -14,7 +14,7 @@ import { sx } from "@/lib/styles/sx";
 import { borders, colors, fonts, radii } from "@/lib/styles/tokens.stylex";
 
 interface CaseChatSurfacePropsT {
-  case_: ImportCaseT;
+  case_: ImportCaseResponseT;
   isReadOnly: boolean;
 }
 

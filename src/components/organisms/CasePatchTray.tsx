@@ -1,4 +1,4 @@
-import type { ImportCaseT } from "@/lib/types";
+import type { ImportCaseResponseT } from "@/lib/api/generated/types.gen";
 
 import * as Sentry from "@sentry/react";
 import * as stylex from "@stylexjs/stylex";
@@ -13,7 +13,7 @@ import { sx } from "@/lib/styles/sx";
 import { borders, colors, fonts } from "@/lib/styles/tokens.stylex";
 
 interface CasePatchTrayPropsT {
-  case_: ImportCaseT;
+  case_: ImportCaseResponseT;
   isReadOnly: boolean;
 }
 
