@@ -41,6 +41,9 @@ skills-lock.json
 # Yarn runtime
 .yarn/install-state.gz
 
+# Storybook component workbench (static build output)
+/storybook-static/
+
 # @hey-api/openapi-ts crash dumps from gen:api failures
 openapi-ts-error-*.log
 

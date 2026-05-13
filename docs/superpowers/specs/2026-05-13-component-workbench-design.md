@@ -1,7 +1,7 @@
-# Component Workbench (Ladle) — Design Spec
+# Component Workbench (Storybook 10) — Design Spec
 
-**Date**: 2026-05-13
-**Status**: Approved for implementation planning
+**Date**: 2026-05-13 (created), revised 2026-05-14 (tool switched from Ladle to Storybook)
+**Status**: Approved; implementation in progress
 **Author**: brainstorming session with Mathieu
 
 ## Goal
@@ -28,84 +28,152 @@ molecules.
   only happens when a candidate has multiple consumers or three or more
   visual states worth covering.
 
-## Tool choice — Ladle
+## Tool choice — Storybook 10
 
-Selected `@ladle/react` over Storybook 10 because:
+Selected `@storybook/react-vite` over Ladle. Initial pick was Ladle (faster
+cold start, no StyleX duplication), but Mathieu trialed it 2026-05-13 and
+switched to Storybook on 2026-05-14. The decisive factors:
 
-- **StyleX integration is free**. Ladle reads the project's existing
-  `vite.config.ts`, so the `@stylexjs/unplugin/vite` transform, the `@`
-  alias, and `@vitejs/plugin-react` all carry over with no duplication.
-  Storybook would require a separate `.storybook/main.ts` with `viteFinal`
-  re-declaring the StyleX unplugin — drift risk every time `vite.config.ts`
-  changes.
-- **Speed**. Cold start ~1s vs Storybook ~8s; HMR <500ms vs ~2s.
-- **Footprint**. One devDependency, one config file, ~10 lines of edits.
-- **Aligned with the goal**. The user picked "style atoms/molecules in
-  isolation" as the primary use case. Storybook's controls/MDX/Chromatic
-  ecosystem is overkill for that and pays off only at a scale we're not
-  targeting.
+- **Ecosystem**. `@storybook/addon-a11y` (axe-based inspector),
+  `@storybook/addon-docs` (auto-generated docs + MDX), controls panel with
+  prop introspection via `react-docgen-typescript`, future Chromatic
+  visual regression hook. Ladle covers a11y and stories but its addon set
+  and controls panel are noticeably thinner.
+- **Standard**. Wider team familiarity, larger sample of patterns for
+  Radix + StyleX integrations, broader compatibility window for future
+  toolchain upgrades.
+- **Toolchain compatibility**. Storybook 10 uses the project's own Vite
+  8 (no bundled second copy) — avoids the `vite-react-refresh-wrapper`
+  module-type clash that surfaced with Ladle's bundled Vite 6 ↔ this
+  project's `@vitejs/plugin-react@6`.
 
-Tradeoff accepted: if the project later wants a public design-system site,
-Chromatic visual regression, or rich MDX docs, we'd migrate to Storybook
-then. Ladle stories are CSF-compatible, so the migration cost is low.
+Cost accepted: a separate `.storybook/main.ts` re-declares the StyleX
+unplugin via `viteFinal`, so any future change to the workbench-relevant
+StyleX options has to be mirrored in both `vite.config.ts` and
+`.storybook/main.ts`. The block is small and obvious enough to spot during
+review. If drift becomes a maintenance issue, extract the StyleX plugin
+options into a shared module both configs import.
 
 ## Architecture
 
 ### Files added
 
-| Path                                             | Purpose                                                                                          |
-| ------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
-| `ladle.config.mjs`                               | Ladle config: story glob, port, addon defaults                                                   |
-| `.ladle/components.tsx`                          | Global `Provider` exporting theme + padding decorators (Ladle convention)                        |
-| `src/stories/fixtures.ts`                        | Typed sample data shared across stories (`sampleCaseRuling`, `sampleHtsCode`, `sampleFeeRow`, …) |
-| `src/components/{atoms,molecules}/*.stories.tsx` | Colocated story files, one per component                                                         |
+| Path                                                | Purpose                                                                                          |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `.storybook/main.ts`                                | Storybook config: framework, story glob, addons, `viteFinal` injecting StyleX + alias            |
+| `.storybook/preview.tsx`                            | Globals, parameters, and a theme decorator that applies `darkTheme` to `<html>`                  |
+| `src/stories/fixtures.ts`                           | Typed sample data shared across stories (`sampleCaseRuling`, `sampleHtsCode`, `sampleFeeRow`, …) |
+| `src/components/{atoms,molecules}/**/*.stories.tsx` | Colocated CSF v3 story files, one per component, including nested atom folders when useful       |
 
 ### Files modified
 
-| Path                | Change                                                                                                                  |
-| ------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `package.json`      | Add `@ladle/react` devDependency; add `ladle` and `ladle:build` scripts                                                 |
-| `vite.config.ts`    | Gate the TanStack Router plugin and Sentry plugin behind a `process.env.LADLE` check so they don't run in the workbench |
-| `tsconfig.app.json` | Ensure `.stories.tsx` files are included (likely already covered by the existing `src/**` include)                      |
-| `eslint.config.js`  | Allow `.stories.tsx` to be exempt from `noBarrelFiles` only if needed (likely no change required)                       |
-| `.gitignore`        | Add `.ladle/build/`                                                                                                     |
+| Path                | Change                                                                                                                 |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `package.json`      | Add `storybook`, `@storybook/react-vite`, `@storybook/addon-a11y`, `@storybook/addon-docs`; add `storybook` and `build-storybook` scripts |
+| `tsconfig.app.json` | Include `.storybook` so `main.ts` / `preview.tsx` get the `@/*` path alias and are type-checked                        |
+| `.gitignore`        | Add `/storybook-static/`                                                                                               |
 
-### Story file convention
+The project's `vite.config.ts` stays unchanged — Storybook spawns its own
+Vite via `viteFinal` and we re-inject only StyleX + the `@` alias there.
+
+### Storybook config
+
+```ts
+// .storybook/main.ts
+import type { StorybookConfig } from "@storybook/react-vite";
+import { fileURLToPath } from "node:url";
+
+import stylexPlugin from "@stylexjs/unplugin/vite";
+import { mergeConfig } from "vite";
+
+const srcDir = fileURLToPath(new URL("../src", import.meta.url));
+
+const config: StorybookConfig = {
+  framework: "@storybook/react-vite",
+  stories: ["../src/components/{atoms,molecules}/**/*.stories.@(ts|tsx)"],
+  addons: ["@storybook/addon-a11y", "@storybook/addon-docs"],
+  typescript: { reactDocgen: "react-docgen-typescript" },
+  viteFinal: (cfg) =>
+    mergeConfig(cfg, {
+      resolve: { alias: { "@": srcDir } },
+      plugins: [
+        stylexPlugin({
+          useCSSLayers: true,
+          unstable_moduleResolution: { type: "commonJS" },
+          aliases: { "@/*": [`${srcDir}/*`] },
+        }),
+      ],
+    }),
+};
+
+export default config;
+```
+
+Notes:
+
+- Story glob lives under `src/components/{atoms,molecules}/**` — organisms
+  and templates stay out of the workbench (see Non-goals).
+- StyleX babel-style transform must run, otherwise `stylex.create({...})`
+  stays a runtime no-op and every story renders unstyled. The `viteFinal`
+  hook is the only sanctioned place to add it.
+- App-only plugins (`tanstackRouter`, `mkcert`, `sentryVitePlugin`) are
+  intentionally NOT re-injected here — the workbench needs none of them.
+
+### Story file convention (CSF v3)
 
 ```tsx
 // src/components/atoms/Button.stories.tsx
-import { type Story, type StoryDefault } from "@ladle/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 
-import { Button, type ButtonPropsT } from "./Button";
+import { Button } from "./Button";
 
-export default {
+const meta = {
   title: "atoms/Button",
-} satisfies StoryDefault;
+  component: Button,
+  tags: ["autodocs"],
+  argTypes: {
+    variant: {
+      options: ["primary", "secondary", "danger"],
+      control: { type: "radio" },
+    },
+    fullWidth: { control: { type: "boolean" } },
+    disabled: { control: { type: "boolean" } },
+  },
+  args: { children: "Sign in", variant: "primary" },
+} satisfies Meta<typeof Button>;
 
-export const Primary: Story<ButtonPropsT> = (props) => <Button {...props} />;
-Primary.args = { variant: "primary", children: "Sign in" };
+export default meta;
 
-export const Disabled: Story<ButtonPropsT> = () => (
-  <Button variant="primary" disabled>
-    Sign in
-  </Button>
-);
+type Story = StoryObj<typeof meta>;
+
+export const Primary: Story = { args: { variant: "primary" } };
+export const Disabled: Story = { args: { disabled: true } };
 ```
 
 Rules:
 
 - Title segment matches folder: `atoms/Button`, `molecules/CaseStatusChip`.
-  Ladle builds the sidebar tree from these.
-- Each story is one named export. `args`-driven stories get auto-generated
-  controls from TypeScript props; static stories skip controls.
-- Each component covers at minimum a **default** story plus one per closed-enum
-  variant (`tone`, `size`, `state`).
-- `args` types come from the component's exported `*PropsT` type — no
-  hand-written `argTypes` boilerplate unless we need to constrain a value.
+  Storybook builds the sidebar tree from these.
+- Each story is a `StoryObj` literal with `args` (and optionally
+  `decorators`). No render function unless the story needs custom JSX.
+- `satisfies Meta<typeof Component>` gives the args full type safety and
+  drives controls via `react-docgen-typescript` introspection.
+- `tags: ["autodocs"]` opts each component into an auto-generated docs page
+  alongside its stories. MDX pages can be added later for design-system
+  narrative.
+- Each component covers at minimum a **default** story plus one per
+  closed-enum variant (`tone`, `size`, `state`).
+- Do not export `*PropsT` solely for stories. `Meta<typeof Component>`
+  already pulls props from the component signature.
+- Closed-enum controls require `argTypes.options`; primitive values can
+  be controlled from `args` alone.
 
-### Global decorators (`.ladle/components.tsx`)
+### Global decorators (`.storybook/preview.tsx`)
 
-Three decorators applied to every story:
+`.storybook/preview.tsx` imports `@/styles.css` so the workbench gets the
+same body font, focus ring, scrollbar, and density reset as the app.
+
+One global decorator wraps every story:
 
 1. **Theme decorator**: applies the StyleX `darkTheme` class to
    `document.documentElement` (mirroring `__root.tsx`) plus the `s.root`
@@ -113,11 +181,14 @@ Three decorators applied to every story:
    future Tooltip/Popover/Toast inherit the theme — CSS custom properties
    only flow through ancestors, and portaled descendants mount into
    `document.body`.
-2. **Padding decorator**: wraps the story in a `padding: 24, display: grid,
-placeItems: start` container so atoms aren't pinned to the top-left edge.
-3. **Density toggle**: Ladle global that flips `data-density="compact"` on
-   the wrapper — exposed via Ladle's `globalState`. Optional, only matters
-   for components that read the attribute.
+2. **Padding wrapper**: wraps the story in a padded grid container
+   (`padding: 24`, `display: grid`, `placeItems: start`) so atoms aren't
+   pinned to the top-left edge.
+3. **Theme toggle**: a Storybook `globalTypes.theme` toolbar entry
+   (`dark` / `light`) drives the wrapper. Default is `dark` to match the
+   app.
+4. **Document attributes**: sets `data-theme` and `lang` on
+   `document.documentElement` from the active Storybook global.
 
 No Redux / TanStack Query / TanStack Router providers. By construction,
 atoms and molecules shouldn't reach for them.
@@ -128,15 +199,17 @@ atoms and molecules shouldn't reach for them.
 stories. Naming: `sample<Type>` (singular), `sample<Type>s` (plural).
 Examples:
 
-- `sampleCaseRuling: CaseRulingResponseT` (wire type)
-- `sampleHtsCode: HtsCodeT` (wire type)
+- `sampleCaseRuling: CaseRulingViewT` (wire type)
+- `sampleHtsCode: HtsCodeFormsT` (wire type)
 - `sampleConversationListResponse: ConversationListResponseT` (wire type)
-- `sampleFeeRow: FeeRowPropsT` (UI prop shape from the consumer molecule)
+- `sampleFeeRow: ComponentProps<typeof FeeRow>` (UI prop shape inferred from
+  the consumer molecule)
 
 For shapes that exist on the wire, fixtures use the generated counterpart
 from `@/lib/api/generated/types.gen` verbatim — never hand-roll a parallel
-type. For UI-only shapes (component prop types, FE-side narrowed enums
-from `@/lib/types`), fixtures use the same UI type the component exports.
+type. For UI-only shapes, fixtures use either an already-public UI type or a
+local `ComponentProps<typeof Component>` type. Do not export prop interfaces
+just to type fixtures.
 
 ## Refactor pass
 
@@ -145,8 +218,12 @@ from `@/lib/types`), fixtures use the same UI type the component exports.
 A component qualifies for a story if it reads only `props`. Specifically:
 
 - **Banned hooks**: `useAppSelector`, `useAppDispatch`, `useQuery`,
-  `useMutation`, `useNavigate`, `useParams`, `useChatStore`, `useTweaks`,
-  any future hook that wraps global state, network, or routing.
+  `useMutation`, `useQueryClient`, `useNavigate`, `useParams`,
+  `useChatStore`, `useTweaks`, any future hook that wraps global state,
+  network, or routing.
+- **Banned imports in story-eligible files**: `@tanstack/react-query`,
+  `@tanstack/react-router`, `@/lib/state/*`, `@/lib/api/generated/sdk.gen`,
+  and `@sentry/react`.
 - **Allowed state**: local UI state (`useState` for hover/expand/focus).
 - **Allowed effects**: DOM-only `useEffect` (focus management, scroll,
   textarea autosize).
@@ -160,17 +237,36 @@ and must be fixed before story authoring starts:
 - `CatalogStatsStrip.tsx`
 - `ThinkingPanel.tsx`
 
-For each: peel the hook calls out into a thin organism wrapper
-(`BulkClassifyBarContainer`, etc.) that lives in `organisms/` and passes
-props down to the existing molecule. This keeps the molecule's name stable
-and existing import sites mostly unchanged (one rename per consumer).
+For each: peel global state / network / routing / observability out into a
+thin organism wrapper (`BulkClassifyBarContainer`, etc.) that lives in
+`organisms/` and passes props down to the existing molecule. This keeps the
+molecule's name stable and existing import sites mostly unchanged (one rename
+per consumer).
+
+Specific split:
+
+- `BulkClassifyBarContainer` owns `useQueryClient`, `AbortController`, SDK
+  calls, Sentry breadcrumbs, and result state. `BulkClassifyBar` receives
+  `running`, `result`, `onClassify`, `onCancel`, `unclassifiedCount`,
+  `isReadOnly`, and `onError` as props.
+- `CatalogStatsStripContainer` owns `useQuery(catalogStatsOptions())` and
+  `useTweaks`. `CatalogStatsStrip` receives stats data and `lang`.
+- `ThinkingPanelContainer` owns `useTweaks`. `ThinkingPanel` keeps its local
+  open/closed state and DOM scroll effects, and receives `lang`.
 
 ### Audit method
 
 A one-shot `rg` grep enumerates every file under `src/components/molecules/`
-and `src/components/atoms/` that matches the banned-hook regex. The same
-script enumerates `src/components/organisms/` and reports line count, so we
-can confirm extraction candidates are the largest files.
+and `src/components/atoms/` that matches the banned hook/import regexes. The
+same script enumerates `src/components/organisms/` and reports line count, so
+we can confirm extraction candidates are the largest files.
+
+Suggested audit:
+
+```bash
+rg -n "use(AppSelector|AppDispatch|Query|Mutation|QueryClient|Navigate|Params|ChatStore|Tweaks)\b|@tanstack/react-query|@tanstack/react-router|@/lib/state/|@/lib/api/generated/sdk\.gen|@sentry/react" src/components/atoms src/components/molecules
+find src/components/organisms -maxdepth 1 -type f -name "*.tsx" -print0 | xargs -0 wc -l | sort -n
+```
 
 ### Extraction pattern
 
@@ -217,12 +313,24 @@ Decide on a case-by-case basis once we hit them.
 
 ## Developer flow
 
+`package.json` scripts:
+
+```json
+{
+  "scripts": {
+    "storybook": "storybook dev -p 61000 --no-open",
+    "build-storybook": "storybook build"
+  }
+}
+```
+
 ```bash
-yarn ladle          # Local workbench on http://localhost:61000
-yarn ladle:build    # Static build → .ladle/build/ (for manual sharing)
+yarn storybook         # Local workbench on http://localhost:61000
+yarn build-storybook   # Static build → storybook-static/ (for manual sharing)
 ```
 
 Port 61000 chosen to stay clear of `yarn dev` on 3000 and the API on 8888.
+`--no-open` prevents Storybook from auto-launching a browser tab on every start.
 
 Story authoring loop:
 
@@ -236,31 +344,50 @@ ahead of sharing a snapshot.
 
 ## Test plan
 
-- **Smoke**: `yarn ladle` starts, sidebar lists every story, each story
+- **Smoke**: `yarn storybook` starts, sidebar lists every story, each story
   renders without console errors.
 - **Theme correctness**: open a Dialog-using story (e.g. once
   `CandidatesReviewDialogBody` exists); confirm the portaled content
   paints with `colors.*` tokens, not browser defaults.
 - **HMR**: edit a story's `args`, confirm the preview updates without a
   full reload.
-- **Build**: `yarn ladle:build` produces a static `.ladle/build/` that can
-  be served with `npx serve .ladle/build` and works offline.
+- **Build**: `yarn build-storybook` produces a static `storybook-static/`
+  that can be served with `npx serve storybook-static` and works offline.
 - **Lint/type**: `yarn lint` and `yarn type` pass with the new files.
 - **No regressions**: `yarn build` still produces a working app bundle —
-  the env-gated plugin block in `vite.config.ts` must not break the normal
-  build.
+  `vite.config.ts` is untouched by the workbench setup, so this should
+  remain green.
 
-## Open questions
+## Resolved decisions
 
-None at design time. Implementation will surface details (e.g. how
-exactly the TanStack Router plugin tolerates being absent during the Ladle
-build, whether any molecule needs a one-off context provider) which are
-plan-level concerns, not spec-level.
+- **Story prop typing**: use `Meta<typeof Component>` + `StoryObj<typeof meta>`
+  (CSF v3). Storybook derives prop shapes from `react-docgen-typescript`,
+  so components don't need to export internal prop interfaces.
+- **Controls**: use Storybook `args` for primitives and `argTypes.options`
+  for closed enums. Auto-introspection picks up `boolean` / `string` /
+  `number` props without explicit `argTypes`, but enum unions need
+  `options` to render as radios/selects.
+- **Nested atoms**: the story glob is recursive, so files under
+  `src/components/atoms/icons/` can have stories when useful. Do not force a
+  story for every one-off SVG; add one when the icon has visual states or is
+  likely to be styled/reused.
+- **Workbench isolation**: `vite.config.ts` is unchanged. Storybook spawns
+  its own Vite instance via `@storybook/react-vite` and gets only StyleX +
+  the `@` alias re-injected via `viteFinal`. App-only plugins (TanStack
+  Router codegen, mkcert, Sentry) do not run in the workbench.
+- **Context providers**: no global Redux / Query / Router providers in v1. If
+  a story requires one, the component is not story-eligible until its wiring is
+  moved up into an organism.
+- **Drift mitigation**: the StyleX plugin options live in two places now
+  (`vite.config.ts` and `.storybook/main.ts`). The block is small and
+  visible; if it grows, extract to a shared module and import in both.
 
 ## Out-of-scope follow-ups (post-v1)
 
-- **Visual regression** via Lost Pixel against `ladle:build` output.
-- **A11y addon** (`ladle`'s built-in axe integration) wired into stories.
+- **Chromatic** visual regression hooked into PRs, using the same stories.
+- **MDX docs pages** for design-system narrative (the `addon-docs` install
+  already supports this; we just haven't authored any).
 - **Organism stories** with Redux + Query decorators, once we've got
   conviction the workbench is paying off.
-- **Public deploy** to Firebase Hosting if stakeholders want to browse.
+- **Public deploy** of `storybook-static/` to Firebase Hosting if
+  stakeholders want to browse.
