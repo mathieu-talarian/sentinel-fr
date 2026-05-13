@@ -17,7 +17,7 @@ Snapshot of what's shipped against this plan. Tied to backend rollout.
 
 | Phase | Backend dep      | FE status   | Notes                                                                                                                                              |
 | ----- | ---------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0     | none             | **done**    | `caseWorkbench: boolean` on `tweaksSlice` (default `false`, persisted). `src/lib/features.ts` OR-es it with `VITE_FEATURE_CASE_WORKBENCH`.         |
+| 0     | none             | **done**    | `FEATURE_CASE_WORKBENCH_ENV` defaults to **on**; set `VITE_FEATURE_CASE_WORKBENCH=false` to roll back. `tweaks.caseWorkbench` toggle still ORs on. |
 | 1     | Step 1 (fees)    | **done**    | Backend exposed structured surcharges (not fee-schedule metadata); FE renders them with source attribution. See §1.1 for what shipped vs plan.     |
 | 2     | Step 2 (cases)   | **done**    | Wire-type aliases, `casesSlice` (`activeCaseId` only), facade (`useCases`, `useActiveCase`, …), `selectCaseStatus` selector. See §1.2.             |
 | 3     | Step 2           | **done**    | `/cases`, `/cases/new`, `/cases/$caseId` routes. `Rail` flag-aware. `RailCaseList` + `RailCaseItem` + `CaseStatusChip` + `NewCaseForm`. See §1.3.  |
@@ -240,9 +240,9 @@ Pure FE polish from the Phase 9 list landed; ops-side items wait on product / re
 
 The remaining ops-side items from the plan are deliberately out of scope here:
 
-- **Flip `VITE_FEATURE_CASE_WORKBENCH=true` as build default + remove `tweaks.caseWorkbench`** — release-time decision; flipping the flag is a config change, not a code change. The flag plumbing supports both modes today.
+- **Flip `VITE_FEATURE_CASE_WORKBENCH=true` as build default + remove `tweaks.caseWorkbench`** — shipped. `FEATURE_CASE_WORKBENCH_ENV` now defaults to `true`; rollback path is `VITE_FEATURE_CASE_WORKBENCH=false`. The Tweaks panel toggle hides automatically because `BehaviourSection` keys it off `!FEATURE_CASE_WORKBENCH_ENV`. The slice field stays around for the moment as a dev escape hatch (OR-ed in by `selectFeatureCaseWorkbench`); future cleanup can delete it.
 - **French copy pass** — no translation system in the repo; copy lives inline. Defer until a real `lang` consumer (props, i18n lib) lands and the workbench has enough static copy to translate consistently.
-- **Demote `/` to flagged scratchpad** — same as above; happens at the moment the env flag becomes default-on. The existing redirect in `routes/index.tsx` already handles authed users when the flag is on.
+- **Demote `/` to flagged scratchpad** — happens automatically with the flag flip. The existing redirect in `routes/index.tsx` now always fires for authed users; the legacy `ChatPage` component is reachable only when someone runs a build with `VITE_FEATURE_CASE_WORKBENCH=false`. A follow-up can delete the now-dead legacy chat surface (`ChatPage`, `Inspector`, `RailHistoryList`, `RailNewChatButton`) once the rollback escape hatch is no longer needed.
 
 Smaller deferrals still pending across Phases 4-8 (intentionally not pulled into Phase 9):
 
