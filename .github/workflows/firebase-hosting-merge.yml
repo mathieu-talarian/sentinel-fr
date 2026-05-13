@@ -18,6 +18,12 @@ jobs:
         with:
           node-version: 22
           cache: yarn
+
+      - name: Configure private registry auth
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: yarn config set 'npmScopes.mathieu-talarian.npmAuthToken' "$NODE_AUTH_TOKEN"
+
       - name: Install dependencies
         run: yarn install --immutable
 
