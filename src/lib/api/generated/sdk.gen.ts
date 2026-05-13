@@ -49,6 +49,13 @@ import type {
   ImportCaseAddLineItemDataT,
   ImportCaseAddLineItemErrorsT,
   ImportCaseAddLineItemResponsesT,
+  ImportCaseChatDataT,
+  ImportCaseChatErrorsT,
+  ImportCaseChatResponsesT,
+  ImportCaseChatStreamDataT,
+  ImportCaseChatStreamErrorsT,
+  ImportCaseChatStreamResponsesT,
+  ImportCaseChatStreamResponseT,
   ImportCaseCreateDataT,
   ImportCaseCreateErrorsT,
   ImportCaseCreateResponsesT,
@@ -131,6 +138,14 @@ import {
   zImportCaseAddLineItemBody,
   zImportCaseAddLineItemPath,
   zImportCaseAddLineItemResponse,
+  zImportCaseChatBody,
+  zImportCaseChatPath,
+  zImportCaseChatQuery,
+  zImportCaseChatResponse,
+  zImportCaseChatStreamBody,
+  zImportCaseChatStreamPath,
+  zImportCaseChatStreamQuery,
+  zImportCaseChatStreamResponse,
   zImportCaseCreateBody,
   zImportCaseCreateResponse,
   zImportCaseDeleteLineItemPath,
@@ -747,6 +762,68 @@ export const importCasePatch = <ThrowOnError extends boolean = false>(
     responseValidator: async (data) =>
       await zImportCasePatchResponse.parseAsync(data),
     url: "/import-cases/{caseId}",
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });
+
+/**
+ * Send a case-aware chat turn.
+ */
+export const importCaseChat = <ThrowOnError extends boolean = false>(
+  options: Options<ImportCaseChatDataT, ThrowOnError>,
+) =>
+  (options.client ?? client).post<
+    ImportCaseChatResponsesT,
+    ImportCaseChatErrorsT,
+    ThrowOnError
+  >({
+    requestValidator: async (data) =>
+      await z
+        .object({
+          body: zImportCaseChatBody,
+          path: zImportCaseChatPath,
+          query: zImportCaseChatQuery.optional(),
+        })
+        .parseAsync(data),
+    responseValidator: async (data) =>
+      await zImportCaseChatResponse.parseAsync(data),
+    url: "/import-cases/{caseId}/chat",
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });
+
+/**
+ * SSE-streamed case-aware chat. Same wire shape as `/chat/stream`.
+ */
+export const importCaseChatStream = <ThrowOnError extends boolean = false>(
+  options: Options<
+    ImportCaseChatStreamDataT,
+    ThrowOnError,
+    ImportCaseChatStreamResponseT
+  >,
+) =>
+  (options.client ?? client).sse.post<
+    ImportCaseChatStreamResponsesT,
+    ImportCaseChatStreamErrorsT,
+    ThrowOnError
+  >({
+    requestValidator: async (data) =>
+      await z
+        .object({
+          body: zImportCaseChatStreamBody,
+          path: zImportCaseChatStreamPath,
+          query: zImportCaseChatStreamQuery.optional(),
+        })
+        .parseAsync(data),
+    responseValidator: async (data) =>
+      await zImportCaseChatStreamResponse.parseAsync(data),
+    url: "/import-cases/{caseId}/chat/stream",
     ...options,
     headers: {
       "Content-Type": "application/json",

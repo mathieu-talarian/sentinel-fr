@@ -37,6 +37,37 @@ export type AppliedSurchargeT = {
   specific_unit?: string | null;
 };
 
+/**
+ * One entry in a `casePatchSuggestion` event.
+ *
+ * The shape mirrors RFC 6902 JSON Patch but is deliberately scoped to
+ * the three operations the import-case workspace supports today
+ * (`add` / `replace` / `remove`). `path` is a JSON pointer into the
+ * `ImportCase` response shape; `reason` is the short rationale the FE
+ * shows next to each chip.
+ */
+export type CasePatchT = {
+  /**
+   * One of `add | replace | remove`.
+   */
+  op: string;
+  /**
+   * JSON pointer into the case shape, e.g. `"/lineItems/0/quantityUnit"`
+   * or `"/countryOfOrigin"`.
+   */
+  path: string;
+  /**
+   * Short, user-facing rationale. Renders alongside the chip.
+   */
+  reason: string;
+  /**
+   * New value for `add` and `replace`. Omitted for `remove`.
+   */
+  value?: {
+    [key: string]: unknown;
+  } | null;
+};
+
 export type CatalogStatsResponseT = {
   activeAlerts: number;
   crossRulingsSince: number;
@@ -140,6 +171,11 @@ export type ChatChunkT =
   | {
       requestId?: string | null;
       type: "done";
+    }
+  | {
+      patches: Array<CasePatchT>;
+      requestId?: string | null;
+      type: "casePatchSuggestion";
     };
 
 export type ChatResponseT = {
@@ -1505,6 +1541,98 @@ export type ImportCasePatchResponsesT = {
 
 export type ImportCasePatchResponseT =
   ImportCasePatchResponsesT[keyof ImportCasePatchResponsesT];
+
+export type ImportCaseChatDataT = {
+  body: ChatBodyT;
+  path: {
+    /**
+     * Case id
+     */
+    caseId: string;
+  };
+  query?: {
+    provider?: string | null;
+  };
+  url: "/import-cases/{caseId}/chat";
+};
+
+export type ImportCaseChatErrorsT = {
+  /**
+   * Case not found
+   */
+  404: ProblemT;
+  /**
+   * Validation failed
+   */
+  422: ProblemT;
+  /**
+   * Upstream provider failed
+   */
+  502: ProblemT;
+  /**
+   * No provider configured
+   */
+  503: ProblemT;
+  /**
+   * Agent budget exceeded
+   */
+  504: ProblemT;
+};
+
+export type ImportCaseChatErrorT =
+  ImportCaseChatErrorsT[keyof ImportCaseChatErrorsT];
+
+export type ImportCaseChatResponsesT = {
+  /**
+   * Assistant reply
+   */
+  200: ChatResponseT;
+};
+
+export type ImportCaseChatResponseT =
+  ImportCaseChatResponsesT[keyof ImportCaseChatResponsesT];
+
+export type ImportCaseChatStreamDataT = {
+  body: ChatBodyT;
+  path: {
+    /**
+     * Case id
+     */
+    caseId: string;
+  };
+  query?: {
+    provider?: string | null;
+  };
+  url: "/import-cases/{caseId}/chat/stream";
+};
+
+export type ImportCaseChatStreamErrorsT = {
+  /**
+   * Case not found
+   */
+  404: ProblemT;
+  /**
+   * Validation failed
+   */
+  422: ProblemT;
+  /**
+   * No provider configured
+   */
+  503: ProblemT;
+};
+
+export type ImportCaseChatStreamErrorT =
+  ImportCaseChatStreamErrorsT[keyof ImportCaseChatStreamErrorsT];
+
+export type ImportCaseChatStreamResponsesT = {
+  /**
+   * Server-Sent Events stream of chat chunks
+   */
+  200: ChatChunkT;
+};
+
+export type ImportCaseChatStreamResponseT =
+  ImportCaseChatStreamResponsesT[keyof ImportCaseChatStreamResponsesT];
 
 export type ImportCaseQuoteCreateDataT = {
   body: CreateQuoteBodyT;

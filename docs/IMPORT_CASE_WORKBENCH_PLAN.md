@@ -15,14 +15,15 @@ This doc is the frontend-side mirror: which existing files change, which new fil
 
 Snapshot of what's shipped against this plan. Tied to backend rollout.
 
-| Phase | Backend dep    | FE status   | Notes                                                                                                                                             |
-| ----- | -------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0     | none           | **done**    | `caseWorkbench: boolean` on `tweaksSlice` (default `false`, persisted). `src/lib/features.ts` OR-es it with `VITE_FEATURE_CASE_WORKBENCH`.        |
-| 1     | Step 1 (fees)  | **done**    | Backend exposed structured surcharges (not fee-schedule metadata); FE renders them with source attribution. See §1.1 for what shipped vs plan.    |
-| 2     | Step 2 (cases) | **done**    | Wire-type aliases, `casesSlice` (`activeCaseId` only), facade (`useCases`, `useActiveCase`, …), `selectCaseStatus` selector. See §1.2.            |
-| 3     | Step 2         | **done**    | `/cases`, `/cases/new`, `/cases/$caseId` routes. `Rail` flag-aware. `RailCaseList` + `RailCaseItem` + `CaseStatusChip` + `NewCaseForm`. See §1.3. |
-| 4     | + classify     | **done**    | `CaseInspector` (Radix Tabs) + `CaseFactsPanel` (PATCH-on-blur) + `CaseLinesPanel` (add/remove + per-line `importCaseLineClassify`). See §1.4.    |
-| 5-9   | per the table  | not started |                                                                                                                                                   |
+| Phase | Backend dep     | FE status   | Notes                                                                                                                                             |
+| ----- | --------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0     | none            | **done**    | `caseWorkbench: boolean` on `tweaksSlice` (default `false`, persisted). `src/lib/features.ts` OR-es it with `VITE_FEATURE_CASE_WORKBENCH`.        |
+| 1     | Step 1 (fees)   | **done**    | Backend exposed structured surcharges (not fee-schedule metadata); FE renders them with source attribution. See §1.1 for what shipped vs plan.    |
+| 2     | Step 2 (cases)  | **done**    | Wire-type aliases, `casesSlice` (`activeCaseId` only), facade (`useCases`, `useActiveCase`, …), `selectCaseStatus` selector. See §1.2.            |
+| 3     | Step 2          | **done**    | `/cases`, `/cases/new`, `/cases/$caseId` routes. `Rail` flag-aware. `RailCaseList` + `RailCaseItem` + `CaseStatusChip` + `NewCaseForm`. See §1.3. |
+| 4     | + classify      | **done**    | `CaseInspector` (Radix Tabs) + `CaseFactsPanel` (PATCH-on-blur) + `CaseLinesPanel` (add/remove + per-line `importCaseLineClassify`). See §1.4.    |
+| 5     | Step 3 (quotes) | **done**    | `CaseQuotePanel` (run / re-run / latest), `QuoteSummaryTable`, `QuoteLineRow` (expandable + surcharges + caveats), `FeeRow`. See §1.5.            |
+| 6-9   | per the table   | not started |                                                                                                                                                   |
 
 Cross-cutting work landed alongside Phase 1 (not tied to any single workbench phase):
 
@@ -112,6 +113,30 @@ Center column is a dashed-border note pointing at Phase 6 for case-aware chat; t
 - `CaseTopbar` as a dedicated organism — instead the title + status + missing-fields strip live inline in the route, since the topbar's only Phase 4-relevant content is what's already there.
 - `MissingFieldChip` click-to-scroll behavior — the chip accepts an `onClick`, but no callers wire it for Phase 4. Easy to add when the workbench grows long enough for scroll-into-view to matter.
 - Severity-color tokens (`risk.bg.*` / `risk.fg.*`) — defer to Phase 7 risk panel when they have a consumer.
+
+### 1.5 Phase 5 — what shipped vs the plan
+
+Backend dependency: `POST /import-cases/{caseId}/landed-cost/quote` + `GET .../quotes` + `GET .../quotes/{quoteId}`. Wire shapes: `LandedCostQuoteResponseT`, `LandedCostQuoteLineResponseT`, `QuoteSummaryT`, `LandedCostQuoteSummaryItemT`, `FeeScheduleRefViewT`, `CreateQuoteBodyT` — all aliased in `src/lib/types.ts`.
+
+`CaseQuotePanel` (replaces the `CasePlaceholderPanel` under the Quote tab):
+
+- **Header** — "Landed cost" eyebrow + "Captured <relative-date> at <HH:mm> · immutable snapshot" (or "No quote yet." when empty). "Run quote" / "Re-run quote" CTA on the right.
+- **Gate** — the CTA stays disabled until `selectCaseStatus(case)` returns `readyForQuote` or later. The backend re-enforces with a friendly `Problem` so this is belt + suspenders.
+- **`QuoteSummaryTable`** — the canonical 7-row breakdown from the FE doc: customs value · duty · surcharges · MPF · HMF (suppressed when `transport !== "ocean"`) · freight · insurance (only when non-zero) · landed cost on a thicker rule line.
+- **Per-line breakdown** — `QuoteLineRow` per line, sorted by `position`. Collapsed: position + HTS badge + description + line total. Expanded: key-value list of customs value, country of origin (snapshot), quantity/unit, ad-valorem duty, specific duty (when non-zero), surcharges subtotal, rate text, rate-source code. Below that, the `LineSurchargesList` molecule renders each surcharge with `SourceLink` attribution (or the verbatim "No verified surcharge rule matched this case." copy when empty). Line-level caveats render via the new `CaveatsList` molecule.
+- **Entry fees** — two `FeeRow`s (MPF + HMF when ocean) each paired with a `SourceLink` from `feeScheduleRefs` (effective date + source URL).
+- **Caveats** — `CaveatsList` molecule, reused across panel + per-line + the legacy `LandedCost.tsx`.
+
+PATCH side-effects: `importCaseQuoteCreateMutation.onSuccess` invalidates both the quote-list query and the case-detail query so `selectCaseStatus` flips from `readyForQuote` → `quoted` and the workbench header chip updates immediately.
+
+**Deferred from the original plan §6.2:**
+
+- **Quote history switcher + side-by-side diff.** Phase 5 always shows the most recent quote. A history dropdown can hang off the captured-at line when there's real UX demand for comparing two quotes; the shape is straightforward (sort `quotesList.data.quotes` desc, dropdown + `quoteId` state, second `useQuery` for the comparison quote).
+- **"Cost estimate only" banner.** Per the plan it gates on the risk screen having run. Defer to Phase 7 when `lastRiskScreenedAt` actually drives a real risk summary.
+
+### 1.6 Backend Phase 4 ready for FE Phase 6
+
+The same SDK regen brought case-aware chat endpoints (`POST /import-cases/{caseId}/chat` + `/stream`) and a new `casePatchSuggestion` chunk type on `ChatChunkT` carrying `CasePatchT[]` (`{ op, path, value?, reason }`, RFC-6902-shaped). Aliased as `CasePatchT` in `src/lib/types.ts`. FE Phase 6 (case-aware chat surface + `CasePatchTray`) is unblocked whenever we want to start it.
 
 ## 2. Constraints
 

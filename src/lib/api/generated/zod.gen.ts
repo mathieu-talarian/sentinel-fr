@@ -32,6 +32,22 @@ export const zAppliedSurcharge = z.object({
   specific_unit: z.string().nullish(),
 });
 
+/**
+ * One entry in a `casePatchSuggestion` event.
+ *
+ * The shape mirrors RFC 6902 JSON Patch but is deliberately scoped to
+ * the three operations the import-case workspace supports today
+ * (`add` / `replace` / `remove`). `path` is a JSON pointer into the
+ * `ImportCase` response shape; `reason` is the short rationale the FE
+ * shows next to each chip.
+ */
+export const zCasePatch = z.object({
+  op: z.string(),
+  path: z.string(),
+  reason: z.string(),
+  value: z.record(z.string(), z.unknown()).nullish(),
+});
+
 export const zCatalogStatsResponse = z.object({
   activeAlerts: z.coerce
     .bigint()
@@ -694,6 +710,11 @@ export const zChatChunk = z.union([
     requestId: z.string().nullish(),
     type: z.enum(["done"]),
   }),
+  z.object({
+    patches: z.array(zCasePatch),
+    requestId: z.string().nullish(),
+    type: z.enum(["casePatchSuggestion"]),
+  }),
 ]);
 
 export const zUsageView = z.object({
@@ -1005,6 +1026,36 @@ export const zImportCasePatchPath = z.object({
  * Patched case
  */
 export const zImportCasePatchResponse = zImportCaseResponse;
+
+export const zImportCaseChatBody = zChatBody;
+
+export const zImportCaseChatPath = z.object({
+  caseId: z.string(),
+});
+
+export const zImportCaseChatQuery = z.object({
+  provider: z.string().nullish(),
+});
+
+/**
+ * Assistant reply
+ */
+export const zImportCaseChatResponse = zChatResponse;
+
+export const zImportCaseChatStreamBody = zChatBody;
+
+export const zImportCaseChatStreamPath = z.object({
+  caseId: z.string(),
+});
+
+export const zImportCaseChatStreamQuery = z.object({
+  provider: z.string().nullish(),
+});
+
+/**
+ * Server-Sent Events stream of chat chunks
+ */
+export const zImportCaseChatStreamResponse = zChatChunk;
 
 export const zImportCaseQuoteCreateBody = zCreateQuoteBody;
 

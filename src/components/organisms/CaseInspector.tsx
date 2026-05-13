@@ -9,6 +9,7 @@ import { Tabs } from "radix-ui";
 import { CaseFactsPanel } from "@/components/organisms/CaseFactsPanel";
 import { CaseLinesPanel } from "@/components/organisms/CaseLinesPanel";
 import { CasePlaceholderPanel } from "@/components/organisms/CasePlaceholderPanel";
+import { CaseQuotePanel } from "@/components/organisms/CaseQuotePanel";
 import { sx } from "@/lib/styles/sx";
 import { borders, colors, fonts, radii } from "@/lib/styles/tokens.stylex";
 
@@ -80,11 +81,7 @@ export function CaseInspector(props: Readonly<CaseInspectorPropsT>) {
             <CaseLinesPanel case_={props.case_} isReadOnly={props.isReadOnly} />
           </Tabs.Content>
           <Tabs.Content value="quote">
-            <CasePlaceholderPanel
-              title="Landed-cost quote"
-              description="Multi-line quote summary, line breakdown, entry-level fees, and source links."
-              phase="Phase 5"
-            />
+            <CaseQuotePanel case_={props.case_} isReadOnly={props.isReadOnly} />
           </Tabs.Content>
           <Tabs.Content value="risks">
             <CasePlaceholderPanel

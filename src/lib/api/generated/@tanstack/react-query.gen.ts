@@ -26,6 +26,7 @@ import {
   health,
   healthz,
   importCaseAddLineItem,
+  importCaseChat,
   importCaseCreate,
   importCaseDelete,
   importCaseDeleteLineItem,
@@ -85,6 +86,9 @@ import type {
   ImportCaseAddLineItemDataT,
   ImportCaseAddLineItemErrorT,
   ImportCaseAddLineItemResponseT,
+  ImportCaseChatDataT,
+  ImportCaseChatErrorT,
+  ImportCaseChatResponseT,
   ImportCaseCreateDataT,
   ImportCaseCreateErrorT,
   ImportCaseCreateResponseT,
@@ -833,6 +837,33 @@ export const importCasePatchMutation = (
   > = {
     mutationFn: async (fnOptions) => {
       const { data } = await importCasePatch({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+/**
+ * Send a case-aware chat turn.
+ */
+export const importCaseChatMutation = (
+  options?: Partial<Options<ImportCaseChatDataT>>,
+): UseMutationOptions<
+  ImportCaseChatResponseT,
+  ImportCaseChatErrorT,
+  Options<ImportCaseChatDataT>
+> => {
+  const mutationOptions: UseMutationOptions<
+    ImportCaseChatResponseT,
+    ImportCaseChatErrorT,
+    Options<ImportCaseChatDataT>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await importCaseChat({
         ...options,
         ...fnOptions,
         throwOnError: true,

@@ -19,18 +19,25 @@ import type {
   AlertItemT as AlertItemGen,
   AlertsResponseT as AlertsResponseGen,
   AppliedSurchargeT as AppliedSurchargeGen,
+  CasePatchT as CasePatchGen,
   ChatChunkT as ChatChunkGen,
   CommodityBodyT as CommodityBodyGen,
   CommodityHierarchyEntryT as CommodityHierarchyEntryGen,
   CreateCaseBodyT as CreateCaseBodyGen,
   CreateLineItemBodyT as CreateLineItemBodyGen,
+  CreateQuoteBodyT as CreateQuoteBodyGen,
+  FeeScheduleRefViewT as FeeScheduleRefViewGen,
   ImportCaseLineItemResponseT as ImportCaseLineItemResponseGen,
   ImportCaseResponseT as ImportCaseResponseGen,
   ImportCaseSummaryT as ImportCaseSummaryGen,
+  LandedCostQuoteLineResponseT as LandedCostQuoteLineResponseGen,
+  LandedCostQuoteResponseT as LandedCostQuoteResponseGen,
+  LandedCostQuoteSummaryItemT as LandedCostQuoteSummaryItemGen,
   LandedCostResponseT as LandedCostResponseGen,
   LandedCostRowT as LandedCostRowGen,
   PatchCaseBodyT as PatchCaseBodyGen,
   PatchLineItemBodyT as PatchLineItemBodyGen,
+  QuoteSummaryT as QuoteSummaryGen,
   SearchBodyT as SearchBodyGen,
   SearchCandidateT as SearchCandidateGen,
   UsageInfoT as UsageInfoGen,
@@ -187,3 +194,16 @@ export type LineItemClassificationStateT =
   | "candidates"
   | "selected"
   | "needsReview";
+
+/* ---------- Landed-cost quote shapes (backend Step 3) ---------- */
+
+export type LandedCostQuoteT = LandedCostQuoteResponseGen;
+export type LandedCostQuoteLineT = LandedCostQuoteLineResponseGen;
+export type LandedCostQuoteSummaryT = QuoteSummaryGen;
+export type LandedCostQuoteSummaryItemT = LandedCostQuoteSummaryItemGen;
+export type CreateQuoteBodyT = CreateQuoteBodyGen;
+export type FeeScheduleRefT = FeeScheduleRefViewGen;
+
+/* ---------- Case-aware chat patch suggestions (backend Step 4) ---------- */
+
+export type CasePatchT = CasePatchGen;
