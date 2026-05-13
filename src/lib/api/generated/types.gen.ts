@@ -58,6 +58,94 @@ export type AttachRulingBodyT = {
   supportsSelectedCode: string;
 };
 
+export type BulkClassifyBodyT = {
+  attachCandidates?: boolean;
+  autoSelectThreshold?: number | null;
+  lang?: string | null;
+  /**
+   * Limit the fan-out to these line ids. When omitted, every line on
+   * the case is a candidate (subject to `onlyUnclassified`).
+   */
+  lineIds?: Array<string> | null;
+  /**
+   * When `true`, skip lines whose `classificationState` is anything
+   * other than `"unclassified"`. Default `false` — caller asks for
+   * it explicitly to avoid silently re-classifying already-selected
+   * lines on a single-click "Classify all".
+   */
+  onlyUnclassified?: boolean;
+  provider?: string | null;
+};
+
+export type BulkClassifyLineResultT =
+  | {
+      line_item_id: string;
+      result: ClassifyLineResponseT;
+      status: "ok";
+    }
+  | {
+      line_item_id: string;
+      reason: string;
+      status: "skipped";
+    }
+  | {
+      error: string;
+      line_item_id: string;
+      status: "failed";
+    };
+
+export type BulkClassifyResponseT = {
+  provider: string;
+  results: Array<BulkClassifyLineResultT>;
+};
+
+export type CandidateListResponseT = {
+  candidates: Array<CandidateViewT>;
+  lineItemId: string;
+};
+
+export type CandidateReviewSummaryT = {
+  accepted: number;
+  pending: number;
+  rejected: number;
+  total: number;
+};
+
+export type CandidateViewT = {
+  code: string;
+  createdAt: string;
+  description?: {
+    [key: string]: unknown;
+  } | null;
+  /**
+   * String form on the wire so utoipa doesn't need its uuid feature
+   * flag (the workspace doesn't enable it).
+   */
+  id: string;
+  lineItemId: string;
+  /**
+   * One of `pending | accepted | rejected`.
+   */
+  reviewState: string;
+  /**
+   * 0..=1 confidence when the classifier produced one; null when the
+   * candidate came from the `search` or `manual` source.
+   */
+  score?: number | null;
+  /**
+   * One of `search | classify | manual | ruling`.
+   */
+  source: string;
+  /**
+   * Raw tool result the candidate came from (rate text, description
+   * envelope, etc). Useful for FE detail panels; null when the row
+   * pre-dates the persistence path.
+   */
+  toolResult?: {
+    [key: string]: unknown;
+  } | null;
+};
+
 /**
  * One entry in a `casePatchSuggestion` event.
  *
@@ -505,6 +593,12 @@ export type HtsCodeFormsT = {
 };
 
 export type ImportCaseLineItemResponseT = {
+  /**
+   * Aggregated review-state counts for this line's candidates
+   * (Phase 10.2). Always present; zero-valued when the line has
+   * no candidates. Drives the FE's per-line review-chip summary.
+   */
+  candidateSummary: CandidateReviewSummaryT;
   caseId: string;
   classificationState: string;
   countryOfOrigin?: string | null;
@@ -563,6 +657,12 @@ export type ImportCaseSummaryT = {
   referenceDate: string;
   status: string;
   title: string;
+  /**
+   * Number of line items still in `classification_state =
+   * "unclassified"`. Drives the FE's "Classify all unclassified"
+   * affordance. Always present (zero when none).
+   */
+  unclassifiedLineCount: number;
   updatedAt: string;
 };
 
@@ -717,6 +817,21 @@ export type LandedCostRowT = {
   kind?: string | null;
   label: string;
   sub?: string | null;
+};
+
+export type LlmUsageResponseT = {
+  from: string;
+  rows: Array<LlmUsageRowT>;
+  to: string;
+};
+
+export type LlmUsageRowT = {
+  cachedInputTokens: number;
+  inputTokens: number;
+  model: string;
+  outputTokens: number;
+  provider: string;
+  totalTokens: number;
 };
 
 export type LocalizedDescriptionT = {
@@ -1085,6 +1200,42 @@ export type WatchSubscriptionViewT = {
   sources: Array<string>;
 };
 
+export type AdminLlmUsageDataT = {
+  body?: never;
+  path?: never;
+  query?: {
+    /**
+     * Lower bound (inclusive). RFC3339. Defaults to `now() - 30d`.
+     */
+    from?: string | null;
+    /**
+     * Upper bound (exclusive). RFC3339. Defaults to `now()`.
+     */
+    to?: string | null;
+  };
+  url: "/admin/llm-usage";
+};
+
+export type AdminLlmUsageErrorsT = {
+  /**
+   * Validation failed (e.g. malformed RFC3339)
+   */
+  422: ProblemT;
+};
+
+export type AdminLlmUsageErrorT =
+  AdminLlmUsageErrorsT[keyof AdminLlmUsageErrorsT];
+
+export type AdminLlmUsageResponsesT = {
+  /**
+   * Per-provider token aggregation
+   */
+  200: LlmUsageResponseT;
+};
+
+export type AdminLlmUsageResponseT =
+  AdminLlmUsageResponsesT[keyof AdminLlmUsageResponsesT];
+
 export type AdminRefreshTriggerDataT = {
   body?: never;
   path?: never;
@@ -1336,6 +1487,13 @@ export type ConversationsListDataT = {
   query?: {
     limit?: number | null;
     cursor?: string | null;
+    /**
+     * Filter to conversations pinned to this import case (Phase 10.2).
+     * Conversations created by `/api/import-cases/{caseId}/chat[/stream]`
+     * carry the case id on the row (Phase 8 follow-up F1); free-standing
+     * `/chat` threads don't and are excluded when this filter is set.
+     */
+    caseId?: string | null;
   };
   url: "/conversations";
 };
@@ -1759,6 +1917,46 @@ export type ImportCaseChatStreamResponsesT = {
 export type ImportCaseChatStreamResponseT =
   ImportCaseChatStreamResponsesT[keyof ImportCaseChatStreamResponsesT];
 
+export type ImportCaseClassifyBulkDataT = {
+  body: BulkClassifyBodyT;
+  path: {
+    /**
+     * Case id
+     */
+    caseId: string;
+  };
+  query?: never;
+  url: "/import-cases/{caseId}/classify";
+};
+
+export type ImportCaseClassifyBulkErrorsT = {
+  /**
+   * Case not found
+   */
+  404: ProblemT;
+  /**
+   * Validation failed
+   */
+  422: ProblemT;
+  /**
+   * No provider configured (or VOYAGE_API_KEY missing)
+   */
+  503: ProblemT;
+};
+
+export type ImportCaseClassifyBulkErrorT =
+  ImportCaseClassifyBulkErrorsT[keyof ImportCaseClassifyBulkErrorsT];
+
+export type ImportCaseClassifyBulkResponsesT = {
+  /**
+   * Bulk classification results
+   */
+  200: BulkClassifyResponseT;
+};
+
+export type ImportCaseClassifyBulkResponseT =
+  ImportCaseClassifyBulkResponsesT[keyof ImportCaseClassifyBulkResponsesT];
+
 export type ImportCaseQuoteCreateDataT = {
   body: CreateQuoteBodyT;
   path: {
@@ -1977,6 +2175,166 @@ export type ImportCasePatchLineItemResponsesT = {
 
 export type ImportCasePatchLineItemResponseT =
   ImportCasePatchLineItemResponsesT[keyof ImportCasePatchLineItemResponsesT];
+
+export type ImportCaseCandidatesListDataT = {
+  body?: never;
+  path: {
+    /**
+     * Case id
+     */
+    caseId: string;
+    /**
+     * Line item id
+     */
+    lineId: string;
+  };
+  query?: never;
+  url: "/import-cases/{caseId}/line-items/{lineId}/candidates";
+};
+
+export type ImportCaseCandidatesListErrorsT = {
+  /**
+   * Case or line item not found
+   */
+  404: ProblemT;
+};
+
+export type ImportCaseCandidatesListErrorT =
+  ImportCaseCandidatesListErrorsT[keyof ImportCaseCandidatesListErrorsT];
+
+export type ImportCaseCandidatesListResponsesT = {
+  /**
+   * Candidate list
+   */
+  200: CandidateListResponseT;
+};
+
+export type ImportCaseCandidatesListResponseT =
+  ImportCaseCandidatesListResponsesT[keyof ImportCaseCandidatesListResponsesT];
+
+export type ImportCaseCandidateDeleteDataT = {
+  body?: never;
+  path: {
+    /**
+     * Case id
+     */
+    caseId: string;
+    /**
+     * Line item id
+     */
+    lineId: string;
+    /**
+     * Candidate id (UUID)
+     */
+    candidateId: string;
+  };
+  query?: never;
+  url: "/import-cases/{caseId}/line-items/{lineId}/candidates/{candidateId}";
+};
+
+export type ImportCaseCandidateDeleteErrorsT = {
+  /**
+   * Case, line, or candidate not found
+   */
+  404: ProblemT;
+};
+
+export type ImportCaseCandidateDeleteErrorT =
+  ImportCaseCandidateDeleteErrorsT[keyof ImportCaseCandidateDeleteErrorsT];
+
+export type ImportCaseCandidateDeleteResponsesT = {
+  /**
+   * Candidate deleted
+   */
+  204: void;
+};
+
+export type ImportCaseCandidateDeleteResponseT =
+  ImportCaseCandidateDeleteResponsesT[keyof ImportCaseCandidateDeleteResponsesT];
+
+export type ImportCaseCandidateAcceptDataT = {
+  body?: never;
+  path: {
+    /**
+     * Case id
+     */
+    caseId: string;
+    /**
+     * Line item id
+     */
+    lineId: string;
+    /**
+     * Candidate id (UUID)
+     */
+    candidateId: string;
+  };
+  query?: never;
+  url: "/import-cases/{caseId}/line-items/{lineId}/candidates/{candidateId}/accept";
+};
+
+export type ImportCaseCandidateAcceptErrorsT = {
+  /**
+   * Case, line, or candidate not found
+   */
+  404: ProblemT;
+  /**
+   * Validation failed (e.g. HTS code not in catalog)
+   */
+  422: ProblemT;
+};
+
+export type ImportCaseCandidateAcceptErrorT =
+  ImportCaseCandidateAcceptErrorsT[keyof ImportCaseCandidateAcceptErrorsT];
+
+export type ImportCaseCandidateAcceptResponsesT = {
+  /**
+   * Updated candidate
+   */
+  200: CandidateViewT;
+};
+
+export type ImportCaseCandidateAcceptResponseT =
+  ImportCaseCandidateAcceptResponsesT[keyof ImportCaseCandidateAcceptResponsesT];
+
+export type ImportCaseCandidateRejectDataT = {
+  body?: never;
+  path: {
+    /**
+     * Case id
+     */
+    caseId: string;
+    /**
+     * Line item id
+     */
+    lineId: string;
+    /**
+     * Candidate id (UUID)
+     */
+    candidateId: string;
+  };
+  query?: never;
+  url: "/import-cases/{caseId}/line-items/{lineId}/candidates/{candidateId}/reject";
+};
+
+export type ImportCaseCandidateRejectErrorsT = {
+  /**
+   * Case, line, or candidate not found
+   */
+  404: ProblemT;
+};
+
+export type ImportCaseCandidateRejectErrorT =
+  ImportCaseCandidateRejectErrorsT[keyof ImportCaseCandidateRejectErrorsT];
+
+export type ImportCaseCandidateRejectResponsesT = {
+  /**
+   * Updated candidate
+   */
+  200: CandidateViewT;
+};
+
+export type ImportCaseCandidateRejectResponseT =
+  ImportCaseCandidateRejectResponsesT[keyof ImportCaseCandidateRejectResponsesT];
 
 export type ImportCaseLineClassifyDataT = {
   body: ClassifyLineBodyT;

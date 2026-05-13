@@ -9,7 +9,7 @@ import { z } from "zod";
 
 import { Button } from "@/components/atoms/Button";
 import { Heading } from "@/components/atoms/Heading";
-import { CaseStatusChip } from "@/components/molecules/CaseStatusChip";
+import { CaseIndexRow } from "@/components/molecules/CaseIndexRow";
 import { ErrorFallback } from "@/components/molecules/ErrorFallback";
 import { Rail } from "@/components/organisms/Rail";
 import { useCases, useSetActiveCase } from "@/lib/state/cases";
@@ -139,21 +139,15 @@ function CasesIndexPage() {
         <ul {...sx(s.list)}>
           {visible.map((c) => (
             <li key={c.id}>
-              <button
-                type="button"
-                {...sx(s.row)}
+              <CaseIndexRow
+                title={c.title}
+                status={asChipValue(c.status)}
+                unclassifiedLineCount={c.unclassifiedLineCount}
+                when={formatWhen(c.updatedAt, tweaks.lang)}
                 onClick={() => {
                   onPick(c.id);
                 }}
-              >
-                <div {...sx(s.rowTitle)}>{c.title}</div>
-                <div {...sx(s.rowMeta)}>
-                  <CaseStatusChip status={asChipValue(c.status)} />
-                  <span {...sx(s.when)}>
-                    Updated {formatWhen(c.updatedAt, tweaks.lang)}
-                  </span>
-                </div>
-              </button>
+              />
             </li>
           ))}
         </ul>
@@ -219,40 +213,6 @@ const s = stylex.create({
     display: "flex",
     flexDirection: "column",
     listStyleType: "none",
-  },
-  row: {
-    padding: "12px 14px",
-    borderColor: colors.line,
-    borderRadius: radii.md,
-    borderStyle: borders.solid,
-    borderWidth: borders.thin,
-    gap: 6,
-    transition: "background 120ms, border-color 120ms",
-    backgroundColor: {
-      default: colors.paper,
-      ":hover": colors.paper2,
-    },
-    cursor: "pointer",
-    display: "flex",
-    flexDirection: "column",
-    textAlign: "left",
-    width: "100%",
-  },
-  rowTitle: {
-    color: colors.ink,
-    fontFamily: fonts.sans,
-    fontSize: 14,
-    fontWeight: 500,
-  },
-  rowMeta: {
-    gap: 10,
-    alignItems: "center",
-    display: "flex",
-  },
-  when: {
-    color: colors.ink4,
-    fontFamily: fonts.mono,
-    fontSize: 11,
   },
   note: {
     color: colors.ink3,

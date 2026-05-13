@@ -11,6 +11,7 @@ import {
 
 import { client } from "../client.gen";
 import {
+  adminLlmUsage,
   adminRefreshTrigger,
   authMe,
   catalogStats,
@@ -26,7 +27,12 @@ import {
   health,
   healthz,
   importCaseAddLineItem,
+  importCaseCandidateAccept,
+  importCaseCandidateDelete,
+  importCaseCandidateReject,
+  importCaseCandidatesList,
   importCaseChat,
+  importCaseClassifyBulk,
   importCaseCreate,
   importCaseDelete,
   importCaseDeleteLineItem,
@@ -54,6 +60,9 @@ import {
   watchSubscribe,
 } from "../sdk.gen";
 import type {
+  AdminLlmUsageDataT,
+  AdminLlmUsageErrorT,
+  AdminLlmUsageResponseT,
   AdminRefreshTriggerDataT,
   AdminRefreshTriggerErrorT,
   AdminRefreshTriggerResponseT,
@@ -93,9 +102,24 @@ import type {
   ImportCaseAddLineItemDataT,
   ImportCaseAddLineItemErrorT,
   ImportCaseAddLineItemResponseT,
+  ImportCaseCandidateAcceptDataT,
+  ImportCaseCandidateAcceptErrorT,
+  ImportCaseCandidateAcceptResponseT,
+  ImportCaseCandidateDeleteDataT,
+  ImportCaseCandidateDeleteErrorT,
+  ImportCaseCandidateDeleteResponseT,
+  ImportCaseCandidateRejectDataT,
+  ImportCaseCandidateRejectErrorT,
+  ImportCaseCandidateRejectResponseT,
+  ImportCaseCandidatesListDataT,
+  ImportCaseCandidatesListErrorT,
+  ImportCaseCandidatesListResponseT,
   ImportCaseChatDataT,
   ImportCaseChatErrorT,
   ImportCaseChatResponseT,
+  ImportCaseClassifyBulkDataT,
+  ImportCaseClassifyBulkErrorT,
+  ImportCaseClassifyBulkResponseT,
   ImportCaseCreateDataT,
   ImportCaseCreateErrorT,
   ImportCaseCreateResponseT,
@@ -168,41 +192,6 @@ import type {
   WatchSubscribeResponseT2,
 } from "../types.gen";
 
-/**
- * Dispatch a manual catalog refresh.
- *
- * Returns 202 (Accepted) once the actor's mailbox has accepted the message;
- * the actual fetch + diff happens asynchronously, mirroring the behaviour of
- * the periodic ticks. Use `GET /db/refresh-status` to observe completion.
- *
- * Requires:
- * * a verified Firebase ID token via `Authorization: Bearer <token>`,
- * * `SENTINEL_REFRESH_ENABLED=1` at server boot — otherwise 503.
- */
-export const adminRefreshTriggerMutation = (
-  options?: Partial<Options<AdminRefreshTriggerDataT>>,
-): UseMutationOptions<
-  AdminRefreshTriggerResponseT,
-  AdminRefreshTriggerErrorT,
-  Options<AdminRefreshTriggerDataT>
-> => {
-  const mutationOptions: UseMutationOptions<
-    AdminRefreshTriggerResponseT,
-    AdminRefreshTriggerErrorT,
-    Options<AdminRefreshTriggerDataT>
-  > = {
-    mutationFn: async (fnOptions) => {
-      const { data } = await adminRefreshTrigger({
-        ...options,
-        ...fnOptions,
-        throwOnError: true,
-      });
-      return data;
-    },
-  };
-  return mutationOptions;
-};
-
 export type QueryKey<TOptions extends Options> = [
   Pick<TOptions, "baseUrl" | "body" | "headers" | "path" | "query"> & {
     _id: string;
@@ -241,6 +230,69 @@ const createQueryKey = <TOptions extends Options>(
     params.query = options.query;
   }
   return [params];
+};
+
+export const adminLlmUsageQueryKey = (options?: Options<AdminLlmUsageDataT>) =>
+  createQueryKey("adminLlmUsage", options);
+
+/**
+ * LLM cost report — token spend aggregated by (provider, model)
+ * over a window. Phase 11. Owner-gated to any authenticated user
+ * (same model as `/admin/refresh`); pivot to a custom Firebase
+ * claim if/when a multi-tenant ACL is needed.
+ */
+export const adminLlmUsageOptions = (options?: Options<AdminLlmUsageDataT>) =>
+  queryOptions<
+    AdminLlmUsageResponseT,
+    AdminLlmUsageErrorT,
+    AdminLlmUsageResponseT,
+    ReturnType<typeof adminLlmUsageQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await adminLlmUsage({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: adminLlmUsageQueryKey(options),
+  });
+
+/**
+ * Dispatch a manual catalog refresh.
+ *
+ * Returns 202 (Accepted) once the actor's mailbox has accepted the message;
+ * the actual fetch + diff happens asynchronously, mirroring the behaviour of
+ * the periodic ticks. Use `GET /db/refresh-status` to observe completion.
+ *
+ * Requires:
+ * * a verified Firebase ID token via `Authorization: Bearer <token>`,
+ * * `SENTINEL_REFRESH_ENABLED=1` at server boot — otherwise 503.
+ */
+export const adminRefreshTriggerMutation = (
+  options?: Partial<Options<AdminRefreshTriggerDataT>>,
+): UseMutationOptions<
+  AdminRefreshTriggerResponseT,
+  AdminRefreshTriggerErrorT,
+  Options<AdminRefreshTriggerDataT>
+> => {
+  const mutationOptions: UseMutationOptions<
+    AdminRefreshTriggerResponseT,
+    AdminRefreshTriggerErrorT,
+    Options<AdminRefreshTriggerDataT>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await adminRefreshTrigger({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
 };
 
 export const frontendAlertsQueryKey = (
@@ -903,6 +955,33 @@ export const importCaseChatMutation = (
 };
 
 /**
+ * Bulk-classify a subset of the case's line items.
+ */
+export const importCaseClassifyBulkMutation = (
+  options?: Partial<Options<ImportCaseClassifyBulkDataT>>,
+): UseMutationOptions<
+  ImportCaseClassifyBulkResponseT,
+  ImportCaseClassifyBulkErrorT,
+  Options<ImportCaseClassifyBulkDataT>
+> => {
+  const mutationOptions: UseMutationOptions<
+    ImportCaseClassifyBulkResponseT,
+    ImportCaseClassifyBulkErrorT,
+    Options<ImportCaseClassifyBulkDataT>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await importCaseClassifyBulk({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+/**
  * Compute and persist a landed-cost quote for an import case.
  */
 export const importCaseQuoteCreateMutation = (
@@ -1107,6 +1186,119 @@ export const importCasePatchLineItemMutation = (
   > = {
     mutationFn: async (fnOptions) => {
       const { data } = await importCasePatchLineItem({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+export const importCaseCandidatesListQueryKey = (
+  options: Options<ImportCaseCandidatesListDataT>,
+) => createQueryKey("importCaseCandidatesList", options);
+
+/**
+ * List candidates for one line, newest-first.
+ */
+export const importCaseCandidatesListOptions = (
+  options: Options<ImportCaseCandidatesListDataT>,
+) =>
+  queryOptions<
+    ImportCaseCandidatesListResponseT,
+    ImportCaseCandidatesListErrorT,
+    ImportCaseCandidatesListResponseT,
+    ReturnType<typeof importCaseCandidatesListQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await importCaseCandidatesList({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: importCaseCandidatesListQueryKey(options),
+  });
+
+/**
+ * Hard-delete a candidate.
+ */
+export const importCaseCandidateDeleteMutation = (
+  options?: Partial<Options<ImportCaseCandidateDeleteDataT>>,
+): UseMutationOptions<
+  ImportCaseCandidateDeleteResponseT,
+  ImportCaseCandidateDeleteErrorT,
+  Options<ImportCaseCandidateDeleteDataT>
+> => {
+  const mutationOptions: UseMutationOptions<
+    ImportCaseCandidateDeleteResponseT,
+    ImportCaseCandidateDeleteErrorT,
+    Options<ImportCaseCandidateDeleteDataT>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await importCaseCandidateDelete({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+/**
+ * Accept a candidate — flip its reviewState to `accepted`, promote
+ * its code to the line's `selectedHtsCode`, advance the line's
+ * `classificationState` to `"selected"`.
+ */
+export const importCaseCandidateAcceptMutation = (
+  options?: Partial<Options<ImportCaseCandidateAcceptDataT>>,
+): UseMutationOptions<
+  ImportCaseCandidateAcceptResponseT,
+  ImportCaseCandidateAcceptErrorT,
+  Options<ImportCaseCandidateAcceptDataT>
+> => {
+  const mutationOptions: UseMutationOptions<
+    ImportCaseCandidateAcceptResponseT,
+    ImportCaseCandidateAcceptErrorT,
+    Options<ImportCaseCandidateAcceptDataT>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await importCaseCandidateAccept({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+/**
+ * Reject a candidate. Does not touch the line's selected code: a
+ * rejected candidate may happen to be the currently-selected one;
+ * the FE handles the "clear selection" affordance.
+ */
+export const importCaseCandidateRejectMutation = (
+  options?: Partial<Options<ImportCaseCandidateRejectDataT>>,
+): UseMutationOptions<
+  ImportCaseCandidateRejectResponseT,
+  ImportCaseCandidateRejectErrorT,
+  Options<ImportCaseCandidateRejectDataT>
+> => {
+  const mutationOptions: UseMutationOptions<
+    ImportCaseCandidateRejectResponseT,
+    ImportCaseCandidateRejectErrorT,
+    Options<ImportCaseCandidateRejectDataT>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await importCaseCandidateReject({
         ...options,
         ...fnOptions,
         throwOnError: true,

@@ -10,6 +10,8 @@ interface RailCaseItemPropsT {
   title: string;
   when: string;
   status: CaseStatusChipValueT;
+  /** Count of unclassified line items (Phase 11 surface). 0 hides the chip. */
+  unclassifiedLineCount: number;
   active?: boolean;
   onClick?: () => void;
 }
@@ -25,6 +27,14 @@ export function RailCaseItem(props: Readonly<RailCaseItemPropsT>) {
         <span {...sx(s.title, props.active && s.titleActive)}>
           {props.title}
         </span>
+        {props.unclassifiedLineCount > 0 && (
+          <span
+            {...sx(s.unclassifiedChip)}
+            aria-label={`${props.unclassifiedLineCount.toString()} unclassified lines`}
+          >
+            {props.unclassifiedLineCount}
+          </span>
+        )}
       </span>
       <span {...sx(s.meta)}>
         <CaseStatusChip status={props.status} />
@@ -85,5 +95,16 @@ const s = stylex.create({
     color: colors.ink4,
     fontSize: 11,
     fontVariantNumeric: "tabular-nums",
+  },
+  unclassifiedChip: {
+    padding: "0 6px",
+    borderRadius: radii.sm,
+    backgroundColor: colors.warnSoft,
+    color: colors.warn,
+    fontFamily: fonts.mono,
+    fontSize: 10.5,
+    fontVariantNumeric: "tabular-nums",
+    fontWeight: 600,
+    lineHeight: 1.6,
   },
 });

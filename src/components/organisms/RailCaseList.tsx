@@ -58,6 +58,7 @@ export function RailCaseList() {
             title={c.title}
             status={asChipValue(c.status)}
             when={formatWhen(c.updatedAt, tweaks.lang)}
+            unclassifiedLineCount={c.unclassifiedLineCount}
             active={c.id === activeId}
             onClick={() => {
               onPick(c.id);

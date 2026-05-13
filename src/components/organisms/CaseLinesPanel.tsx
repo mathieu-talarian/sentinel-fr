@@ -11,6 +11,7 @@ import { useState } from "react";
 import { Button } from "@/components/atoms/Button";
 import { FieldLabel } from "@/components/atoms/FieldLabel";
 import { Textarea } from "@/components/atoms/Textarea";
+import { BulkClassifyBar } from "@/components/molecules/BulkClassifyBar";
 import { CaseLineItemRow } from "@/components/molecules/CaseLineItemRow";
 import { ErrorBanner } from "@/components/molecules/ErrorBanner";
 import {
@@ -116,6 +117,10 @@ export function CaseLinesPanel(props: Readonly<CaseLinesPanelPropsT>) {
     deleteLine.mutate({ path: { caseId: case_.id, lineId } });
   };
 
+  const unclassifiedCount = case_.lineItems.filter(
+    (l) => l.classificationState === "unclassified",
+  ).length;
+
   const sortedLines = case_.lineItems.toSorted(
     (a, b) => a.position - b.position,
   );
@@ -123,6 +128,13 @@ export function CaseLinesPanel(props: Readonly<CaseLinesPanelPropsT>) {
   return (
     <div {...sx(s.panel)}>
       {error && <ErrorBanner message={error} />}
+
+      <BulkClassifyBar
+        caseId={case_.id}
+        unclassifiedCount={unclassifiedCount}
+        isReadOnly={isReadOnly}
+        onError={setError}
+      />
 
       {sortedLines.length === 0 ? (
         <p {...sx(s.empty)}>

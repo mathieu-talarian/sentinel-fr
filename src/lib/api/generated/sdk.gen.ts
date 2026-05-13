@@ -6,6 +6,9 @@ import * as z from "zod";
 import type { Client, Options as Options2, TDataShape } from "./client";
 import { client } from "./client.gen";
 import type {
+  AdminLlmUsageDataT,
+  AdminLlmUsageErrorsT,
+  AdminLlmUsageResponsesT,
   AdminRefreshTriggerDataT,
   AdminRefreshTriggerErrorsT,
   AdminRefreshTriggerResponsesT,
@@ -49,6 +52,18 @@ import type {
   ImportCaseAddLineItemDataT,
   ImportCaseAddLineItemErrorsT,
   ImportCaseAddLineItemResponsesT,
+  ImportCaseCandidateAcceptDataT,
+  ImportCaseCandidateAcceptErrorsT,
+  ImportCaseCandidateAcceptResponsesT,
+  ImportCaseCandidateDeleteDataT,
+  ImportCaseCandidateDeleteErrorsT,
+  ImportCaseCandidateDeleteResponsesT,
+  ImportCaseCandidateRejectDataT,
+  ImportCaseCandidateRejectErrorsT,
+  ImportCaseCandidateRejectResponsesT,
+  ImportCaseCandidatesListDataT,
+  ImportCaseCandidatesListErrorsT,
+  ImportCaseCandidatesListResponsesT,
   ImportCaseChatDataT,
   ImportCaseChatErrorsT,
   ImportCaseChatResponsesT,
@@ -56,6 +71,9 @@ import type {
   ImportCaseChatStreamErrorsT,
   ImportCaseChatStreamResponsesT,
   ImportCaseChatStreamResponseT,
+  ImportCaseClassifyBulkDataT,
+  ImportCaseClassifyBulkErrorsT,
+  ImportCaseClassifyBulkResponsesT,
   ImportCaseCreateDataT,
   ImportCaseCreateErrorsT,
   ImportCaseCreateResponsesT,
@@ -128,6 +146,8 @@ import type {
   WatchSubscribeResponsesT,
 } from "./types.gen";
 import {
+  zAdminLlmUsageQuery,
+  zAdminLlmUsageResponse,
   zAdminRefreshTriggerResponse,
   zAuthMeResponse,
   zCatalogStatsResponse2,
@@ -159,6 +179,14 @@ import {
   zImportCaseAddLineItemBody,
   zImportCaseAddLineItemPath,
   zImportCaseAddLineItemResponse,
+  zImportCaseCandidateAcceptPath,
+  zImportCaseCandidateAcceptResponse,
+  zImportCaseCandidateDeletePath,
+  zImportCaseCandidateDeleteResponse,
+  zImportCaseCandidateRejectPath,
+  zImportCaseCandidateRejectResponse,
+  zImportCaseCandidatesListPath,
+  zImportCaseCandidatesListResponse,
   zImportCaseChatBody,
   zImportCaseChatPath,
   zImportCaseChatQuery,
@@ -167,6 +195,9 @@ import {
   zImportCaseChatStreamPath,
   zImportCaseChatStreamQuery,
   zImportCaseChatStreamResponse,
+  zImportCaseClassifyBulkBody,
+  zImportCaseClassifyBulkPath,
+  zImportCaseClassifyBulkResponse,
   zImportCaseCreateBody,
   zImportCaseCreateResponse,
   zImportCaseDeleteLineItemPath,
@@ -238,6 +269,34 @@ export type Options<
    */
   meta?: Record<string, unknown>;
 };
+
+/**
+ * LLM cost report — token spend aggregated by (provider, model)
+ * over a window. Phase 11. Owner-gated to any authenticated user
+ * (same model as `/admin/refresh`); pivot to a custom Firebase
+ * claim if/when a multi-tenant ACL is needed.
+ */
+export const adminLlmUsage = <ThrowOnError extends boolean = false>(
+  options?: Options<AdminLlmUsageDataT, ThrowOnError>,
+) =>
+  (options?.client ?? client).get<
+    AdminLlmUsageResponsesT,
+    AdminLlmUsageErrorsT,
+    ThrowOnError
+  >({
+    requestValidator: async (data) =>
+      await z
+        .object({
+          body: z.never().optional(),
+          path: z.never().optional(),
+          query: zAdminLlmUsageQuery.optional(),
+        })
+        .parseAsync(data),
+    responseValidator: async (data) =>
+      await zAdminLlmUsageResponse.parseAsync(data),
+    url: "/admin/llm-usage",
+    ...options,
+  });
 
 /**
  * Dispatch a manual catalog refresh.
@@ -868,6 +927,35 @@ export const importCaseChatStream = <ThrowOnError extends boolean = false>(
   });
 
 /**
+ * Bulk-classify a subset of the case's line items.
+ */
+export const importCaseClassifyBulk = <ThrowOnError extends boolean = false>(
+  options: Options<ImportCaseClassifyBulkDataT, ThrowOnError>,
+) =>
+  (options.client ?? client).post<
+    ImportCaseClassifyBulkResponsesT,
+    ImportCaseClassifyBulkErrorsT,
+    ThrowOnError
+  >({
+    requestValidator: async (data) =>
+      await z
+        .object({
+          body: zImportCaseClassifyBulkBody,
+          path: zImportCaseClassifyBulkPath,
+          query: z.never().optional(),
+        })
+        .parseAsync(data),
+    responseValidator: async (data) =>
+      await zImportCaseClassifyBulkResponse.parseAsync(data),
+    url: "/import-cases/{caseId}/classify",
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });
+
+/**
  * Compute and persist a landed-cost quote for an import case.
  */
 export const importCaseQuoteCreate = <ThrowOnError extends boolean = false>(
@@ -1027,6 +1115,110 @@ export const importCasePatchLineItem = <ThrowOnError extends boolean = false>(
       "Content-Type": "application/json",
       ...options.headers,
     },
+  });
+
+/**
+ * List candidates for one line, newest-first.
+ */
+export const importCaseCandidatesList = <ThrowOnError extends boolean = false>(
+  options: Options<ImportCaseCandidatesListDataT, ThrowOnError>,
+) =>
+  (options.client ?? client).get<
+    ImportCaseCandidatesListResponsesT,
+    ImportCaseCandidatesListErrorsT,
+    ThrowOnError
+  >({
+    requestValidator: async (data) =>
+      await z
+        .object({
+          body: z.never().optional(),
+          path: zImportCaseCandidatesListPath,
+          query: z.never().optional(),
+        })
+        .parseAsync(data),
+    responseValidator: async (data) =>
+      await zImportCaseCandidatesListResponse.parseAsync(data),
+    url: "/import-cases/{caseId}/line-items/{lineId}/candidates",
+    ...options,
+  });
+
+/**
+ * Hard-delete a candidate.
+ */
+export const importCaseCandidateDelete = <ThrowOnError extends boolean = false>(
+  options: Options<ImportCaseCandidateDeleteDataT, ThrowOnError>,
+) =>
+  (options.client ?? client).delete<
+    ImportCaseCandidateDeleteResponsesT,
+    ImportCaseCandidateDeleteErrorsT,
+    ThrowOnError
+  >({
+    requestValidator: async (data) =>
+      await z
+        .object({
+          body: z.never().optional(),
+          path: zImportCaseCandidateDeletePath,
+          query: z.never().optional(),
+        })
+        .parseAsync(data),
+    responseValidator: async (data) =>
+      await zImportCaseCandidateDeleteResponse.parseAsync(data),
+    url: "/import-cases/{caseId}/line-items/{lineId}/candidates/{candidateId}",
+    ...options,
+  });
+
+/**
+ * Accept a candidate — flip its reviewState to `accepted`, promote
+ * its code to the line's `selectedHtsCode`, advance the line's
+ * `classificationState` to `"selected"`.
+ */
+export const importCaseCandidateAccept = <ThrowOnError extends boolean = false>(
+  options: Options<ImportCaseCandidateAcceptDataT, ThrowOnError>,
+) =>
+  (options.client ?? client).post<
+    ImportCaseCandidateAcceptResponsesT,
+    ImportCaseCandidateAcceptErrorsT,
+    ThrowOnError
+  >({
+    requestValidator: async (data) =>
+      await z
+        .object({
+          body: z.never().optional(),
+          path: zImportCaseCandidateAcceptPath,
+          query: z.never().optional(),
+        })
+        .parseAsync(data),
+    responseValidator: async (data) =>
+      await zImportCaseCandidateAcceptResponse.parseAsync(data),
+    url: "/import-cases/{caseId}/line-items/{lineId}/candidates/{candidateId}/accept",
+    ...options,
+  });
+
+/**
+ * Reject a candidate. Does not touch the line's selected code: a
+ * rejected candidate may happen to be the currently-selected one;
+ * the FE handles the "clear selection" affordance.
+ */
+export const importCaseCandidateReject = <ThrowOnError extends boolean = false>(
+  options: Options<ImportCaseCandidateRejectDataT, ThrowOnError>,
+) =>
+  (options.client ?? client).post<
+    ImportCaseCandidateRejectResponsesT,
+    ImportCaseCandidateRejectErrorsT,
+    ThrowOnError
+  >({
+    requestValidator: async (data) =>
+      await z
+        .object({
+          body: z.never().optional(),
+          path: zImportCaseCandidateRejectPath,
+          query: z.never().optional(),
+        })
+        .parseAsync(data),
+    responseValidator: async (data) =>
+      await zImportCaseCandidateRejectResponse.parseAsync(data),
+    url: "/import-cases/{caseId}/line-items/{lineId}/candidates/{candidateId}/reject",
+    ...options,
   });
 
 /**

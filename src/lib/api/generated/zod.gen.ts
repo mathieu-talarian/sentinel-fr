@@ -39,6 +39,67 @@ export const zAttachRulingBody = z.object({
   supportsSelectedCode: z.string(),
 });
 
+export const zBulkClassifyBody = z.object({
+  attachCandidates: z.boolean().optional(),
+  autoSelectThreshold: z.number().nullish(),
+  lang: z.string().nullish(),
+  lineIds: z.array(z.string()).nullish(),
+  onlyUnclassified: z.boolean().optional(),
+  provider: z.string().nullish(),
+});
+
+export const zCandidateReviewSummary = z.object({
+  accepted: z.coerce
+    .bigint()
+    .min(BigInt("-9223372036854775808"), {
+      error: "Invalid value: Expected int64 to be >= -9223372036854775808",
+    })
+    .max(BigInt("9223372036854775807"), {
+      error: "Invalid value: Expected int64 to be <= 9223372036854775807",
+    }),
+  pending: z.coerce
+    .bigint()
+    .min(BigInt("-9223372036854775808"), {
+      error: "Invalid value: Expected int64 to be >= -9223372036854775808",
+    })
+    .max(BigInt("9223372036854775807"), {
+      error: "Invalid value: Expected int64 to be <= 9223372036854775807",
+    }),
+  rejected: z.coerce
+    .bigint()
+    .min(BigInt("-9223372036854775808"), {
+      error: "Invalid value: Expected int64 to be >= -9223372036854775808",
+    })
+    .max(BigInt("9223372036854775807"), {
+      error: "Invalid value: Expected int64 to be <= 9223372036854775807",
+    }),
+  total: z.coerce
+    .bigint()
+    .min(BigInt("-9223372036854775808"), {
+      error: "Invalid value: Expected int64 to be >= -9223372036854775808",
+    })
+    .max(BigInt("9223372036854775807"), {
+      error: "Invalid value: Expected int64 to be <= 9223372036854775807",
+    }),
+});
+
+export const zCandidateView = z.object({
+  code: z.string(),
+  createdAt: z.iso.datetime(),
+  description: z.record(z.string(), z.unknown()).nullish(),
+  id: z.string(),
+  lineItemId: z.string(),
+  reviewState: z.string(),
+  score: z.number().nullish(),
+  source: z.string(),
+  toolResult: z.record(z.string(), z.unknown()).nullish(),
+});
+
+export const zCandidateListResponse = z.object({
+  candidates: z.array(zCandidateView),
+  lineItemId: z.string(),
+});
+
 /**
  * One entry in a `casePatchSuggestion` event.
  *
@@ -273,6 +334,7 @@ export const zHtsCodeForms = z.object({
 });
 
 export const zImportCaseLineItemResponse = z.object({
+  candidateSummary: zCandidateReviewSummary,
   caseId: z.string(),
   classificationState: z.string(),
   countryOfOrigin: z.string().nullish(),
@@ -327,6 +389,14 @@ export const zImportCaseSummary = z.object({
   referenceDate: z.iso.date(),
   status: z.string(),
   title: z.string(),
+  unclassifiedLineCount: z.coerce
+    .bigint()
+    .min(BigInt("-9223372036854775808"), {
+      error: "Invalid value: Expected int64 to be >= -9223372036854775808",
+    })
+    .max(BigInt("9223372036854775807"), {
+      error: "Invalid value: Expected int64 to be <= 9223372036854775807",
+    }),
   updatedAt: z.iso.datetime(),
 });
 
@@ -380,6 +450,49 @@ export const zLandedCostRow = z.object({
   kind: z.string().nullish(),
   label: z.string(),
   sub: z.string().nullish(),
+});
+
+export const zLlmUsageRow = z.object({
+  cachedInputTokens: z.coerce
+    .bigint()
+    .min(BigInt("-9223372036854775808"), {
+      error: "Invalid value: Expected int64 to be >= -9223372036854775808",
+    })
+    .max(BigInt("9223372036854775807"), {
+      error: "Invalid value: Expected int64 to be <= 9223372036854775807",
+    }),
+  inputTokens: z.coerce
+    .bigint()
+    .min(BigInt("-9223372036854775808"), {
+      error: "Invalid value: Expected int64 to be >= -9223372036854775808",
+    })
+    .max(BigInt("9223372036854775807"), {
+      error: "Invalid value: Expected int64 to be <= 9223372036854775807",
+    }),
+  model: z.string(),
+  outputTokens: z.coerce
+    .bigint()
+    .min(BigInt("-9223372036854775808"), {
+      error: "Invalid value: Expected int64 to be >= -9223372036854775808",
+    })
+    .max(BigInt("9223372036854775807"), {
+      error: "Invalid value: Expected int64 to be <= 9223372036854775807",
+    }),
+  provider: z.string(),
+  totalTokens: z.coerce
+    .bigint()
+    .min(BigInt("-9223372036854775808"), {
+      error: "Invalid value: Expected int64 to be >= -9223372036854775808",
+    })
+    .max(BigInt("9223372036854775807"), {
+      error: "Invalid value: Expected int64 to be <= 9223372036854775807",
+    }),
+});
+
+export const zLlmUsageResponse = z.object({
+  from: z.iso.datetime(),
+  rows: z.array(zLlmUsageRow),
+  to: z.iso.datetime(),
 });
 
 export const zLocalizedDescription = z.object({
@@ -577,6 +690,29 @@ export const zClassifyLineResponse = z.object({
   lineItemId: z.string(),
   provider: z.string(),
   selected: zSelectedClassification,
+});
+
+export const zBulkClassifyLineResult = z.union([
+  z.object({
+    line_item_id: z.string(),
+    result: zClassifyLineResponse,
+    status: z.enum(["ok"]),
+  }),
+  z.object({
+    line_item_id: z.string(),
+    reason: z.string(),
+    status: z.enum(["skipped"]),
+  }),
+  z.object({
+    error: z.string(),
+    line_item_id: z.string(),
+    status: z.enum(["failed"]),
+  }),
+]);
+
+export const zBulkClassifyResponse = z.object({
+  provider: z.string(),
+  results: z.array(zBulkClassifyLineResult),
 });
 
 export const zSourceRef = z.object({
@@ -942,6 +1078,16 @@ export const zWatchSubscribeResponse = z.object({
   subscriptions: z.array(zWatchSubscriptionView),
 });
 
+export const zAdminLlmUsageQuery = z.object({
+  from: z.string().nullish(),
+  to: z.string().nullish(),
+});
+
+/**
+ * Per-provider token aggregation
+ */
+export const zAdminLlmUsageResponse = zLlmUsageResponse;
+
 /**
  * Refresh queued
  */
@@ -1025,6 +1171,7 @@ export const zConversationsListQuery = z.object({
     })
     .nullish(),
   cursor: z.string().nullish(),
+  caseId: z.string().nullish(),
 });
 
 /**
@@ -1163,6 +1310,17 @@ export const zImportCaseChatStreamQuery = z.object({
  */
 export const zImportCaseChatStreamResponse = zChatChunk;
 
+export const zImportCaseClassifyBulkBody = zBulkClassifyBody;
+
+export const zImportCaseClassifyBulkPath = z.object({
+  caseId: z.string(),
+});
+
+/**
+ * Bulk classification results
+ */
+export const zImportCaseClassifyBulkResponse = zBulkClassifyResponse;
+
 export const zImportCaseQuoteCreateBody = zCreateQuoteBody;
 
 export const zImportCaseQuoteCreatePath = z.object({
@@ -1236,6 +1394,49 @@ export const zImportCasePatchLineItemPath = z.object({
  * Patched line item
  */
 export const zImportCasePatchLineItemResponse = zImportCaseLineItemResponse;
+
+export const zImportCaseCandidatesListPath = z.object({
+  caseId: z.string(),
+  lineId: z.string(),
+});
+
+/**
+ * Candidate list
+ */
+export const zImportCaseCandidatesListResponse = zCandidateListResponse;
+
+export const zImportCaseCandidateDeletePath = z.object({
+  caseId: z.string(),
+  lineId: z.string(),
+  candidateId: z.string(),
+});
+
+/**
+ * Candidate deleted
+ */
+export const zImportCaseCandidateDeleteResponse = z.void();
+
+export const zImportCaseCandidateAcceptPath = z.object({
+  caseId: z.string(),
+  lineId: z.string(),
+  candidateId: z.string(),
+});
+
+/**
+ * Updated candidate
+ */
+export const zImportCaseCandidateAcceptResponse = zCandidateView;
+
+export const zImportCaseCandidateRejectPath = z.object({
+  caseId: z.string(),
+  lineId: z.string(),
+  candidateId: z.string(),
+});
+
+/**
+ * Updated candidate
+ */
+export const zImportCaseCandidateRejectResponse = zCandidateView;
 
 export const zImportCaseLineClassifyBody = zClassifyLineBody;
 
