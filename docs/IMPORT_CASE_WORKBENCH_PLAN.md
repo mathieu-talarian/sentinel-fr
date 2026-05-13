@@ -15,21 +15,21 @@ This doc is the frontend-side mirror: which existing files change, which new fil
 
 Snapshot of what's shipped against this plan. Tied to backend rollout.
 
-| Phase  | Backend dep      | FE status   | Notes                                                                                                                                                                            |
-| ------ | ---------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0      | none             | **done**    | `FEATURE_CASE_WORKBENCH_ENV` defaults to **on**. Legacy chat surface deleted; the env var is preserved as a future rollback hook but is a runtime no-op now.                     |
-| 1      | Step 1 (fees)    | **done**    | Backend exposed structured surcharges (not fee-schedule metadata); FE renders them with source attribution. See §1.1 for what shipped vs plan.                                   |
-| 2      | Step 2 (cases)   | **done**    | Wire-type aliases, `casesSlice` (`activeCaseId` only), facade (`useCases`, `useActiveCase`, …), `selectCaseStatus` selector. See §1.2.                                           |
-| 3      | Step 2           | **done**    | `/cases`, `/cases/new`, `/cases/$caseId` routes. `Rail` flag-aware. `RailCaseList` + `RailCaseItem` + `CaseStatusChip` + `NewCaseForm`. See §1.3.                                |
-| 4      | + classify       | **done**    | `CaseInspector` (Radix Tabs) + `CaseFactsPanel` (PATCH-on-blur) + `CaseLinesPanel` (add/remove + per-line `importCaseLineClassify`). See §1.4.                                   |
-| 5      | Step 3 (quotes)  | **done**    | `CaseQuotePanel` (run / re-run / latest), `QuoteSummaryTable`, `QuoteLineRow` (expandable + surcharges + caveats), `FeeRow`. See §1.5.                                           |
-| 6      | Step 4 (chat)    | **done**    | Keyed `chatSlice` (per-thread), `streamChat` `caseId` routing, `casePatchSuggestion` → `CasePatchTray`, `CaseChatSurface`. See §1.7.                                             |
-| 7      | Step 5 (risk)    | **done**    | `CaseRiskPanel` (`importCaseRiskScreen*`), `RiskFlagRow` + severity tokens, "Cost estimate only" gate in `CaseQuotePanel`. See §1.8.                                             |
-| 8      | Step 6 (rulings) | **done**    | `CaseEvidencePanel` (supports / conflicts / reference groups), `CaseRulingCard`, `RulingsSearchDialog` (Radix). See §1.9.                                                        |
-| 9      | none             | **partial** | Workbench header now uses `selectCaseStatus(case, risk)` + Archive/Unarchive button. Sentry tags via `mutation.meta`. See §1.10 for ops deferrals.                               |
-| polish | none             | **done**    | Click-to-scroll missing-fact chips, ruling refresh, ruling attach pin+note, quote history dropdown. See §1.12.                                                                   |
-| diff   | none             | **done**    | Side-by-side quote diff (paired-row variants for summary / lines / entry fees, signed Δ$ + Δ% tinted by direction). See §1.13.                                                   |
-| 10/11  | Phases 10–11     | **done**    | Bulk classify + unclassified chip, candidate review dialog, conversations-on-case rail, LLM usage widget. Thread switching + `casePatchSuggestion` rehydration shipped in §1.15. |
+| Phase  | Backend dep      | FE status | Notes                                                                                                                                                                                                |
+| ------ | ---------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0      | none             | **done**  | `FEATURE_CASE_WORKBENCH_ENV` defaults to **on**. Legacy chat surface deleted; the env var is preserved as a future rollback hook but is a runtime no-op now.                                         |
+| 1      | Step 1 (fees)    | **done**  | Backend exposed structured surcharges (not fee-schedule metadata); FE renders them with source attribution. See §1.1 for what shipped vs plan.                                                       |
+| 2      | Step 2 (cases)   | **done**  | Wire-type aliases, `casesSlice` (`activeCaseId` only), facade (`useCases`, `useActiveCase`, …), `selectCaseStatus` selector. See §1.2.                                                               |
+| 3      | Step 2           | **done**  | `/cases`, `/cases/new`, `/cases/$caseId` routes. `Rail` flag-aware. `RailCaseList` + `RailCaseItem` + `CaseStatusChip` + `NewCaseForm`. See §1.3.                                                    |
+| 4      | + classify       | **done**  | `CaseInspector` (Radix Tabs) + `CaseFactsPanel` (PATCH-on-blur) + `CaseLinesPanel` (add/remove + per-line `importCaseLineClassify`). See §1.4.                                                       |
+| 5      | Step 3 (quotes)  | **done**  | `CaseQuotePanel` (run / re-run / latest), `QuoteSummaryTable`, `QuoteLineRow` (expandable + surcharges + caveats), `FeeRow`. See §1.5.                                                               |
+| 6      | Step 4 (chat)    | **done**  | Keyed `chatSlice` (per-thread), `streamChat` `caseId` routing, `casePatchSuggestion` → `CasePatchTray`, `CaseChatSurface`. See §1.7.                                                                 |
+| 7      | Step 5 (risk)    | **done**  | `CaseRiskPanel` (`importCaseRiskScreen*`), `RiskFlagRow` + severity tokens, "Cost estimate only" gate in `CaseQuotePanel`. See §1.8.                                                                 |
+| 8      | Step 6 (rulings) | **done**  | `CaseEvidencePanel` (supports / conflicts / reference groups), `CaseRulingCard`, `RulingsSearchDialog` (Radix). See §1.9.                                                                            |
+| 9      | none             | **done**  | Workbench header `selectCaseStatus(case, risk)` + Archive/Unarchive + Sentry case tags. Flag flip + `/` demote shipped in §1.11; French copy pass stays deferred until an i18n lib lands. See §1.10. |
+| polish | none             | **done**  | Click-to-scroll missing-fact chips, ruling refresh, ruling attach pin+note, quote history dropdown. See §1.12.                                                                                       |
+| diff   | none             | **done**  | Side-by-side quote diff (paired-row variants for summary / lines / entry fees, signed Δ$ + Δ% tinted by direction). See §1.13.                                                                       |
+| 10/11  | Phases 10–11     | **done**  | Bulk classify + unclassified chip, candidate review dialog, conversations-on-case rail, LLM usage widget. Thread switching + `casePatchSuggestion` rehydration shipped in §1.15.                     |
 
 Cross-cutting work landed alongside Phase 1 (not tied to any single workbench phase):
 
@@ -262,9 +262,7 @@ The Phase 9 flag flip made the legacy chat unreachable at runtime; this cleanup 
 
 Net: 18 deleted files, ~1500 fewer lines of FE code, single mounted chat path (case-aware) site-wide. The `LEGACY_THREAD_ID` constant + `FEATURE_CASE_WORKBENCH_ENV` env hook are the two intentional stubs left behind so a future scratchpad / rollback mode can grow back without re-introducing plumbing.
 
-Smaller deferrals still pending across Phases 4-8 (intentionally not pulled into Phase 9):
-
-- `CaseTimeline` chronological merge in `CaseChatSurface`.
+No standing FE deferrals after Phase 11. The French copy pass remains the only intentional defer — see §1.10 — and only kicks in once an i18n lib lands.
 
 ### 1.12 Polish batch — what shipped
 
@@ -317,6 +315,20 @@ Backend Phase 12 exposed the markers as a dedicated `ConversationMessage.casePat
 - **`RailCaseConversations` click.** Now an active button per row that dispatches `loadConversation(activeCaseId, c.id)`. The currently-loaded conversation is marked active by reading `chat.threads[activeCaseId].conversationId` — same source-of-truth the `sendChat` thunk writes on each `turnStart` chunk, so a freshly-streamed conversation also lights up the matching row once its id arrives.
 - **Wholesale replace vs merge.** Loading a past conversation discards any unsent draft state in the thread (the composer state lives in component-local `useState`, not the slice). The persisted transcript is settled, so merging into a half-streamed live state would just leave the UI inconsistent. Re-picking the live conversation no-ops at the start of the thunk (`existing?.conversationId === conversationId`).
 - **Codegen.** Phase 12 isn't deployed to Cloud Run yet, so a one-off `OPENAPI_URL=file://…/openapi.snapshot.json yarn run gen:api` pulled the new types (`CasePatchSuggestionViewT`, `ConversationMessageT.casePatchSuggestions`). Once the next backend deploy lands, the cloud spec will carry them and routine regens will work without the override.
+
+### 1.16 `CaseTimeline` chronological merge
+
+The last carried deferral from Phase 6. `CaseTimeline` (new organism, mounted at the top of `CaseChatSurface` above the chat thread) renders a unified, time-ordered activity strip for the case:
+
+- **Quote captures** — one row per quote from `importCaseQuoteListOptions`, labelled with `formatUsd(landedCostUsd)`.
+- **Risk screens** — latest screen from `importCaseRiskScreenLatestOptions` (the wire only exposes the latest; older screens aren't listed). Tone follows the screen's status (`clear` → ok, `needsReview` → warn, `incomplete` → info) and detail shows the flag count when non-zero.
+- **Ruling attachments** — one row per entry in `case.rulings`, labelled with the ruling number; tone follows the user's verdict on whether the ruling supports the line's selected code (`yes` → ok, `no` → err, `unknown` → info).
+
+Entries are sorted descending by `capturedAt`. The first five render by default with a "Show N more" toggle; collapsed → expanded → collapsed. Each row is a click-target that calls `onJumpToTab(tab)` to navigate the inspector to the relevant tab (`quote` / `risks` / `evidence`) — `cases.$caseId.tsx` passes the existing `onTabChange` through `CaseChatSurface`.
+
+Chat messages stay in `ChatThread` rather than being interleaved with events: live messages don't carry timestamps in the FE shape (`UserMessageDataT` / `AssistantMessageDataT` have no `createdAt`; only `thinkingStartedAt` and the per-call `startedAt`), and a single chat thread is already temporally ordered by definition. The timeline strip sits above it so the user sees what's happened to the case alongside the active conversation, without conflating the two.
+
+`CaseTimelineItem` (new molecule) renders one row with an icon swatch, a one-line label + optional mono-tinted detail, and a relative-date suffix via the shared `formatRelativeDays` / `formatMonthDay` helpers. When `onClick` is omitted (e.g. there's no inspector tab for the event), it falls back to a static `<article>`.
 
 ## 2. Constraints
 

@@ -1,3 +1,4 @@
+import type { CaseInspectorTabT } from "@/components/organisms/CaseInspector";
 import type { ImportCaseResponseT } from "@/lib/api/generated/types.gen";
 
 import * as stylex from "@stylexjs/stylex";
@@ -6,6 +7,7 @@ import { useRef, useState } from "react";
 import { UserBubble } from "@/components/molecules/UserBubble";
 import { AssistantMessage } from "@/components/organisms/AssistantMessage";
 import { CasePatchTray } from "@/components/organisms/CasePatchTray";
+import { CaseTimeline } from "@/components/organisms/CaseTimeline";
 import { ChatThread } from "@/components/organisms/ChatThread";
 import { Composer } from "@/components/organisms/Composer";
 import { useChatStore } from "@/lib/state/chatStore";
@@ -16,6 +18,8 @@ import { borders, colors, fonts, radii } from "@/lib/styles/tokens.stylex";
 interface CaseChatSurfacePropsT {
   case_: ImportCaseResponseT;
   isReadOnly: boolean;
+  /** Jump to an inspector tab — wired from the route which owns the tab. */
+  onJumpToTab?: (tab: CaseInspectorTabT) => void;
 }
 
 /**
@@ -44,6 +48,8 @@ export function CaseChatSurface(props: Readonly<CaseChatSurfacePropsT>) {
 
   return (
     <>
+      <CaseTimeline case_={case_} onJumpToTab={props.onJumpToTab} />
+
       {isEmpty ? (
         <section {...sx(s.empty)}>
           <h2 {...sx(s.emptyTitle)}>Ask the assistant about this case</h2>

@@ -133,7 +133,11 @@ function CaseWorkbenchPage() {
               case_={data}
               onFieldClick={onMissingFieldClick}
             />
-            <CaseChatSurface case_={data} isReadOnly={isReadOnly} />
+            <CaseChatSurface
+              case_={data}
+              isReadOnly={isReadOnly}
+              onJumpToTab={onTabChange}
+            />
           </>
         )}
       </main>
