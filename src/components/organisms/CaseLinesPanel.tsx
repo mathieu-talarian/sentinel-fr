@@ -14,6 +14,7 @@ import { Textarea } from "@/components/atoms/Textarea";
 import { BulkClassifyBar } from "@/components/molecules/BulkClassifyBar";
 import { CaseLineItemRow } from "@/components/molecules/CaseLineItemRow";
 import { ErrorBanner } from "@/components/molecules/ErrorBanner";
+import { CandidatesReviewDialog } from "@/components/organisms/CandidatesReviewDialog";
 import {
   importCaseAddLineItemMutation,
   importCaseDeleteLineItemMutation,
@@ -51,6 +52,7 @@ export function CaseLinesPanel(props: Readonly<CaseLinesPanelPropsT>) {
   const [newDescription, setNewDescription] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [classifyingId, setClassifyingId] = useState<string | null>(null);
+  const [reviewLineId, setReviewLineId] = useState<string | null>(null);
 
   const invalidateCase = () =>
     queryClient.invalidateQueries({ queryKey: caseQueryKey });
@@ -156,9 +158,26 @@ export function CaseLinesPanel(props: Readonly<CaseLinesPanelPropsT>) {
               onRemove={() => {
                 onRemove(line.id);
               }}
+              onReviewCandidates={() => {
+                setReviewLineId(line.id);
+              }}
             />
           ))}
         </ul>
+      )}
+
+      {reviewLineId && (
+        <CandidatesReviewDialog
+          caseId={case_.id}
+          line={
+            sortedLines.find((l) => l.id === reviewLineId) ?? sortedLines[0]
+          }
+          open
+          isReadOnly={isReadOnly}
+          onOpenChange={(open) => {
+            if (!open) setReviewLineId(null);
+          }}
+        />
       )}
 
       {!isReadOnly && (

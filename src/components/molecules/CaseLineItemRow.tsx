@@ -3,6 +3,7 @@ import type { ImportCaseLineItemResponseT } from "@/lib/api/generated/types.gen"
 import * as stylex from "@stylexjs/stylex";
 
 import { Button } from "@/components/atoms/Button";
+import { CandidateReviewChip } from "@/components/molecules/CandidateReviewChip";
 import { ClassificationStateChip } from "@/components/molecules/ClassificationStateChip";
 import { HtsCodeBadge } from "@/components/molecules/HtsCodeBadge";
 import { MissingFieldChip } from "@/components/molecules/MissingFieldChip";
@@ -19,6 +20,7 @@ interface CaseLineItemRowPropsT {
   isReadOnly: boolean;
   onClassify: () => void;
   onRemove: () => void;
+  onReviewCandidates: () => void;
 }
 
 export function CaseLineItemRow(props: Readonly<CaseLineItemRowPropsT>) {
@@ -59,6 +61,10 @@ export function CaseLineItemRow(props: Readonly<CaseLineItemRowPropsT>) {
             )}
           </span>
         )}
+        <CandidateReviewChip
+          summary={line.candidateSummary}
+          onClick={props.onReviewCandidates}
+        />
       </div>
 
       {missing.length > 0 && (
