@@ -9,6 +9,7 @@ import { borders, colors, fonts } from "@/lib/styles/tokens.stylex";
 import { AccountSection } from "./AccountSection";
 import { AppearanceSection } from "./AppearanceSection";
 import { BehaviourSection } from "./BehaviourSection";
+import { LlmUsageSection } from "./LlmUsageSection";
 
 // Injected by Vite's `define` from package.json — see vite.config.ts.
 declare const __APP_VERSION__: string;
@@ -54,6 +55,8 @@ export function TweaksPanel(props: Readonly<TweaksPanelPropsT>) {
           setTweaks({ inspectorAutoOpen });
         }}
       />
+
+      <LlmUsageSection />
 
       {accountEmail && (
         <AccountSection email={accountEmail} onSignedOut={close} />

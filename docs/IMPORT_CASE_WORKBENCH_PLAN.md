@@ -15,20 +15,21 @@ This doc is the frontend-side mirror: which existing files change, which new fil
 
 Snapshot of what's shipped against this plan. Tied to backend rollout.
 
-| Phase  | Backend dep      | FE status   | Notes                                                                                                                                                        |
-| ------ | ---------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 0      | none             | **done**    | `FEATURE_CASE_WORKBENCH_ENV` defaults to **on**. Legacy chat surface deleted; the env var is preserved as a future rollback hook but is a runtime no-op now. |
-| 1      | Step 1 (fees)    | **done**    | Backend exposed structured surcharges (not fee-schedule metadata); FE renders them with source attribution. See §1.1 for what shipped vs plan.               |
-| 2      | Step 2 (cases)   | **done**    | Wire-type aliases, `casesSlice` (`activeCaseId` only), facade (`useCases`, `useActiveCase`, …), `selectCaseStatus` selector. See §1.2.                       |
-| 3      | Step 2           | **done**    | `/cases`, `/cases/new`, `/cases/$caseId` routes. `Rail` flag-aware. `RailCaseList` + `RailCaseItem` + `CaseStatusChip` + `NewCaseForm`. See §1.3.            |
-| 4      | + classify       | **done**    | `CaseInspector` (Radix Tabs) + `CaseFactsPanel` (PATCH-on-blur) + `CaseLinesPanel` (add/remove + per-line `importCaseLineClassify`). See §1.4.               |
-| 5      | Step 3 (quotes)  | **done**    | `CaseQuotePanel` (run / re-run / latest), `QuoteSummaryTable`, `QuoteLineRow` (expandable + surcharges + caveats), `FeeRow`. See §1.5.                       |
-| 6      | Step 4 (chat)    | **done**    | Keyed `chatSlice` (per-thread), `streamChat` `caseId` routing, `casePatchSuggestion` → `CasePatchTray`, `CaseChatSurface`. See §1.7.                         |
-| 7      | Step 5 (risk)    | **done**    | `CaseRiskPanel` (`importCaseRiskScreen*`), `RiskFlagRow` + severity tokens, "Cost estimate only" gate in `CaseQuotePanel`. See §1.8.                         |
-| 8      | Step 6 (rulings) | **done**    | `CaseEvidencePanel` (supports / conflicts / reference groups), `CaseRulingCard`, `RulingsSearchDialog` (Radix). See §1.9.                                    |
-| 9      | none             | **partial** | Workbench header now uses `selectCaseStatus(case, risk)` + Archive/Unarchive button. Sentry tags via `mutation.meta`. See §1.10 for ops deferrals.           |
-| polish | none             | **done**    | Click-to-scroll missing-fact chips, ruling refresh, ruling attach pin+note, quote history dropdown. See §1.12.                                               |
-| diff   | none             | **done**    | Side-by-side quote diff (paired-row variants for summary / lines / entry fees, signed Δ$ + Δ% tinted by direction). See §1.13.                               |
+| Phase  | Backend dep      | FE status   | Notes                                                                                                                                                                                     |
+| ------ | ---------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0      | none             | **done**    | `FEATURE_CASE_WORKBENCH_ENV` defaults to **on**. Legacy chat surface deleted; the env var is preserved as a future rollback hook but is a runtime no-op now.                              |
+| 1      | Step 1 (fees)    | **done**    | Backend exposed structured surcharges (not fee-schedule metadata); FE renders them with source attribution. See §1.1 for what shipped vs plan.                                            |
+| 2      | Step 2 (cases)   | **done**    | Wire-type aliases, `casesSlice` (`activeCaseId` only), facade (`useCases`, `useActiveCase`, …), `selectCaseStatus` selector. See §1.2.                                                    |
+| 3      | Step 2           | **done**    | `/cases`, `/cases/new`, `/cases/$caseId` routes. `Rail` flag-aware. `RailCaseList` + `RailCaseItem` + `CaseStatusChip` + `NewCaseForm`. See §1.3.                                         |
+| 4      | + classify       | **done**    | `CaseInspector` (Radix Tabs) + `CaseFactsPanel` (PATCH-on-blur) + `CaseLinesPanel` (add/remove + per-line `importCaseLineClassify`). See §1.4.                                            |
+| 5      | Step 3 (quotes)  | **done**    | `CaseQuotePanel` (run / re-run / latest), `QuoteSummaryTable`, `QuoteLineRow` (expandable + surcharges + caveats), `FeeRow`. See §1.5.                                                    |
+| 6      | Step 4 (chat)    | **done**    | Keyed `chatSlice` (per-thread), `streamChat` `caseId` routing, `casePatchSuggestion` → `CasePatchTray`, `CaseChatSurface`. See §1.7.                                                      |
+| 7      | Step 5 (risk)    | **done**    | `CaseRiskPanel` (`importCaseRiskScreen*`), `RiskFlagRow` + severity tokens, "Cost estimate only" gate in `CaseQuotePanel`. See §1.8.                                                      |
+| 8      | Step 6 (rulings) | **done**    | `CaseEvidencePanel` (supports / conflicts / reference groups), `CaseRulingCard`, `RulingsSearchDialog` (Radix). See §1.9.                                                                 |
+| 9      | none             | **partial** | Workbench header now uses `selectCaseStatus(case, risk)` + Archive/Unarchive button. Sentry tags via `mutation.meta`. See §1.10 for ops deferrals.                                        |
+| polish | none             | **done**    | Click-to-scroll missing-fact chips, ruling refresh, ruling attach pin+note, quote history dropdown. See §1.12.                                                                            |
+| diff   | none             | **done**    | Side-by-side quote diff (paired-row variants for summary / lines / entry fees, signed Δ$ + Δ% tinted by direction). See §1.13.                                                            |
+| 10/11  | Phases 10–11     | **partial** | Bulk classify + unclassified chip, candidate review dialog, conversations-on-case rail (display), LLM usage widget. Thread switch + casePatchSuggestion rehydration deferred — see §1.14. |
 
 Cross-cutting work landed alongside Phase 1 (not tied to any single workbench phase):
 
@@ -286,6 +287,26 @@ Diff math lives in `src/lib/utils/quoteDiff.ts`: `computeDelta(selected, latest)
 Running a new quote (`Re-run quote`) clears `compareMode` and `selectedQuoteId` so the user lands on the fresh quote in regular mode. Navigating back to "Latest" in the dropdown also short-circuits compare mode via `effectiveCompareMode = compareMode && isHistorical`, so the diff render never collapses into identical Selected/Latest columns.
 
 To stay under the 250-line lint cap, the panel handed off three pieces: `formatCaptured` → `src/lib/utils/quoteCapture.ts`, the historical banner UI → `HistoricalQuoteBanner` molecule, and the render branching → `QuoteBody` molecule. Each is < 80 lines and independently testable.
+
+### 1.14 Phases 10-11 — what shipped vs the plan
+
+Backend Phases 10 and 11 introduced bulk classify, candidate review, per-case affordances on existing payloads, a case-scoped conversation filter, and the LLM usage report. FE pulled the new wire types via `gen:api` and landed four surfaces.
+
+- **Bulk classify.** `BulkClassifyBar` molecule (in `CaseLinesPanel`) calls `importCaseClassifyBulk` with `{ onlyUnclassified: true, attachCandidates: true }` via a fresh `AbortController` per click; the existing per-line `Classify` button still does the single-line path. Progress is a single spinner because the endpoint returns one envelope (5–60 s wall-clock by design); the user can hit Cancel mid-flight. After-run summary is a dashed banner showing `N classified · N skipped · N failed` plus the per-line `error` strings. Transport-level failures bubble through `onError` to the panel's `ErrorBanner`.
+- **`unclassifiedLineCount` chips.** `RailCaseItem` (rail) and `CaseIndexRow` (`/cases` index) both surface the count as a small warn-tinted pill; hidden when zero. The actual classify trigger lives inside the workbench (one click to open, one click to fire) instead of doubling up the button on every card.
+- **Candidate review surface.** New `CandidateReviewChip` molecule on each `CaseLineItemRow` surfaces `candidateSummary.{ pending, accepted, rejected }` as click-target pills (`total === 0` hides the chip). Clicking opens `CandidatesReviewDialog` (new organism, Radix Dialog), which lists candidates with Accept / Reject / Delete per row. The dialog uses a small `useCandidateReviewActions` hook for the four mutations + busy state so the component stays under the line-cap. When the user rejects the candidate whose code matches the line's current `selectedHtsCode`, a `ClearSelectionPrompt` banner appears with a "Clear selection" action that PATCHes the line to `{ selectedHtsCode: null, classificationState: "unclassified" }`. Reject never auto-clears — the user always confirms.
+- **Conversations on this case (display-only).** `RailCaseConversations` queries `conversationsList({ caseId })` whenever a case is active and renders a "Conversations on this case" rail section below the cases list. Each row shows the conversation title + a relative date. Rows aren't clickable yet — see deferral below.
+- **LLM cost widget.** `LlmUsageSection` in the Tweaks panel (between Behaviour and Account) queries `adminLlmUsage` with `from` / `to` defaulting to the last 30 days. Date range editable via two native `<input type="date">`s. Renders a horizontal stacked bar (one segment per provider, four-tone palette: ink / ok / warn / err) plus a per-provider table with token totals. No dollars (the wire only carries token counts).
+
+Already-shipped pieces from this batch that the prompt called out but didn't require new work:
+
+- **Ruling refresh.** Shipped in §1.12; `CaseRulingCard` exposes a Refresh button wired to `importCaseRulingRefresh` via `CaseEvidencePanel`.
+- **`casePatchSuggestion` SSE chunks.** Wire shape already matches §3.9 of the SSE protocol doc — `chatThunks.sendChat` routes the chunk into `casesSlice.pendingPatches` which `CasePatchTray` renders as reviewable chips. The wire `CasePatchT` has `op | path | value | reason` per the spec.
+
+Deferrals (server-side blocked):
+
+- **Thread switching on the conversations rail.** Clicking a past conversation isn't wired yet — that needs a `loadConversation` thunk that pulls `conversationGet` and maps `ConversationMessage` rows back into the FE's `MessageT` shape, including reconstructing the `calls` array from `toolCalls`.
+- **`casePatchSuggestion` rehydration.** The persisted marker entry in `tool_calls` jsonb has shape `{ kind: "casePatchSuggestion", patches, status }`, which doesn't satisfy the `ToolCallView` deserializer's required `id` / `tool` / `args` fields. The marker never reaches the FE through `conversationGet` today — see `crates/server/src/handlers/conversations.rs::parse_tool_calls`. Once the server-side mapping surfaces the markers (either as a separate field on `ConversationMessage` or as a recognised `ToolCallView` variant), the FE side becomes a small change inside `loadConversation`.
 
 ## 2. Constraints
 

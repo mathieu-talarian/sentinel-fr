@@ -10,6 +10,7 @@ import { useAuth } from "@/lib/state/auth";
 import { sx } from "@/lib/styles/sx";
 import { borders, colors } from "@/lib/styles/tokens.stylex";
 
+import { RailCaseConversations } from "./RailCaseConversations";
 import { RailCaseList } from "./RailCaseList";
 
 /**
@@ -30,6 +31,7 @@ export function Rail() {
         }}
       />
       <RailCaseList />
+      <RailCaseConversations />
       <RailFooter
         initial={auth.firebaseUser?.displayName?.[0].toUpperCase() ?? "M"}
         name={auth.firebaseUser?.displayName ?? "Marie L."}
