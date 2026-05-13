@@ -199,6 +199,48 @@ export type ClassifyBodyT = {
   transport?: string | null;
 };
 
+export type ClassifyLineBodyT = {
+  /**
+   * When `true` (default) the model's candidate list is persisted
+   * onto the line, replacing any previous set.
+   */
+  attachCandidates?: boolean;
+  /**
+   * If set AND the model's confidence is `>=` this value, the
+   * selected code is written to the line and `classificationState`
+   * becomes `"selected"`. Otherwise the state goes to `"candidates"`
+   * when at least one alternative was returned.
+   */
+  autoSelectThreshold?: number | null;
+  /**
+   * Free-text language hint passed through to the agent's first
+   * user turn (e.g. `"fr"`, `"en"`).
+   */
+  lang?: string | null;
+  /**
+   * Override the workspace-default LLM provider for this request.
+   */
+  provider?: string | null;
+};
+
+export type ClassifyLineResponseT = {
+  anchoringRulings: Array<{
+    [key: string]: unknown;
+  }>;
+  candidates: Array<{
+    [key: string]: unknown;
+  }>;
+  caveats: Array<string>;
+  /**
+   * New `classificationState` after this call. One of
+   * `unclassified | candidates | selected | needsReview`.
+   */
+  classificationState: string;
+  lineItemId: string;
+  provider: string;
+  selected: SelectedClassificationT;
+};
+
 export type ClassifyResponseT = {
   [key: string]: unknown;
 } & {
@@ -702,6 +744,18 @@ export type SearchRequestT = {
    * Free-text product description.
    */
   q: string;
+};
+
+export type SelectedClassificationT = {
+  /**
+   * True when this call wrote `selectedHtsCode` to the line because
+   * the model's confidence met `autoSelectThreshold`.
+   */
+  autoSelected: boolean;
+  code: string;
+  confidence: number;
+  description: string;
+  rateText?: string | null;
 };
 
 export type SourceStateT = {
@@ -1670,6 +1724,54 @@ export type ImportCasePatchLineItemResponsesT = {
 
 export type ImportCasePatchLineItemResponseT =
   ImportCasePatchLineItemResponsesT[keyof ImportCasePatchLineItemResponsesT];
+
+export type ImportCaseLineClassifyDataT = {
+  body: ClassifyLineBodyT;
+  path: {
+    /**
+     * Case id
+     */
+    caseId: string;
+    /**
+     * Line item id
+     */
+    lineId: string;
+  };
+  query?: never;
+  url: "/import-cases/{caseId}/line-items/{lineId}/classify";
+};
+
+export type ImportCaseLineClassifyErrorsT = {
+  /**
+   * Case or line item not found
+   */
+  404: ProblemT;
+  /**
+   * Validation failed
+   */
+  422: ProblemT;
+  /**
+   * No provider configured (or VOYAGE_API_KEY missing)
+   */
+  503: ProblemT;
+  /**
+   * Agent budget exceeded
+   */
+  504: ProblemT;
+};
+
+export type ImportCaseLineClassifyErrorT =
+  ImportCaseLineClassifyErrorsT[keyof ImportCaseLineClassifyErrorsT];
+
+export type ImportCaseLineClassifyResponsesT = {
+  /**
+   * Classification result
+   */
+  200: ClassifyLineResponseT;
+};
+
+export type ImportCaseLineClassifyResponseT =
+  ImportCaseLineClassifyResponsesT[keyof ImportCaseLineClassifyResponsesT];
 
 export type LandedCostDataT = {
   body: LandedCostBodyT;

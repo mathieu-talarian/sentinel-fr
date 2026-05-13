@@ -39,11 +39,42 @@ const lineIsClassifying = (line: ImportCaseLineItemT): boolean =>
 const lineNeedsClassificationReview = (line: ImportCaseLineItemT): boolean =>
   line.classificationState === "needsReview";
 
+export type MissingCaseFactKeyT =
+  | "transport"
+  | "countryOfOrigin"
+  | "declaredValueUsd"
+  | "lineItems";
+
+export type MissingLineFactKeyT = "selectedHtsCode" | "customsValueUsd";
+
+/**
+ * Returns the case-level facts that haven't been filled in yet. Drives
+ * the "missing fields" chips in the workbench header + `CaseFactsPanel`.
+ */
+export function selectMissingCaseFacts(c: ImportCaseT): MissingCaseFactKeyT[] {
+  const missing: MissingCaseFactKeyT[] = [];
+  if (!c.transport) missing.push("transport");
+  if (!c.countryOfOrigin) missing.push("countryOfOrigin");
+  if (c.declaredValueUsd == null) missing.push("declaredValueUsd");
+  if (c.lineItems.length === 0) missing.push("lineItems");
+  return missing;
+}
+
+/**
+ * Returns the line-level facts blocking a quote on this line. A line is
+ * quotable when it has a selected HTS code AND a customs value.
+ */
+export function selectMissingLineFacts(
+  line: ImportCaseLineItemT,
+): MissingLineFactKeyT[] {
+  const missing: MissingLineFactKeyT[] = [];
+  if (!line.selectedHtsCode) missing.push("selectedHtsCode");
+  if (line.customsValueUsd == null) missing.push("customsValueUsd");
+  return missing;
+}
+
 const isMissingCaseFacts = (c: ImportCaseT): boolean =>
-  !c.transport ||
-  !c.countryOfOrigin ||
-  c.declaredValueUsd == null ||
-  c.lineItems.length === 0;
+  selectMissingCaseFacts(c).length > 0;
 
 export function selectCaseStatus(c: ImportCaseT): ImportCaseStatusT {
   // Persisted "archived" always wins — case is read-only regardless of data.

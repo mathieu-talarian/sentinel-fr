@@ -99,6 +99,13 @@ export const zClassifyBody = z.object({
   transport: z.string().nullish(),
 });
 
+export const zClassifyLineBody = z.object({
+  attachCandidates: z.boolean().optional(),
+  autoSelectThreshold: z.number().nullish(),
+  lang: z.string().nullish(),
+  provider: z.string().nullish(),
+});
+
 export const zClassifyResponse = z.record(z.string(), z.unknown()).and(
   z.object({
     provider: z.string(),
@@ -459,6 +466,24 @@ export const zSearchRequest = z.object({
   k: z.int().gte(0).nullish(),
   lang: z.string().nullish(),
   q: z.string(),
+});
+
+export const zSelectedClassification = z.object({
+  autoSelected: z.boolean(),
+  code: z.string(),
+  confidence: z.number(),
+  description: z.string(),
+  rateText: z.string().nullish(),
+});
+
+export const zClassifyLineResponse = z.object({
+  anchoringRulings: z.array(z.record(z.string(), z.unknown())),
+  candidates: z.array(z.record(z.string(), z.unknown())),
+  caveats: z.array(z.string()),
+  classificationState: z.string(),
+  lineItemId: z.string(),
+  provider: z.string(),
+  selected: zSelectedClassification,
 });
 
 export const zSourceState = z.object({
@@ -1054,6 +1079,18 @@ export const zImportCasePatchLineItemPath = z.object({
  * Patched line item
  */
 export const zImportCasePatchLineItemResponse = zImportCaseLineItemResponse;
+
+export const zImportCaseLineClassifyBody = zClassifyLineBody;
+
+export const zImportCaseLineClassifyPath = z.object({
+  caseId: z.string(),
+  lineId: z.string(),
+});
+
+/**
+ * Classification result
+ */
+export const zImportCaseLineClassifyResponse = zClassifyLineResponse;
 
 export const zLandedCostBody2 = zLandedCostBody;
 

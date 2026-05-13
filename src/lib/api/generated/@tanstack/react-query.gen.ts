@@ -30,6 +30,7 @@ import {
   importCaseDelete,
   importCaseDeleteLineItem,
   importCaseGet,
+  importCaseLineClassify,
   importCaseList,
   importCasePatch,
   importCasePatchLineItem,
@@ -96,6 +97,9 @@ import type {
   ImportCaseGetDataT,
   ImportCaseGetErrorT,
   ImportCaseGetResponseT,
+  ImportCaseLineClassifyDataT,
+  ImportCaseLineClassifyErrorT,
+  ImportCaseLineClassifyResponseT,
   ImportCaseListDataT,
   ImportCaseListResponseT2,
   ImportCasePatchDataT,
@@ -1044,6 +1048,34 @@ export const importCasePatchLineItemMutation = (
   > = {
     mutationFn: async (fnOptions) => {
       const { data } = await importCasePatchLineItem({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+/**
+ * Classify a line item via the LLM agent loop and persist the result
+ * onto the case.
+ */
+export const importCaseLineClassifyMutation = (
+  options?: Partial<Options<ImportCaseLineClassifyDataT>>,
+): UseMutationOptions<
+  ImportCaseLineClassifyResponseT,
+  ImportCaseLineClassifyErrorT,
+  Options<ImportCaseLineClassifyDataT>
+> => {
+  const mutationOptions: UseMutationOptions<
+    ImportCaseLineClassifyResponseT,
+    ImportCaseLineClassifyErrorT,
+    Options<ImportCaseLineClassifyDataT>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await importCaseLineClassify({
         ...options,
         ...fnOptions,
         throwOnError: true,

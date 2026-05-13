@@ -61,6 +61,9 @@ import type {
   ImportCaseGetDataT,
   ImportCaseGetErrorsT,
   ImportCaseGetResponsesT,
+  ImportCaseLineClassifyDataT,
+  ImportCaseLineClassifyErrorsT,
+  ImportCaseLineClassifyResponsesT,
   ImportCaseListDataT,
   ImportCaseListResponsesT,
   ImportCasePatchDataT,
@@ -136,6 +139,9 @@ import {
   zImportCaseDeleteResponse,
   zImportCaseGetPath,
   zImportCaseGetResponse,
+  zImportCaseLineClassifyBody,
+  zImportCaseLineClassifyPath,
+  zImportCaseLineClassifyResponse,
   zImportCaseListQuery,
   zImportCaseListResponse2,
   zImportCasePatchBody,
@@ -903,6 +909,36 @@ export const importCasePatchLineItem = <ThrowOnError extends boolean = false>(
     responseValidator: async (data) =>
       await zImportCasePatchLineItemResponse.parseAsync(data),
     url: "/import-cases/{caseId}/line-items/{lineId}",
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });
+
+/**
+ * Classify a line item via the LLM agent loop and persist the result
+ * onto the case.
+ */
+export const importCaseLineClassify = <ThrowOnError extends boolean = false>(
+  options: Options<ImportCaseLineClassifyDataT, ThrowOnError>,
+) =>
+  (options.client ?? client).post<
+    ImportCaseLineClassifyResponsesT,
+    ImportCaseLineClassifyErrorsT,
+    ThrowOnError
+  >({
+    requestValidator: async (data) =>
+      await z
+        .object({
+          body: zImportCaseLineClassifyBody,
+          path: zImportCaseLineClassifyPath,
+          query: z.never().optional(),
+        })
+        .parseAsync(data),
+    responseValidator: async (data) =>
+      await zImportCaseLineClassifyResponse.parseAsync(data),
+    url: "/import-cases/{caseId}/line-items/{lineId}/classify",
     ...options,
     headers: {
       "Content-Type": "application/json",

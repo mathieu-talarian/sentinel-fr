@@ -21,7 +21,8 @@ Snapshot of what's shipped against this plan. Tied to backend rollout.
 | 1     | Step 1 (fees)  | **done**    | Backend exposed structured surcharges (not fee-schedule metadata); FE renders them with source attribution. See §1.1 for what shipped vs plan.    |
 | 2     | Step 2 (cases) | **done**    | Wire-type aliases, `casesSlice` (`activeCaseId` only), facade (`useCases`, `useActiveCase`, …), `selectCaseStatus` selector. See §1.2.            |
 | 3     | Step 2         | **done**    | `/cases`, `/cases/new`, `/cases/$caseId` routes. `Rail` flag-aware. `RailCaseList` + `RailCaseItem` + `CaseStatusChip` + `NewCaseForm`. See §1.3. |
-| 4-9   | per the table  | not started |                                                                                                                                                   |
+| 4     | + classify     | **done**    | `CaseInspector` (Radix Tabs) + `CaseFactsPanel` (PATCH-on-blur) + `CaseLinesPanel` (add/remove + per-line `importCaseLineClassify`). See §1.4.    |
+| 5-9   | per the table  | not started |                                                                                                                                                   |
 
 Cross-cutting work landed alongside Phase 1 (not tied to any single workbench phase):
 
@@ -87,6 +88,30 @@ New molecules: `CaseStatusChip` (accepts both the persisted 3-value enum and the
 Tweaks panel: `BehaviourSection` gains a "Import-case workbench (preview)" toggle that flips `tweaks.caseWorkbench`. The toggle is hidden when `VITE_FEATURE_CASE_WORKBENCH=true` is set at build time — the env wins and the runtime toggle would only be confusing.
 
 **Deferred from the original plan §6.1:** segmented status filter inside the rail itself. The filter lives on the `/cases` index page only — keeping the rail unfiltered shares one TanStack Query cache between rail and index, and the rail already shows the active case as a strong "you are here" affordance. Phase 4 can revisit if the rail grows long enough to need filtering.
+
+### 1.4 Phase 4 — what shipped vs the plan
+
+Backend dependency: Phase 2 `import-cases` CRUD + the freshly-shipped `POST /import-cases/{caseId}/line-items/{lineId}/classify` (`importCaseLineClassify`) which persists candidates / selected code onto the line.
+
+Workbench layout (`routes/cases.$caseId.tsx`) — three-zone: `Rail` left, main center, `CaseInspector` right. Header strip shows the case title, derived `CaseStatusChip`, and a `MissingFieldChip` row for case-level missing facts (`transport`, `countryOfOrigin`, `declaredValueUsd`, `lineItems`). Inspector tab persisted via `?tab=` search param (`facts | lines | quote | risks | evidence`), defaults to `facts`.
+
+`CaseInspector` (`Radix Tabs`):
+
+- **Facts** — `CaseFactsPanel` with one editable input per case field (`title`, `transport`, `countryOfOrigin`, `originCountry`, `destinationCountry`, `incoterm`, `currency`, `declaredValueUsd`, `freightUsd`, `notes`). Each input is a "draft-then-commit" field (`CaseFactsFields.tsx`): typing fills a local `draft`, blur commits via `importCasePatchMutation` when `draft !== initial`, then clears the draft so subsequent server pushes (Phase 6 accepted patches) flow through. PATCH success invalidates both the detail and list queries.
+- **Lines** — `CaseLinesPanel` with one `CaseLineItemRow` per line (sorted by `position`), an "Add a line" composer below. Each row shows description, `ClassificationStateChip`, selected `HtsCodeBadge` when present, rate text, customs value, qty/unit, country (with "case default" hint when no line override). Line-level `MissingFieldChip` row when `selectedHtsCode` or `customsValueUsd` is missing. Per-row "Classify" button kicks `importCaseLineClassifyMutation` and the case query refetches on success.
+- **Quote / Risks / Evidence** — `CasePlaceholderPanel` empty states pointing at Phases 5 / 7 / 8 respectively. Tab structure stays in place across phases so the UX doesn't shift as panels turn on.
+
+`selectMissingCaseFacts(case)` and `selectMissingLineFacts(line)` added to `caseStatus.ts` (returning typed key arrays) — they drive both the workbench header strip and the per-panel "missing fields" chips.
+
+Center column is a dashed-border note pointing at Phase 6 for case-aware chat; the legacy chat surface isn't mounted here. Phase 6 will replace this with a `CaseTimeline` + `Composer` + `CasePatchTray`.
+
+**Read-only mode:** when `case_.status === "archived"` (persisted-status check, NOT the derived `ImportCaseStatusT`), every editable affordance receives `disabled` / `isReadOnly` and skips the PATCH dispatch. Archive / unarchive UI itself is deferred to Phase 4.5 polish or Phase 9.
+
+**Deferred from the original plan §6.2:**
+
+- `CaseTopbar` as a dedicated organism — instead the title + status + missing-fields strip live inline in the route, since the topbar's only Phase 4-relevant content is what's already there.
+- `MissingFieldChip` click-to-scroll behavior — the chip accepts an `onClick`, but no callers wire it for Phase 4. Easy to add when the workbench grows long enough for scroll-into-view to matter.
+- Severity-color tokens (`risk.bg.*` / `risk.fg.*`) — defer to Phase 7 risk panel when they have a consumer.
 
 ## 2. Constraints
 
