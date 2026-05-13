@@ -28,6 +28,7 @@ Snapshot of what's shipped against this plan. Tied to backend rollout.
 | 8      | Step 6 (rulings) | **done**    | `CaseEvidencePanel` (supports / conflicts / reference groups), `CaseRulingCard`, `RulingsSearchDialog` (Radix). See §1.9.                                    |
 | 9      | none             | **partial** | Workbench header now uses `selectCaseStatus(case, risk)` + Archive/Unarchive button. Sentry tags via `mutation.meta`. See §1.10 for ops deferrals.           |
 | polish | none             | **done**    | Click-to-scroll missing-fact chips, ruling refresh, ruling attach pin+note, quote history dropdown. See §1.12.                                               |
+| diff   | none             | **done**    | Side-by-side quote diff (paired-row variants for summary / lines / entry fees, signed Δ$ + Δ% tinted by direction). See §1.13.                               |
 
 Cross-cutting work landed alongside Phase 1 (not tied to any single workbench phase):
 
@@ -263,7 +264,6 @@ Net: 18 deleted files, ~1500 fewer lines of FE code, single mounted chat path (c
 Smaller deferrals still pending across Phases 4-8 (intentionally not pulled into Phase 9):
 
 - `CaseTimeline` chronological merge in `CaseChatSurface`.
-- "What changed since last quote" side-by-side quote diff inside `CaseQuotePanel` (the listing dropdown shipped in §1.12, but per-row diff did not).
 
 ### 1.12 Polish batch — what shipped
 
@@ -276,6 +276,16 @@ Small affordances that were carried as deferrals across Phases 4-8. Bundled toge
 - **CaseQuotePanel refactor.** Extracting the lines + entry-fees sections out (`QuoteLinesList`, `QuoteEntryFees`) kept the panel under the 250-line lint cap once the dropdown + banner landed.
 
 Side-by-side quote diff is the one piece of the original "quote history" polish that did not ship — the dropdown swaps which quote is rendered, but rendering two quotes simultaneously with per-row deltas needs more design and stays deferred.
+
+### 1.13 Side-by-side quote diff
+
+The §1.12 deferral closed. When the user picks a non-latest quote via `QuoteHistoryDropdown`, `HistoricalQuoteBanner` now exposes a "Compare to latest" checkbox. With it on, `CaseQuotePanel` fires a second `importCaseQuoteGetOptions` query for the latest quote alongside the selected one, and routes both into the new `QuoteBody` molecule. `QuoteBody` is a thin switch: regular mode renders the existing `QuoteSummaryTable` / `QuoteLinesList` / `QuoteEntryFees`; compare mode renders the paired-row variants `QuoteDiffSummaryTable` / `QuoteDiffLinesList` / `QuoteDiffEntryFees`. Caveats always come from the selected quote — they're metadata about that capture, not part of the diff.
+
+Diff math lives in `src/lib/utils/quoteDiff.ts`: `computeDelta(selected, latest)` returns `{ amountUsd, pct, direction }`, `pairLines` joins two line arrays by `position`, `pairEntryFees` joins fees by `feeCode`. The shared `QuoteDeltaCell` molecule renders a signed `$` amount + (when meaningful) a signed `%`, tinted green when the selected quote was cheaper and red when more expensive. Lines added or removed between captures get an `Added` / `Removed` chip and a `—` on the missing side; the Δ cell stays blank rather than reading "+$0.00" so empty rows don't bias the visual scan.
+
+Running a new quote (`Re-run quote`) clears `compareMode` and `selectedQuoteId` so the user lands on the fresh quote in regular mode. Navigating back to "Latest" in the dropdown also short-circuits compare mode via `effectiveCompareMode = compareMode && isHistorical`, so the diff render never collapses into identical Selected/Latest columns.
+
+To stay under the 250-line lint cap, the panel handed off three pieces: `formatCaptured` → `src/lib/utils/quoteCapture.ts`, the historical banner UI → `HistoricalQuoteBanner` molecule, and the render branching → `QuoteBody` molecule. Each is < 80 lines and independently testable.
 
 ## 2. Constraints
 

@@ -9,12 +9,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/atoms/Button";
-import { CaveatsList } from "@/components/molecules/CaveatsList";
 import { ErrorBanner } from "@/components/molecules/ErrorBanner";
-import { QuoteEntryFees } from "@/components/molecules/QuoteEntryFees";
+import { HistoricalQuoteBanner } from "@/components/molecules/HistoricalQuoteBanner";
+import { QuoteBody } from "@/components/molecules/QuoteBody";
 import { QuoteHistoryDropdown } from "@/components/molecules/QuoteHistoryDropdown";
-import { QuoteLinesList } from "@/components/molecules/QuoteLinesList";
-import { QuoteSummaryTable } from "@/components/molecules/QuoteSummaryTable";
 import {
   importCaseGetQueryKey,
   importCaseQuoteCreateMutation,
@@ -27,9 +25,7 @@ import { selectCaseStatus } from "@/lib/state/caseStatus";
 import { useTweaks } from "@/lib/state/tweaks";
 import { sx } from "@/lib/styles/sx";
 import { borders, colors, fonts, radii } from "@/lib/styles/tokens.stylex";
-import { formatRelativeDays } from "@/lib/utils/intl";
-
-const ONE_DAY_MS = 86_400_000;
+import { formatCaptured } from "@/lib/utils/quoteCapture";
 
 interface CaseQuotePanelPropsT {
   case_: ImportCaseResponseT;
@@ -40,17 +36,6 @@ const errorMessage = (e: unknown): string => {
   if (e instanceof Error) return e.message;
   if (typeof e === "string") return e;
   return "Couldn't run the quote.";
-};
-
-const formatCaptured = (iso: string, lang: "en" | "fr"): string => {
-  const d = new Date(iso);
-  const days = Math.floor((Date.now() - d.getTime()) / ONE_DAY_MS);
-  const relative = formatRelativeDays(-Math.max(days, 0), lang);
-  const time = d.toLocaleTimeString(lang, {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  return `${relative} at ${time}`;
 };
 
 const pickButtonLabel = (busy: boolean, hasQuote: boolean): string => {
@@ -64,6 +49,7 @@ export function CaseQuotePanel(props: Readonly<CaseQuotePanelPropsT>) {
   const [tweaks] = useTweaks();
   const [error, setError] = useState<string | null>(null);
   const [selectedQuoteId, setSelectedQuoteId] = useState<string | null>(null);
+  const [compareMode, setCompareMode] = useState(false);
 
   const queryClient = useQueryClient();
   const status = selectCaseStatus(case_);
@@ -90,11 +76,23 @@ export function CaseQuotePanel(props: Readonly<CaseQuotePanelPropsT>) {
       : (latestSummary?.id ?? null);
   const isHistorical = activeId != null && activeId !== latestSummary?.id;
 
-  const latestQuote = useQuery({
+  const selectedQuoteQ = useQuery({
     ...importCaseQuoteGetOptions({
       path: { caseId: case_.id, quoteId: activeId ?? "" },
     }),
     enabled: activeId !== null,
+  });
+
+  // When compare mode is on AND we're viewing a historical snapshot,
+  // fetch the latest quote alongside the selected one. Same query as
+  // the regular `latestQuote` path; React Query dedupes by key when both
+  // ids happen to coincide, but `isHistorical` already gates that out.
+  const latestQuoteQ = useQuery({
+    ...importCaseQuoteGetOptions({
+      path: { caseId: case_.id, quoteId: latestSummary?.id ?? "" },
+    }),
+    enabled:
+      compareMode && isHistorical && (latestSummary?.id ?? null) !== null,
   });
 
   // Risk screen for the cost-estimate-only gate. 404 = "not run" — we
@@ -110,6 +108,7 @@ export function CaseQuotePanel(props: Readonly<CaseQuotePanelPropsT>) {
     onSuccess: async () => {
       setError(null);
       setSelectedQuoteId(null);
+      setCompareMode(false);
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: importCaseQuoteListQueryKey({
@@ -139,9 +138,15 @@ export function CaseQuotePanel(props: Readonly<CaseQuotePanelPropsT>) {
     runQuote.mutate({ body: {}, path: { caseId: case_.id } });
   };
 
-  const quote: LandedCostQuoteResponseT | undefined = latestQuote.data;
+  const quote: LandedCostQuoteResponseT | undefined = selectedQuoteQ.data;
+  const latestQuoteData = latestQuoteQ.data ?? null;
   const buttonLabel = pickButtonLabel(runQuote.isPending, quote != null);
   const screen = riskScreen.data;
+
+  // Auto-flip out of compare mode if the user navigates back to "Latest"
+  // — there's nothing to compare against. Keeping it on would render
+  // identical Selected / Latest columns with all-zero Δ rows.
+  const effectiveCompareMode = compareMode && isHistorical;
 
   // Cost-estimate-only banner. Per the FE doc, the quote should never read
   // as "complete" until the risk screen has run on the current quote (a
@@ -189,10 +194,10 @@ export function CaseQuotePanel(props: Readonly<CaseQuotePanelPropsT>) {
       )}
 
       {isHistorical && (
-        <p {...sx(s.historicalNote)}>
-          Viewing a historical snapshot. Re-run the quote to capture a fresh
-          one.
-        </p>
+        <HistoricalQuoteBanner
+          compareMode={compareMode}
+          onCompareModeChange={setCompareMode}
+        />
       )}
 
       {!canQuote && !quote && (
@@ -213,19 +218,13 @@ export function CaseQuotePanel(props: Readonly<CaseQuotePanelPropsT>) {
       )}
 
       {quote && (
-        <>
-          <QuoteSummaryTable summary={quote.summary} showHmf={showHmf} />
-
-          <QuoteLinesList lines={quote.lines} lang={tweaks.lang} />
-
-          <QuoteEntryFees
-            summary={quote.summary}
-            feeScheduleRefs={quote.feeScheduleRefs}
-            showHmf={showHmf}
-          />
-
-          <CaveatsList caveats={quote.caveats} />
-        </>
+        <QuoteBody
+          selectedQuote={quote}
+          latestQuote={effectiveCompareMode ? latestQuoteData : null}
+          compareMode={effectiveCompareMode}
+          lang={tweaks.lang}
+          showHmf={showHmf}
+        />
       )}
     </div>
   );
@@ -259,17 +258,5 @@ const s = stylex.create({
     backgroundColor: colors.paper2,
     color: colors.ink3,
     fontSize: 12,
-  },
-  historicalNote: {
-    margin: 0,
-    padding: "6px 10px",
-    borderColor: colors.line,
-    borderRadius: radii.sm,
-    borderStyle: "dashed",
-    borderWidth: borders.thin,
-    backgroundColor: colors.paper2,
-    color: colors.ink3,
-    fontSize: 11.5,
-    fontStyle: "italic",
   },
 });
