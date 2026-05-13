@@ -30,7 +30,12 @@ export const Route = createFileRoute("/cases/$caseId")({
 });
 
 function CaseWorkbenchPage() {
-  const { caseId } = Route.useParams();
+  // Explicit annotation: TanStack Router's `useParams` inference resolves
+  // to an `error`-typed value under tsgo after the `/cases/` index split.
+  // Re-asserting the shape pins `caseId` to `string` for the rest of the
+  // function. The router itself guarantees a non-empty path segment.
+  const params: { caseId: string } = Route.useParams();
+  const caseId = params.caseId;
   const setActive = useSetActiveCase();
   const activeCase = useActiveCase();
 

@@ -33,7 +33,7 @@ const CasesSearchSchema = z.object({
   status: z.enum(STATUS_FILTERS).optional(),
 });
 
-export const Route = createFileRoute("/cases")({
+export const Route = createFileRoute("/cases/")({
   validateSearch: CasesSearchSchema,
   beforeLoad: ({ location }) => {
     const { status } = store.getState().auth;
