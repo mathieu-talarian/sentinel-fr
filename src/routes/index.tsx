@@ -18,6 +18,7 @@ import { Inspector } from "@/components/organisms/Inspector";
 import { Rail } from "@/components/organisms/Rail";
 import { TweaksPanel } from "@/components/organisms/TweaksPanel";
 import { selectFeatureCaseWorkbench } from "@/lib/features";
+import { LEGACY_THREAD_ID } from "@/lib/state/chatSlice";
 import { useChatStore } from "@/lib/state/chatStore";
 import { store } from "@/lib/state/store";
 import { useTweaks } from "@/lib/state/tweaks";
@@ -57,7 +58,7 @@ export const Route = createFileRoute("/")({
 
 function ChatPage() {
   const [tweaks, setTweaks] = useTweaks();
-  const chat = useChatStore();
+  const chat = useChatStore(LEGACY_THREAD_ID);
   const [input, setInput] = useState("");
   const [tweaksOpen, setTweaksOpen] = useState(false);
   const threadRef = useRef<HTMLDivElement | null>(null);

@@ -23,7 +23,8 @@ Snapshot of what's shipped against this plan. Tied to backend rollout.
 | 3     | Step 2          | **done**    | `/cases`, `/cases/new`, `/cases/$caseId` routes. `Rail` flag-aware. `RailCaseList` + `RailCaseItem` + `CaseStatusChip` + `NewCaseForm`. See §1.3. |
 | 4     | + classify      | **done**    | `CaseInspector` (Radix Tabs) + `CaseFactsPanel` (PATCH-on-blur) + `CaseLinesPanel` (add/remove + per-line `importCaseLineClassify`). See §1.4.    |
 | 5     | Step 3 (quotes) | **done**    | `CaseQuotePanel` (run / re-run / latest), `QuoteSummaryTable`, `QuoteLineRow` (expandable + surcharges + caveats), `FeeRow`. See §1.5.            |
-| 6-9   | per the table   | not started |                                                                                                                                                   |
+| 6     | Step 4 (chat)   | **done**    | Keyed `chatSlice` (per-thread), `streamChat` `caseId` routing, `casePatchSuggestion` → `CasePatchTray`, `CaseChatSurface`. See §1.7.              |
+| 7-9   | per the table   | not started |                                                                                                                                                   |
 
 Cross-cutting work landed alongside Phase 1 (not tied to any single workbench phase):
 
@@ -137,6 +138,33 @@ PATCH side-effects: `importCaseQuoteCreateMutation.onSuccess` invalidates both t
 ### 1.6 Backend Phase 4 ready for FE Phase 6
 
 The same SDK regen brought case-aware chat endpoints (`POST /import-cases/{caseId}/chat` + `/stream`) and a new `casePatchSuggestion` chunk type on `ChatChunkT` carrying `CasePatchT[]` (`{ op, path, value?, reason }`, RFC-6902-shaped). Aliased as `CasePatchT` in `src/lib/types.ts`. FE Phase 6 (case-aware chat surface + `CasePatchTray`) is unblocked whenever we want to start it.
+
+### 1.7 Phase 6 — what shipped vs the plan
+
+**Keyed chat slice.** `chatSlice` is now keyed by thread id: `state.chat.threads: Partial<Record<string, ChatThreadStateT>>`. Threads are materialised lazily on first dispatch (see `getOrInit`). Thread ids in use:
+
+- `LEGACY_THREAD_ID = "legacy"` for the `/` route's free-form chat.
+- The case id for each case workbench's case-aware chat.
+
+Only one stream is allowed in-flight site-wide (`anyRunning` early-return in `sendChat`); `running` is per-thread so the UI can show which thread is currently streaming.
+
+All `chatActions` payloads now include `threadId`. `useChatStore(threadId)` scopes the facade to a specific thread. Two consumers reading the same thread id share state by construction. Sentry redux-enhancer scrubs all threads' messages.
+
+**Case-aware streaming.** `streamChat` gained a `caseId?: string` option. When set, the request POSTs to `${base}/import-cases/${caseId}/chat/stream` instead of the legacy `/chat/stream`; backend prepends the case's facts, line items, latest quote, and risk summary before the model's first user turn, so the assistant uses known facts and doesn't re-ask. `sendChat(threadId, text)` resolves `caseId` from the thread id (`undefined` for legacy).
+
+**Case-patch suggestions.** When a `casePatchSuggestion` chunk arrives, the chat reducer is a no-op for that case (keeps its scope pure) and `sendChat` instead dispatches `casesActions.pushPendingPatches(chunk.patches)`. The new `CasePatchTray` organism above the composer renders one `CasePatchSuggestionRow` per pending patch, each with Accept / Dismiss.
+
+Accept routes through the new `applyCasePatch` thunk: parses the JSON pointer `path` and splits into either `PATCH /import-cases/{caseId}` (single segment, e.g. `/countryOfOrigin`) or `PATCH /import-cases/{caseId}/line-items/{lineId}` (three segments, e.g. `/lineItems/0/quantityUnit` — position → line id resolved via a `Map<number, string>` the tray builds from the active case). Unsupported paths are logged and dismissed without a network call. On success: invalidate the case-detail + list queries, then drop the patch from the tray. Failure leaves the patch in the tray so the user can retry.
+
+`casesSlice` grew `pendingPatches: CasePatchT[]` + actions `pushPendingPatches`, `resolvePatch(index)`, `clearPendingPatches`. Switching `activeCaseId` clears pending patches — they were scoped to that case's chat.
+
+**Workbench chat surface.** New `CaseChatSurface` organism mounted in `cases.$caseId.tsx` between the missing-facts strip and the inspector. Renders the case-scoped `ChatThread`, the `CasePatchTray`, and the existing `Composer`. Empty state explains the case-aware assistant up front. The dashed "Phase 6 placeholder" center column is gone.
+
+**Deferred from the original plan §6.2:**
+
+- **`CaseTimeline` organism** — listed as a chronological merge of chat messages + tool calls + quote/risk/ruling events + accepted case-patch events. Phase 6 reuses the existing `ChatThread` rendering instead; the unified timeline UX is a polish task once we have data to merge.
+- **Tool-result-driven full case refetch.** The plan called for `sendChat` to invalidate Query keys when `quote_landed_cost` / `run_risk_screen` / `attach_ruling` tool results arrive. The quote panel already refetches via its own mutation `onSuccess`; risk + ruling tools don't exist yet (Phase 7/8 backend). Revisit when those land.
+- **Single-stream cross-thread aborts.** Today starting a chat in thread A while thread B is streaming is a no-op (`anyRunning` early-return). The plan's intent was abort-and-replace; we picked the simpler no-op for Phase 6.
 
 ## 2. Constraints
 

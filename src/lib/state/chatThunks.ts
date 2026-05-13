@@ -2,7 +2,7 @@ import type {
   ConversationMessageT,
   ToolCallViewT,
 } from "@/lib/api/generated/types.gen";
-import type { AppThunkT } from "@/lib/state/store";
+import type { AppThunkT, RootStateT } from "@/lib/state/store";
 import type {
   AssistantMessageDataT,
   ChatTurnT,
@@ -11,12 +11,14 @@ import type {
   ToolCallT,
   UserMessageDataT,
 } from "@/lib/types";
+import type { Dispatch } from "@reduxjs/toolkit";
 
 import * as Sentry from "@sentry/react";
 
 import { streamChat } from "@/lib/api/chatStream";
 import { conversationGet } from "@/lib/api/generated/sdk.gen";
-import { chatActions } from "@/lib/state/chatSlice";
+import { casesActions } from "@/lib/state/casesSlice";
+import { LEGACY_THREAD_ID, chatActions } from "@/lib/state/chatSlice";
 
 const newId = (prefix: string) => `${prefix}_${crypto.randomUUID()}`;
 
@@ -40,10 +42,12 @@ const errorMessage = (error: unknown): string => {
 };
 
 interface StreamErrorContextT {
+  threadId: string;
   asstId: string;
   provider?: string;
   lang?: string;
   conversationId?: string;
+  caseId?: string;
 }
 
 // Aborts are user-driven (Stop button) so we never want them in Sentry; any
@@ -65,35 +69,65 @@ const reportStreamError = (
 };
 
 // AbortController is not serializable so it lives outside Redux state.
+// Only one stream allowed in-flight at a time site-wide; starting a new
+// stream while another is running is a no-op (see early return below).
 let abortCtrl: AbortController | null = null;
 
-export const sendChat =
-  (text: string): AppThunkT<Promise<void>> =>
-  async (dispatch, getState) => {
-    if (getState().chat.running) return;
+const turnsFromThread = (
+  messages: readonly MessageT[],
+  next: string,
+): ChatTurnT[] => {
+  const turns: ChatTurnT[] = messages
+    .filter((m) => m.role === "user" || m.reply)
+    .map((m) =>
+      m.role === "user"
+        ? { role: "user" as const, content: m.text }
+        : { role: "assistant" as const, content: m.reply },
+    );
+  turns.push({ role: "user", content: next });
+  return turns;
+};
 
-    // Snapshot history BEFORE mutating, otherwise the backend would see the
-    // new user message twice plus an empty assistant turn.
-    const turns: ChatTurnT[] = getState()
-      .chat.messages.filter((m) => m.role === "user" || m.reply)
-      .map((m) =>
-        m.role === "user"
-          ? { role: "user" as const, content: m.text }
-          : { role: "assistant" as const, content: m.reply },
-      );
-    turns.push({ role: "user", content: text });
+const dispatchToolResultSideEffects = (
+  dispatch: Dispatch,
+  getState: () => RootStateT,
+  threadId: string,
+  callId: string,
+) => {
+  const { tweaks, chat } = getState();
+  if (!tweaks.inspectorAutoOpen) return;
+  dispatch(chatActions.setInspectorOpen({ threadId, open: true }));
+  if (chat.threads[threadId]?.focusedCallId == null) {
+    dispatch(chatActions.setFocusedCall({ threadId, callId }));
+  }
+};
+
+export const sendChat =
+  (threadId: string, text: string): AppThunkT<Promise<void>> =>
+  async (dispatch, getState) => {
+    const state = getState();
+    const anyRunning = Object.values(state.chat.threads).some(
+      (t) => t?.running,
+    );
+    if (anyRunning) return;
+
+    const thread = state.chat.threads[threadId];
+    const conversationId = thread?.conversationId ?? undefined;
+    const turns = turnsFromThread(thread?.messages ?? [], text);
 
     const userMsg: UserMessageDataT = { id: newId("u"), role: "user", text };
     const asstId = newId("a");
     const asstMsg = blankAssistant(asstId);
 
-    dispatch(chatActions.appendMessages([userMsg, asstMsg]));
-    dispatch(chatActions.setFocusedCall(null));
-    dispatch(chatActions.setRunning(true));
+    dispatch(
+      chatActions.appendMessages({ threadId, messages: [userMsg, asstMsg] }),
+    );
+    dispatch(chatActions.setFocusedCall({ threadId, callId: null }));
+    dispatch(chatActions.setRunning({ threadId, running: true }));
 
     abortCtrl = new AbortController();
-    const { provider, lang } = getState().tweaks;
-    const conversationId = getState().chat.conversationId ?? undefined;
+    const { provider, lang } = state.tweaks;
+    const caseId = threadId === LEGACY_THREAD_ID ? undefined : threadId;
 
     try {
       for await (const chunk of streamChat(turns, {
@@ -101,37 +135,39 @@ export const sendChat =
         provider,
         lang,
         conversationId,
+        caseId,
       })) {
-        dispatch(chatActions.applyChunk({ asstId, chunk }));
-
-        // Auto-open inspector + focus first tool result if the user hasn't
-        // disabled it. Read tweaks lazily so toggling mid-stream is honoured.
-        if (chunk.type === "toolResult") {
-          const { tweaks, chat } = getState();
-          if (tweaks.inspectorAutoOpen) {
-            dispatch(chatActions.setInspectorOpen(true));
-            if (chat.focusedCallId == null) {
-              dispatch(chatActions.setFocusedCall(chunk.callId));
-            }
-          }
+        dispatch(chatActions.applyChunk({ threadId, asstId, chunk }));
+        if (chunk.type === "casePatchSuggestion") {
+          dispatch(casesActions.pushPendingPatches(chunk.patches));
+        } else if (chunk.type === "toolResult") {
+          dispatchToolResultSideEffects(
+            dispatch,
+            getState,
+            threadId,
+            chunk.callId,
+          );
         }
       }
     } catch (error) {
       const { aborted, message } = reportStreamError(error, {
+        threadId,
         asstId,
         provider,
         lang,
         conversationId,
+        caseId,
       });
       dispatch(
         chatActions.finalizeAssistant({
+          threadId,
           asstId,
           error: aborted ? undefined : message,
         }),
       );
     } finally {
       abortCtrl = null;
-      dispatch(chatActions.setRunning(false));
+      dispatch(chatActions.setRunning({ threadId, running: false }));
     }
   };
 
@@ -139,10 +175,13 @@ export const abortChat: AppThunkT = () => {
   abortCtrl?.abort();
 };
 
-export const resetChat: AppThunkT = (dispatch, getState) => {
-  if (getState().chat.running) abortCtrl?.abort();
-  dispatch(chatActions.reset());
-};
+export const resetChat =
+  (threadId: string): AppThunkT =>
+  (dispatch, getState) => {
+    const thread = getState().chat.threads[threadId];
+    if (thread?.running) abortCtrl?.abort();
+    dispatch(chatActions.reset({ threadId }));
+  };
 
 const callStatus = (s: string): ToolCallStatusT => {
   if (s === "in-flight" || s === "complete" || s === "failed") return s;
@@ -154,8 +193,6 @@ const toFECall = (c: ToolCallViewT): ToolCallT => ({
   tool: c.tool,
   args: c.args,
   status: callStatus(c.status),
-  // Persisted view doesn't carry the wall-clock start; only `durationMs`
-  // matters for the rendered "(312ms)" suffix on the call pill.
   startedAt: 0,
   durationMs: c.durationMs ?? undefined,
   result: c.result ?? undefined,
@@ -183,12 +220,11 @@ const toFEMessage = (m: ConversationMessageT): MessageT => {
 
 /**
  * Replace the rendered chat with a persisted conversation. Aborts any
- * in-flight stream first so the user doesn't see deltas land into the
- * newly-loaded thread. Subsequent `sendChat` calls append to this
- * conversation server-side because `state.chat.conversationId` is set.
+ * in-flight stream first. Used by the legacy `/` route only; case
+ * threads don't have server-side conversation persistence yet.
  */
 export const loadConversation =
-  (id: string): AppThunkT<Promise<void>> =>
+  (threadId: string, id: string): AppThunkT<Promise<void>> =>
   async (dispatch) => {
     abortCtrl?.abort();
     abortCtrl = null;
@@ -207,5 +243,11 @@ export const loadConversation =
     }
 
     const messages: MessageT[] = r.data.messages.map((m) => toFEMessage(m));
-    dispatch(chatActions.loadConversation({ conversationId: id, messages }));
+    dispatch(
+      chatActions.loadConversation({
+        threadId,
+        conversationId: id,
+        messages,
+      }),
+    );
   };

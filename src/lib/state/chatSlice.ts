@@ -8,26 +8,58 @@ import type { PayloadAction } from "@reduxjs/toolkit";
 
 import { createSlice } from "@reduxjs/toolkit";
 
-export interface ChatStateT {
+/**
+ * Chat state is keyed by thread id so the workbench (one thread per
+ * case) and the legacy `/` chat can coexist. Thread ids in use today:
+ *
+ *   - `"legacy"` for the `/` route's free-form chat.
+ *   - `caseId` for each case workbench's case-aware chat.
+ *
+ * Only one stream is allowed in-flight at a time site-wide — the abort
+ * controller in `chatThunks.ts` is module-scoped. `running` is
+ * per-thread so the UI can show which thread is currently streaming.
+ */
+
+export const LEGACY_THREAD_ID = "legacy";
+
+export interface ChatThreadStateT {
   messages: MessageT[];
   running: boolean;
   focusedCallId: string | null;
   inspectorOpen: boolean;
   /**
    * Server-issued conversation id, captured from the first `turnStart`
-   * chunk of a stream. When set, `sendChat` forwards it on subsequent
-   * turns so the backend resumes server-side history instead of
-   * round-tripping the full transcript.
+   * chunk of a stream. The legacy `/chat/stream` endpoint persists
+   * conversations server-side and reuses this id on subsequent turns.
+   * Case-aware chat ignores it.
    */
   conversationId: string | null;
 }
 
-const initialState: ChatStateT = {
+export interface ChatStateT {
+  // Partial so consumers narrow on missing keys — a thread is materialised
+  // lazily on first dispatch via `getOrInit` below.
+  threads: Partial<Record<string, ChatThreadStateT>>;
+}
+
+const initialThread = (): ChatThreadStateT => ({
   messages: [],
   running: false,
   focusedCallId: null,
   inspectorOpen: false,
   conversationId: null,
+});
+
+const initialState: ChatStateT = {
+  threads: { [LEGACY_THREAD_ID]: initialThread() },
+};
+
+const getOrInit = (state: ChatStateT, threadId: string): ChatThreadStateT => {
+  const existing = state.threads[threadId];
+  if (existing) return existing;
+  const created = initialThread();
+  state.threads[threadId] = created;
+  return created;
 };
 
 const closeThinking = (m: AssistantMessageDataT) => {
@@ -38,64 +70,93 @@ const closeThinking = (m: AssistantMessageDataT) => {
 };
 
 const findAssistant = (
-  state: ChatStateT,
+  thread: ChatThreadStateT,
   id: string,
 ): AssistantMessageDataT | undefined => {
-  const m = state.messages.find((x) => x.id === id);
+  const m = thread.messages.find((x) => x.id === id);
   return m?.role === "assistant" ? m : undefined;
 };
+
+interface ApplyChunkPayloadT {
+  threadId: string;
+  asstId: string;
+  chunk: ChatChunkT;
+}
 
 const slice = createSlice({
   name: "chat",
   initialState,
   reducers: {
-    appendMessages(state, action: PayloadAction<MessageT[]>) {
-      state.messages.push(...action.payload);
+    appendMessages(
+      state,
+      action: PayloadAction<{ threadId: string; messages: MessageT[] }>,
+    ) {
+      const t = getOrInit(state, action.payload.threadId);
+      t.messages.push(...action.payload.messages);
     },
-    setRunning(state, action: PayloadAction<boolean>) {
-      state.running = action.payload;
+    setRunning(
+      state,
+      action: PayloadAction<{ threadId: string; running: boolean }>,
+    ) {
+      const t = getOrInit(state, action.payload.threadId);
+      t.running = action.payload.running;
     },
-    setFocusedCall(state, action: PayloadAction<string | null>) {
-      state.focusedCallId = action.payload;
+    setFocusedCall(
+      state,
+      action: PayloadAction<{ threadId: string; callId: string | null }>,
+    ) {
+      const t = getOrInit(state, action.payload.threadId);
+      t.focusedCallId = action.payload.callId;
     },
-    setInspectorOpen(state, action: PayloadAction<boolean>) {
-      state.inspectorOpen = action.payload;
+    setInspectorOpen(
+      state,
+      action: PayloadAction<{ threadId: string; open: boolean }>,
+    ) {
+      const t = getOrInit(state, action.payload.threadId);
+      t.inspectorOpen = action.payload.open;
     },
-    reset() {
-      return initialState;
+    reset(state, action: PayloadAction<{ threadId: string }>) {
+      state.threads[action.payload.threadId] = initialThread();
     },
     loadConversation(
       state,
-      action: PayloadAction<{ conversationId: string; messages: MessageT[] }>,
+      action: PayloadAction<{
+        threadId: string;
+        conversationId: string;
+        messages: MessageT[];
+      }>,
     ) {
-      state.messages = action.payload.messages;
-      state.conversationId = action.payload.conversationId;
-      state.running = false;
-      state.focusedCallId = null;
-      state.inspectorOpen = false;
+      state.threads[action.payload.threadId] = {
+        ...initialThread(),
+        messages: action.payload.messages,
+        conversationId: action.payload.conversationId,
+      };
     },
     finalizeAssistant(
       state,
-      action: PayloadAction<{ asstId: string; error?: string }>,
+      action: PayloadAction<{
+        threadId: string;
+        asstId: string;
+        error?: string;
+      }>,
     ) {
-      const m = findAssistant(state, action.payload.asstId);
+      const t = getOrInit(state, action.payload.threadId);
+      const m = findAssistant(t, action.payload.asstId);
       if (!m) return;
       if (action.payload.error) m.error = action.payload.error;
       m.streaming = false;
       m.thinkingActive = false;
       m.done = true;
     },
-    applyChunk(
-      state,
-      action: PayloadAction<{ asstId: string; chunk: ChatChunkT }>,
-    ) {
-      const { asstId, chunk } = action.payload;
-      const m = findAssistant(state, asstId);
+    applyChunk(state, action: PayloadAction<ApplyChunkPayloadT>) {
+      const { threadId, asstId, chunk } = action.payload;
+      const t = getOrInit(state, threadId);
+      const m = findAssistant(t, asstId);
       if (!m) return;
 
       switch (chunk.type) {
         case "turnStart": {
-          state.conversationId = chunk.conversationId;
+          t.conversationId = chunk.conversationId;
           m.serverId = chunk.messageId;
           return;
         }
@@ -121,17 +182,11 @@ const slice = createSlice({
         }
         case "toolCallDelta": {
           // Live-update the in-flight call's args/name as the model writes.
-          // For `args` we accumulate the streamed JSON text on a private
-          // `_argsText` field on the call; once the model emits `toolResult`
-          // the `args` field is already the parsed object so this stays
-          // best-effort cosmetic.
           const call = m.calls.find((c) => c.id === chunk.callId);
           if (!call) return;
           if (chunk.delta.kind === "name") {
             call.tool = chunk.delta.name;
           }
-          // `args` deltas are JSON fragments — we don't try to render
-          // partial JSON, just leave the existing `args` value alone.
           return;
         }
         case "toolResult": {
@@ -175,6 +230,12 @@ const slice = createSlice({
           m.streaming = false;
           m.thinkingActive = false;
           m.done = true;
+          return;
+        }
+        case "casePatchSuggestion": {
+          // Routed to `casesSlice.pendingPatches` from `sendChat` thunk
+          // rather than mutating `chatSlice` directly; this case is a
+          // no-op here so the chat reducer stays scope-pure.
           return;
         }
       }

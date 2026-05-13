@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { RailConvoItem } from "@/components/molecules/RailConvoItem";
 import { conversationsListOptions } from "@/lib/api/generated/@tanstack/react-query.gen";
+import { LEGACY_THREAD_ID } from "@/lib/state/chatSlice";
 import { loadConversation, resetChat } from "@/lib/state/chatThunks";
 import { useAppDispatch, useAppSelector } from "@/lib/state/hooks";
 import { useTweaks } from "@/lib/state/tweaks";
@@ -27,17 +28,19 @@ const formatWhen = (iso: string, lang: "en" | "fr"): string => {
 export function RailHistoryList() {
   const [tweaks] = useTweaks();
   const convos = useQuery(conversationsListOptions());
-  const conversationId = useAppSelector((s) => s.chat.conversationId);
+  const conversationId = useAppSelector(
+    (s) => s.chat.threads[LEGACY_THREAD_ID]?.conversationId ?? null,
+  );
   const dispatch = useAppDispatch();
   const items = convos.data?.conversations ?? [];
 
   const onPick = (id: string) => {
     if (id === conversationId) return;
-    dispatch(loadConversation(id)).catch(() => undefined);
+    dispatch(loadConversation(LEGACY_THREAD_ID, id)).catch(() => undefined);
   };
   const onNew = () => {
     if (conversationId === null) return;
-    dispatch(resetChat);
+    dispatch(resetChat(LEGACY_THREAD_ID));
   };
 
   return (

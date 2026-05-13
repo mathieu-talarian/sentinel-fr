@@ -11,6 +11,7 @@ interface SendArgsT {
 }
 
 export interface ChatStoreT {
+  threadId: string;
   messages: readonly MessageT[];
   running: boolean;
   focusedCallId: string | null;
@@ -22,39 +23,55 @@ export interface ChatStoreT {
   setInspectorOpen: (open: boolean) => void;
 }
 
-export function useChatStore(): ChatStoreT {
-  const messages = useAppSelector((s) => s.chat.messages);
-  const running = useAppSelector((s) => s.chat.running);
-  const focusedCallId = useAppSelector((s) => s.chat.focusedCallId);
-  const inspectorOpen = useAppSelector((s) => s.chat.inspectorOpen);
+const EMPTY_MESSAGES: readonly MessageT[] = [];
+
+/**
+ * Scoped chat hook. Pass `LEGACY_THREAD_ID` for the `/` route or the
+ * active case id for the workbench. Two callers reading the same
+ * thread id share state by construction.
+ */
+export function useChatStore(threadId: string): ChatStoreT {
+  const messages = useAppSelector(
+    (s) => s.chat.threads[threadId]?.messages ?? EMPTY_MESSAGES,
+  );
+  const running = useAppSelector(
+    (s) => s.chat.threads[threadId]?.running ?? false,
+  );
+  const focusedCallId = useAppSelector(
+    (s) => s.chat.threads[threadId]?.focusedCallId ?? null,
+  );
+  const inspectorOpen = useAppSelector(
+    (s) => s.chat.threads[threadId]?.inspectorOpen ?? false,
+  );
   const dispatch = useAppDispatch();
 
   const send = useCallback(
     ({ text }: SendArgsT) => {
-      dispatch(sendChat(text)).catch(() => undefined);
+      dispatch(sendChat(threadId, text)).catch(() => undefined);
     },
-    [dispatch],
+    [dispatch, threadId],
   );
   const abort = useCallback(() => {
     dispatch(abortChat);
   }, [dispatch]);
   const reset = useCallback(() => {
-    dispatch(resetChat);
-  }, [dispatch]);
+    dispatch(resetChat(threadId));
+  }, [dispatch, threadId]);
   const setFocusedCall = useCallback(
     (id: string | null) => {
-      dispatch(chatActions.setFocusedCall(id));
+      dispatch(chatActions.setFocusedCall({ threadId, callId: id }));
     },
-    [dispatch],
+    [dispatch, threadId],
   );
   const setInspectorOpen = useCallback(
     (open: boolean) => {
-      dispatch(chatActions.setInspectorOpen(open));
+      dispatch(chatActions.setInspectorOpen({ threadId, open }));
     },
-    [dispatch],
+    [dispatch, threadId],
   );
 
   return {
+    threadId,
     messages,
     running,
     focusedCallId,

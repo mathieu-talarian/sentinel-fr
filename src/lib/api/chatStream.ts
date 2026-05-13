@@ -12,6 +12,14 @@ interface StreamOptionsT {
   lang?: string;
   /** When set, the backend prepends the persisted thread server-side. */
   conversationId?: string;
+  /**
+   * When set, the stream is routed to the case-aware endpoint
+   * (`POST /import-cases/{caseId}/chat/stream`). The backend injects
+   * the case context — facts, line items, latest quote — before the
+   * model's first user turn, and may emit `casePatchSuggestion` chunks.
+   * Falls back to the un-cased `/chat/stream` when omitted.
+   */
+  caseId?: string;
   signal?: AbortSignal;
   baseUrl?: string;
 }
@@ -50,25 +58,22 @@ const parseChunk = (data: string): ChatChunkT | null => {
 };
 
 /**
- * POST /chat/stream — Server-Sent Events over fetch.
+ * POST `/chat/stream` (legacy) or `/import-cases/{caseId}/chat/stream`
+ * (case-aware) — Server-Sent Events over fetch.
  *
  * EventSource isn't an option (we need POST), so we read the response body
- * as a stream. The body is piped through `TextDecoderStream` → spec-compliant
- * `EventSourceParserStream` (multi-line `data:` continuations, `event:`/`id:`
- * fields, comments, CRLF normalization — all handled by the parser).
- *
- * Yields parsed `ChatChunk` events one by one until the stream finishes
- * (`done` or `error`) or the `signal` aborts.
- *
- * Usage:
- *   for await (const chunk of streamChat(turns, { signal })) { ... }
+ * as a stream and pipe through `TextDecoderStream` →
+ * `EventSourceParserStream`. Yields parsed `ChatChunk` events one by one
+ * until the stream finishes (`done` or `error`) or the `signal` aborts.
  */
 export async function* streamChat(
   messages: ChatTurnT[],
   opts: StreamOptionsT = {},
 ): AsyncGenerator<ChatChunkT, void, undefined> {
   const base = opts.baseUrl ?? API_BASE_URL;
-  const url = `${base}/chat/stream`;
+  const url = opts.caseId
+    ? `${base}/import-cases/${opts.caseId}/chat/stream`
+    : `${base}/chat/stream`;
 
   const headers: Record<string, string> = {
     "content-type": "application/json",

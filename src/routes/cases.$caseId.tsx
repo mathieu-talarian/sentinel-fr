@@ -12,6 +12,7 @@ import { Heading } from "@/components/atoms/Heading";
 import { CaseStatusChip } from "@/components/molecules/CaseStatusChip";
 import { ErrorFallback } from "@/components/molecules/ErrorFallback";
 import { MissingFieldChip } from "@/components/molecules/MissingFieldChip";
+import { CaseChatSurface } from "@/components/organisms/CaseChatSurface";
 import {
   CaseInspector,
   asInspectorTab,
@@ -110,19 +111,7 @@ function CaseWorkbenchPage() {
 
             <MissingFactsStrip case_={data} />
 
-            <section {...sx(s.center)}>
-              <h2 {...sx(s.centerTitle)}>Conversation</h2>
-              <p {...sx(s.centerText)}>
-                Case-aware chat lands in Phase 6 — the assistant will read this
-                case&apos;s facts, line items, and quote directly, and propose
-                reviewable updates instead of asking the user to repeat shipment
-                details.
-              </p>
-              <p {...sx(s.centerHint)}>
-                In the meantime, use the inspector on the right to edit facts,
-                add lines, and trigger classification.
-              </p>
-            </section>
+            <CaseChatSurface case_={data} isReadOnly={isReadOnly} />
           </>
         )}
       </main>
@@ -204,36 +193,6 @@ const s = stylex.create({
     fontWeight: 500,
     letterSpacing: "0.04em",
     textTransform: "uppercase",
-  },
-  center: {
-    padding: "20px 18px",
-    borderColor: colors.line,
-    borderRadius: radii.md,
-    borderStyle: "dashed",
-    borderWidth: borders.thin,
-    gap: 8,
-    backgroundColor: colors.paper2,
-    display: "flex",
-    flexDirection: "column",
-  },
-  centerTitle: {
-    margin: 0,
-    color: colors.ink2,
-    fontFamily: fonts.serif,
-    fontSize: 14,
-    fontWeight: 500,
-  },
-  centerText: {
-    margin: 0,
-    color: colors.ink3,
-    fontSize: 12.5,
-    lineHeight: 1.5,
-  },
-  centerHint: {
-    margin: 0,
-    color: colors.ink4,
-    fontFamily: fonts.mono,
-    fontSize: 11.5,
   },
   note: {
     color: colors.ink3,

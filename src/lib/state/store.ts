@@ -47,14 +47,24 @@ const scrubMessage = (m: unknown): unknown => {
   };
 };
 
+const scrubThread = (thread: unknown): unknown => {
+  if (thread === null || typeof thread !== "object") return thread;
+  const t = thread as { messages?: unknown };
+  if (!Array.isArray(t.messages)) return thread;
+  return {
+    ...t,
+    messages: (t.messages as unknown[]).map((m) => scrubMessage(m)),
+  };
+};
+
 const scrubChatState = (chat: unknown): unknown => {
   if (chat === null || typeof chat !== "object") return chat;
-  const c = chat as { messages?: unknown };
-  if (!Array.isArray(c.messages)) return chat;
-  return {
-    ...c,
-    messages: (c.messages as unknown[]).map((m) => scrubMessage(m)),
-  };
+  const c = chat as { threads?: unknown };
+  if (c.threads === null || typeof c.threads !== "object") return chat;
+  const entries = Object.entries(c.threads as Record<string, unknown>).map(
+    ([key, thread]) => [key, scrubThread(thread)] as const,
+  );
+  return { ...c, threads: Object.fromEntries(entries) };
 };
 
 const sentryReduxEnhancer = Sentry.createReduxEnhancer({
