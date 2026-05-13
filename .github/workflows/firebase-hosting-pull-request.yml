@@ -29,7 +29,6 @@ jobs:
       - name: Install dependencies
         run: yarn install --immutable
 
-
       - run: yarn build
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:

@@ -9,6 +9,7 @@
     "build": "vite build",
     "preview": "vite preview --port 3000",
     "test": "vitest run --passWithNoTests",
+    "prettify": "prettier --write .",
     "lint": "eslint",
     "format": "prettier --write . && eslint --fix",
     "check": "prettier --check .",

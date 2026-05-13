@@ -53,22 +53,22 @@ then. Ladle stories are CSF-compatible, so the migration cost is low.
 
 ### Files added
 
-| Path | Purpose |
-|---|---|
-| `ladle.config.mjs` | Ladle config: story glob, port, addon defaults |
-| `.ladle/components.tsx` | Global `Provider` exporting theme + padding decorators (Ladle convention) |
-| `src/stories/fixtures.ts` | Typed sample data shared across stories (`sampleCaseRuling`, `sampleHtsCode`, `sampleFeeRow`, …) |
-| `src/components/{atoms,molecules}/*.stories.tsx` | Colocated story files, one per component |
+| Path                                             | Purpose                                                                                          |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| `ladle.config.mjs`                               | Ladle config: story glob, port, addon defaults                                                   |
+| `.ladle/components.tsx`                          | Global `Provider` exporting theme + padding decorators (Ladle convention)                        |
+| `src/stories/fixtures.ts`                        | Typed sample data shared across stories (`sampleCaseRuling`, `sampleHtsCode`, `sampleFeeRow`, …) |
+| `src/components/{atoms,molecules}/*.stories.tsx` | Colocated story files, one per component                                                         |
 
 ### Files modified
 
-| Path | Change |
-|---|---|
-| `package.json` | Add `@ladle/react` devDependency; add `ladle` and `ladle:build` scripts |
-| `vite.config.ts` | Gate the TanStack Router plugin and Sentry plugin behind a `process.env.LADLE` check so they don't run in the workbench |
-| `tsconfig.app.json` | Ensure `.stories.tsx` files are included (likely already covered by the existing `src/**` include) |
-| `eslint.config.js` | Allow `.stories.tsx` to be exempt from `noBarrelFiles` only if needed (likely no change required) |
-| `.gitignore` | Add `.ladle/build/` |
+| Path                | Change                                                                                                                  |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `package.json`      | Add `@ladle/react` devDependency; add `ladle` and `ladle:build` scripts                                                 |
+| `vite.config.ts`    | Gate the TanStack Router plugin and Sentry plugin behind a `process.env.LADLE` check so they don't run in the workbench |
+| `tsconfig.app.json` | Ensure `.stories.tsx` files are included (likely already covered by the existing `src/**` include)                      |
+| `eslint.config.js`  | Allow `.stories.tsx` to be exempt from `noBarrelFiles` only if needed (likely no change required)                       |
+| `.gitignore`        | Add `.ladle/build/`                                                                                                     |
 
 ### Story file convention
 
@@ -86,7 +86,9 @@ export const Primary: Story<ButtonPropsT> = (props) => <Button {...props} />;
 Primary.args = { variant: "primary", children: "Sign in" };
 
 export const Disabled: Story<ButtonPropsT> = () => (
-  <Button variant="primary" disabled>Sign in</Button>
+  <Button variant="primary" disabled>
+    Sign in
+  </Button>
 );
 ```
 
@@ -112,7 +114,7 @@ Three decorators applied to every story:
    only flow through ancestors, and portaled descendants mount into
    `document.body`.
 2. **Padding decorator**: wraps the story in a `padding: 24, display: grid,
-   placeItems: start` container so atoms aren't pinned to the top-left edge.
+placeItems: start` container so atoms aren't pinned to the top-left edge.
 3. **Density toggle**: Ladle global that flips `data-density="compact"` on
    the wrapper — exposed via Ladle's `globalState`. Optional, only matters
    for components that read the attribute.

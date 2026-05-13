@@ -27,7 +27,7 @@
 ## Component Architecture
 
 - Atomic Design layout: `src/components/{atoms,molecules,organisms,templates}/`. Routes (`src/routes/`) are pages. ESLint `noBarrelFiles` is on — no `index.ts` re-exports; `Foo/index.tsx` is only allowed when it IS the component
-- Lib layout: `src/lib/{api,state,styles,utils}/` — api (auth/queries/chatStream), state (chatStore/tweaks), styles (sx/tokens/animations/themes), utils (format/suggestions). Wire types stay at `src/lib/types.ts`
+- Lib layout: `src/lib/{api,state,styles,utils}/` — api (auth/queries/chatStream), state (chatStore/tweaks), styles (sx/tokens/animations/themes), utils (format/suggestions). `src/lib/types.ts` holds **only** UI-side shapes (`MessageT`, `ToolCallT`), FE-only narrowed enums (`ImportCaseStatusT`, `LineItemClassificationStateT`), and types with no spec mirror (`CrossRulingsContentT`). Wire types live at `@/lib/api/generated/types.gen` and consumers use the generated T-suffixed names (`ImportCaseResponseT`, `LandedCostQuoteResponseT`, `WatchSubscribeResponseT`, …) verbatim
 - Atom contract: `extends Omit<ComponentProps<"div">, "style">` (from `react`), add `style?: StyleXStyles` (from `@stylexjs/stylex`), pass `style` as the LAST arg to `sx(...)` so callers override. Destructure own props off `props` and spread the rest as `<el {...rest} {...sx(...)} />` — stylex's `className`/`style` win over rest. No manual `className` merge; if a caller wants extra styling, that's what `style?: StyleXStyles` is for
 - React event handlers for value-bearing inputs use `ChangeEvent<HTMLInputElement>`/`ChangeEvent<HTMLTextAreaElement>` from `react`. Atoms expose an `onValueChange?: (v: string) => void` convenience and forward the original `onChange` so callers can still hook in
 
@@ -53,6 +53,7 @@
 - ESLint `no-barrel-files` blocks `export type { Foo } from "..."` (and bare `export const x = imported`) even on files that do real work. Workaround: declare a local alias — `import type { Foo } from "..."; export type FooT = Foo;` — that's a definition, not a re-export, and passes the rule
 - macOS APFS is case-insensitive: renaming a directory `Foo` → `foo` is a no-op. Two-step it: `mv Foo __tmp && mv __tmp foo`
 - Paths starting with `-` (e.g. TanStack Router's `-private` folders) need `--` to disambiguate from flags: `git mv -- src/routes/-login/foo ...`. Without `--`, the command fails silently in an `&&` chain
+- jsx-a11y rules are on. `<label htmlFor>` and other a11y attrs must be statically on the JSX — a `{...rest}` spread is opaque to the linter, so destructure and pass them explicitly. `<div onClick>` → `<button type="button">` with the stylex reset pattern used by `QuoteLineRow.head` / `Inspector.callButton` (borderStyle "none" + borderWidth 0 + backgroundColor "transparent" + color/font "inherit" + textAlign "left" + width "100%" + padding 0). For unavoidable `autoFocus`, put `// eslint-disable-next-line jsx-a11y/no-autofocus -- rationale` on the line directly above the prop; multi-line `//` comments inside a JSX attribute list get reflowed by `yarn run format` and the directive loses its anchor
 
 ---
 
