@@ -100,6 +100,9 @@ import type {
   ImportCaseRulingDetachDataT,
   ImportCaseRulingDetachErrorsT,
   ImportCaseRulingDetachResponsesT,
+  ImportCaseRulingRefreshDataT,
+  ImportCaseRulingRefreshErrorsT,
+  ImportCaseRulingRefreshResponsesT,
   LandedCostDataT,
   LandedCostErrorsT,
   LandedCostResponsesT,
@@ -200,6 +203,8 @@ import {
   zImportCaseRulingAttachResponse,
   zImportCaseRulingDetachPath,
   zImportCaseRulingDetachResponse,
+  zImportCaseRulingRefreshPath,
+  zImportCaseRulingRefreshResponse,
   zLandedCostBody2,
   zLandedCostResponse2,
   zRefreshStatusResponse,
@@ -1157,6 +1162,38 @@ export const importCaseRulingDetach = <ThrowOnError extends boolean = false>(
     responseValidator: async (data) =>
       await zImportCaseRulingDetachResponse.parseAsync(data),
     url: "/import-cases/{caseId}/rulings/{rulingNumber}",
+    ...options,
+  });
+
+/**
+ * Re-fetch a previously attached ruling from CROSS, overwriting the
+ * CROSS-owned fields (subject, date, tariffs, URL, raw snapshot) in
+ * place. The user's verdict + match note + line-item link survive.
+ *
+ * Use when the workbench evidence card looks stale (CROSS rulings do
+ * drift occasionally — typo fixes, tariff column corrections). For
+ * "show me the current ruling without persisting" the FE should call
+ * the CROSS-search endpoint directly.
+ */
+export const importCaseRulingRefresh = <ThrowOnError extends boolean = false>(
+  options: Options<ImportCaseRulingRefreshDataT, ThrowOnError>,
+) =>
+  (options.client ?? client).post<
+    ImportCaseRulingRefreshResponsesT,
+    ImportCaseRulingRefreshErrorsT,
+    ThrowOnError
+  >({
+    requestValidator: async (data) =>
+      await z
+        .object({
+          body: z.never().optional(),
+          path: zImportCaseRulingRefreshPath,
+          query: z.never().optional(),
+        })
+        .parseAsync(data),
+    responseValidator: async (data) =>
+      await zImportCaseRulingRefreshResponse.parseAsync(data),
+    url: "/import-cases/{caseId}/rulings/{rulingNumber}/refresh",
     ...options,
   });
 

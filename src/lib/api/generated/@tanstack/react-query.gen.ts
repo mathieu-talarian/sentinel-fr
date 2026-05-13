@@ -42,6 +42,7 @@ import {
   importCaseRiskScreenRun,
   importCaseRulingAttach,
   importCaseRulingDetach,
+  importCaseRulingRefresh,
   landedCost,
   type Options,
   refreshStatus,
@@ -139,6 +140,9 @@ import type {
   ImportCaseRulingDetachDataT,
   ImportCaseRulingDetachErrorT,
   ImportCaseRulingDetachResponseT,
+  ImportCaseRulingRefreshDataT,
+  ImportCaseRulingRefreshErrorT,
+  ImportCaseRulingRefreshResponseT,
   LandedCostDataT,
   LandedCostErrorT,
   LandedCostResponseT2,
@@ -1240,6 +1244,40 @@ export const importCaseRulingDetachMutation = (
   > = {
     mutationFn: async (fnOptions) => {
       const { data } = await importCaseRulingDetach({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+/**
+ * Re-fetch a previously attached ruling from CROSS, overwriting the
+ * CROSS-owned fields (subject, date, tariffs, URL, raw snapshot) in
+ * place. The user's verdict + match note + line-item link survive.
+ *
+ * Use when the workbench evidence card looks stale (CROSS rulings do
+ * drift occasionally — typo fixes, tariff column corrections). For
+ * "show me the current ruling without persisting" the FE should call
+ * the CROSS-search endpoint directly.
+ */
+export const importCaseRulingRefreshMutation = (
+  options?: Partial<Options<ImportCaseRulingRefreshDataT>>,
+): UseMutationOptions<
+  ImportCaseRulingRefreshResponseT,
+  ImportCaseRulingRefreshErrorT,
+  Options<ImportCaseRulingRefreshDataT>
+> => {
+  const mutationOptions: UseMutationOptions<
+    ImportCaseRulingRefreshResponseT,
+    ImportCaseRulingRefreshErrorT,
+    Options<ImportCaseRulingRefreshDataT>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await importCaseRulingRefresh({
         ...options,
         ...fnOptions,
         throwOnError: true,

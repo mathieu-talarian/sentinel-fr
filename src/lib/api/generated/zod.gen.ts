@@ -1288,6 +1288,16 @@ export const zImportCaseRulingDetachPath = z.object({
  */
 export const zImportCaseRulingDetachResponse = z.void();
 
+export const zImportCaseRulingRefreshPath = z.object({
+  caseId: z.string(),
+  rulingNumber: z.string(),
+});
+
+/**
+ * Ruling refreshed
+ */
+export const zImportCaseRulingRefreshResponse = zCaseRulingView;
+
 export const zLandedCostBody2 = zLandedCostBody;
 
 /**

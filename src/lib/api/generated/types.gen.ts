@@ -2170,6 +2170,50 @@ export type ImportCaseRulingDetachResponsesT = {
 export type ImportCaseRulingDetachResponseT =
   ImportCaseRulingDetachResponsesT[keyof ImportCaseRulingDetachResponsesT];
 
+export type ImportCaseRulingRefreshDataT = {
+  body?: never;
+  path: {
+    /**
+     * Case id
+     */
+    caseId: string;
+    /**
+     * CROSS ruling number
+     */
+    rulingNumber: string;
+  };
+  query?: never;
+  url: "/import-cases/{caseId}/rulings/{rulingNumber}/refresh";
+};
+
+export type ImportCaseRulingRefreshErrorsT = {
+  /**
+   * Case or attachment not found, or CROSS upstream lost the ruling
+   */
+  404: ProblemT;
+  /**
+   * CROSS upstream failed
+   */
+  502: ProblemT;
+  /**
+   * CROSS client not configured
+   */
+  503: ProblemT;
+};
+
+export type ImportCaseRulingRefreshErrorT =
+  ImportCaseRulingRefreshErrorsT[keyof ImportCaseRulingRefreshErrorsT];
+
+export type ImportCaseRulingRefreshResponsesT = {
+  /**
+   * Ruling refreshed
+   */
+  200: CaseRulingViewT;
+};
+
+export type ImportCaseRulingRefreshResponseT =
+  ImportCaseRulingRefreshResponsesT[keyof ImportCaseRulingRefreshResponsesT];
+
 export type LandedCostDataT = {
   body: LandedCostBodyT;
   path?: never;

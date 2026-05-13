@@ -6,9 +6,9 @@ import type { ImportCaseResponseT } from "@/lib/api/generated/types.gen";
 import * as stylex from "@stylexjs/stylex";
 import { Tabs } from "radix-ui";
 
+import { CaseEvidencePanel } from "@/components/organisms/CaseEvidencePanel";
 import { CaseFactsPanel } from "@/components/organisms/CaseFactsPanel";
 import { CaseLinesPanel } from "@/components/organisms/CaseLinesPanel";
-import { CasePlaceholderPanel } from "@/components/organisms/CasePlaceholderPanel";
 import { CaseQuotePanel } from "@/components/organisms/CaseQuotePanel";
 import { CaseRiskPanel } from "@/components/organisms/CaseRiskPanel";
 import { sx } from "@/lib/styles/sx";
@@ -88,10 +88,9 @@ export function CaseInspector(props: Readonly<CaseInspectorPropsT>) {
             <CaseRiskPanel case_={props.case_} isReadOnly={props.isReadOnly} />
           </Tabs.Content>
           <Tabs.Content value="evidence">
-            <CasePlaceholderPanel
-              title="Ruling evidence"
-              description="Attached CBP CROSS rulings grouped by supports / conflicts / reference."
-              phase="Phase 8"
+            <CaseEvidencePanel
+              case_={props.case_}
+              isReadOnly={props.isReadOnly}
             />
           </Tabs.Content>
         </div>
