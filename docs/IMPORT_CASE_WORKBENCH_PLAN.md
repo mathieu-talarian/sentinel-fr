@@ -15,12 +15,13 @@ This doc is the frontend-side mirror: which existing files change, which new fil
 
 Snapshot of what's shipped against this plan. Tied to backend rollout.
 
-| Phase | Backend dep    | FE status   | Notes                                                                                                                                          |
-| ----- | -------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0     | none           | **done**    | `caseWorkbench: boolean` on `tweaksSlice` (default `false`, persisted). `src/lib/features.ts` OR-es it with `VITE_FEATURE_CASE_WORKBENCH`.     |
-| 1     | Step 1 (fees)  | **done**    | Backend exposed structured surcharges (not fee-schedule metadata); FE renders them with source attribution. See §1.1 for what shipped vs plan. |
-| 2     | Step 2 (cases) | **done**    | Wire-type aliases, `casesSlice` (`activeCaseId` only), facade (`useCases`, `useActiveCase`, …), `selectCaseStatus` selector. See §1.2.         |
-| 3-9   | per the table  | not started |                                                                                                                                                |
+| Phase | Backend dep    | FE status   | Notes                                                                                                                                             |
+| ----- | -------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0     | none           | **done**    | `caseWorkbench: boolean` on `tweaksSlice` (default `false`, persisted). `src/lib/features.ts` OR-es it with `VITE_FEATURE_CASE_WORKBENCH`.        |
+| 1     | Step 1 (fees)  | **done**    | Backend exposed structured surcharges (not fee-schedule metadata); FE renders them with source attribution. See §1.1 for what shipped vs plan.    |
+| 2     | Step 2 (cases) | **done**    | Wire-type aliases, `casesSlice` (`activeCaseId` only), facade (`useCases`, `useActiveCase`, …), `selectCaseStatus` selector. See §1.2.            |
+| 3     | Step 2         | **done**    | `/cases`, `/cases/new`, `/cases/$caseId` routes. `Rail` flag-aware. `RailCaseList` + `RailCaseItem` + `CaseStatusChip` + `NewCaseForm`. See §1.3. |
+| 4-9   | per the table  | not started |                                                                                                                                                   |
 
 Cross-cutting work landed alongside Phase 1 (not tied to any single workbench phase):
 
@@ -63,6 +64,29 @@ Backend Phase 2 shipped `/api/import-cases` (list/create/get/patch/delete) + lin
 **Thunks deferred.** The plan listed `casesThunks.ts` for case + line-item CRUD. Skipped for Phase 2 — TanStack `useMutation({ ...importCaseCreateMutation(), onSuccess })` already gives components an ergonomic call site, and `onSuccess` is the natural place to invalidate the list cache + dispatch `setActiveCaseId`. A `casesThunks` file becomes useful in Phase 6 when SSE chunks need to refetch the active case from a non-React context; revisit then with a hoisted `QueryClient` singleton.
 
 **Chat thread keying deferred.** Plan listed refactoring `chatSlice.threads: Record<caseId, …>` as Phase 2 work. Deferred to Phase 6 (case-aware chat) when there's a real consumer — refactoring chat state without a UI to validate it is churn-without-benefit.
+
+### 1.3 Phase 3 — what shipped vs the plan
+
+Routes (TanStack file-based):
+
+- `routes/cases.tsx` — `/cases` discovery / index page. `validateSearch` with a zod-typed `?status=` filter (`all|draft|ready_for_review|archived`). Filter chips are a horizontal segmented control. Rows are buttons that navigate to `/cases/$caseId`.
+- `routes/cases.new.tsx` — `/cases/new` intake form route shell; the form itself lives in `src/components/organisms/NewCaseForm.tsx`. Required fields: case title + first line description. Optional: transport, country of origin, declared value USD. Submits via the generated `importCaseCreateMutation`, sets the new id as active, redirects to `/cases/$caseId`.
+- `routes/cases.$caseId.tsx` — workbench shell. Loads the case via `useActiveCase()`, shows title + `CaseStatusChip` (derived via `selectCaseStatus`) + a dashed-border placeholder noting that Phase 4 fills in the panels. `useEffect` syncs the URL param into `activeCaseId`.
+
+`routes/index.tsx` — `beforeLoad` now reads `selectFeatureCaseWorkbench(state)` and redirects authed users to `/cases/$activeCaseId` (when one is persisted) or `/cases` otherwise. The legacy chat page stays as the route `component` so flipping the flag back off restores it without code changes.
+
+`Rail` (`src/components/organisms/Rail.tsx`) — internally branches on `useFeatureCaseWorkbench()`:
+
+- Flag on: `RailNewCaseButton` (navigates to `/cases/new`) + `RailCaseList` (lists `useCases()` rows via `RailCaseItem`, marks the row matching `activeCaseId`).
+- Flag off: legacy `RailNewChatButton` + `RailHistoryList`.
+
+The `onNewChat` prop stays on `Rail` for the legacy `/` route; it's ignored when the flag is on.
+
+New molecules: `CaseStatusChip` (accepts both the persisted 3-value enum and the derived 7-value enum), `RailNewCaseButton`, `RailCaseItem`.
+
+Tweaks panel: `BehaviourSection` gains a "Import-case workbench (preview)" toggle that flips `tweaks.caseWorkbench`. The toggle is hidden when `VITE_FEATURE_CASE_WORKBENCH=true` is set at build time — the env wins and the runtime toggle would only be confusing.
+
+**Deferred from the original plan §6.1:** segmented status filter inside the rail itself. The filter lives on the `/cases` index page only — keeping the rail unfiltered shares one TanStack Query cache between rail and index, and the rail already shows the active case as a strong "you are here" affordance. Phase 4 can revisit if the rail grows long enough to need filtering.
 
 ## 2. Constraints
 

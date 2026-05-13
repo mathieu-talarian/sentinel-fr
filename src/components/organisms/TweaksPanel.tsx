@@ -49,11 +49,15 @@ export function TweaksPanel(props: Readonly<TweaksPanelPropsT>) {
       <BehaviourSection
         showThinkingByDefault={tweaks.showThinkingByDefault}
         inspectorAutoOpen={tweaks.inspectorAutoOpen}
+        caseWorkbench={tweaks.caseWorkbench}
         onShowThinkingChange={(showThinkingByDefault) => {
           setTweaks({ showThinkingByDefault });
         }}
         onInspectorAutoOpenChange={(inspectorAutoOpen) => {
           setTweaks({ inspectorAutoOpen });
+        }}
+        onCaseWorkbenchChange={(caseWorkbench) => {
+          setTweaks({ caseWorkbench });
         }}
       />
 

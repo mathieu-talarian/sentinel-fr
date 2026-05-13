@@ -17,6 +17,7 @@ import { EmptyState } from "@/components/organisms/EmptyState";
 import { Inspector } from "@/components/organisms/Inspector";
 import { Rail } from "@/components/organisms/Rail";
 import { TweaksPanel } from "@/components/organisms/TweaksPanel";
+import { selectFeatureCaseWorkbench } from "@/lib/features";
 import { useChatStore } from "@/lib/state/chatStore";
 import { store } from "@/lib/state/store";
 import { useTweaks } from "@/lib/state/tweaks";
@@ -28,13 +29,27 @@ export const Route = createFileRoute("/")({
   // `subscribeAuth` in main.tsx awaits the first onAuthStateChanged callback
   // before mounting React, so the slice is always settled here.
   beforeLoad: ({ location }) => {
-    const { status } = store.getState().auth;
-    if (status !== "authed") {
+    const state = store.getState();
+    if (state.auth.status !== "authed") {
       redirect({
         to: "/login",
         search: { next: location.pathname + location.searchStr },
         throw: true,
       });
+    }
+    // Phase 0 flag: route authed users into the workbench. The legacy chat
+    // page remains as the `component` below so flipping the flag off
+    // restores it without further code changes.
+    if (selectFeatureCaseWorkbench(state)) {
+      const activeId = state.cases.activeCaseId;
+      if (activeId !== null) {
+        redirect({
+          to: "/cases/$caseId",
+          params: { caseId: activeId },
+          throw: true,
+        });
+      }
+      redirect({ to: "/cases", throw: true });
     }
   },
   component: ChatPage,
