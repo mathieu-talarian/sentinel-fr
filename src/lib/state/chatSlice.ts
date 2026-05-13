@@ -114,6 +114,25 @@ const slice = createSlice({
     reset(state, action: PayloadAction<{ threadId: string }>) {
       state.threads[action.payload.threadId] = initialThread();
     },
+    loadMessages(
+      state,
+      action: PayloadAction<{
+        threadId: string;
+        conversationId: string;
+        messages: MessageT[];
+      }>,
+    ) {
+      // Replace the thread wholesale — used by `loadConversation` when
+      // the user picks a past conversation from the rail. We don't
+      // merge into the live thread because the new payload is a
+      // settled, server-side transcript and any in-memory streaming
+      // state would be inconsistent with it.
+      state.threads[action.payload.threadId] = {
+        ...initialThread(),
+        messages: action.payload.messages,
+        conversationId: action.payload.conversationId,
+      };
+    },
     finalizeAssistant(
       state,
       action: PayloadAction<{

@@ -116,6 +116,15 @@ export const zCasePatch = z.object({
   value: z.record(z.string(), z.unknown()).nullish(),
 });
 
+/**
+ * Persisted snapshot of one `casePatchSuggestion` SSE chunk. Shape
+ * mirrors what the FE renders as review chips; never auto-applied.
+ */
+export const zCasePatchSuggestionView = z.object({
+  patches: z.array(zCasePatch),
+  status: z.string(),
+});
+
 export const zCaseRulingView = z.object({
   assignedHtsCodes: z.array(z.string()),
   attachedAt: z.iso.datetime(),
@@ -987,6 +996,7 @@ export const zUsageView = z.object({
 });
 
 export const zConversationMessage = z.object({
+  casePatchSuggestions: z.array(zCasePatchSuggestionView).optional(),
   content: z.string(),
   id: z.string(),
   role: z.string(),

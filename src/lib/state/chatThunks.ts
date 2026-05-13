@@ -1,8 +1,14 @@
+import type {
+  ConversationMessageT,
+  ToolCallViewT,
+} from "@/lib/api/generated/types.gen";
 import type { AppThunkT, RootStateT } from "@/lib/state/store";
 import type {
   AssistantMessageDataT,
   ChatTurnT,
   MessageT,
+  ToolCallStatusT,
+  ToolCallT,
   UserMessageDataT,
 } from "@/lib/types";
 import type { Dispatch } from "@reduxjs/toolkit";
@@ -10,6 +16,7 @@ import type { Dispatch } from "@reduxjs/toolkit";
 import * as Sentry from "@sentry/react";
 
 import { streamChat } from "@/lib/api/chatStream";
+import { conversationGet } from "@/lib/api/generated/sdk.gen";
 import { casesActions } from "@/lib/state/casesSlice";
 import { LEGACY_THREAD_ID, chatActions } from "@/lib/state/chatSlice";
 
@@ -176,4 +183,94 @@ export const resetChat =
     const thread = getState().chat.threads[threadId];
     if (thread?.running) abortCtrl?.abort();
     dispatch(chatActions.reset({ threadId }));
+  };
+
+const asToolCallStatus = (raw: string): ToolCallStatusT => {
+  if (raw === "complete") return "complete";
+  if (raw === "failed") return "failed";
+  return "in-flight";
+};
+
+const mapToolCall = (tc: ToolCallViewT): ToolCallT => ({
+  id: tc.id,
+  tool: tc.tool,
+  args: tc.args,
+  status: asToolCallStatus(tc.status),
+  // No persisted started-at; durationMs is what we have. `0` is the
+  // sentinel a future render uses to detect "loaded, not streamed".
+  startedAt: 0,
+  durationMs: tc.durationMs ?? undefined,
+  result: tc.result ?? undefined,
+  errorCode: tc.code ?? undefined,
+  errorMessage: tc.message ?? undefined,
+});
+
+const mapConversationMessage = (m: ConversationMessageT): MessageT | null => {
+  if (m.role === "user") {
+    return { id: newId("u"), role: "user", text: m.content };
+  }
+  if (m.role !== "assistant") return null;
+  const calls = (m.toolCalls ?? []).map((tc) => mapToolCall(tc));
+  const msg: AssistantMessageDataT = {
+    id: newId("a"),
+    role: "assistant",
+    serverId: m.id,
+    thinking: "",
+    thinkingActive: false,
+    calls,
+    reply: m.content,
+    streaming: false,
+    done: true,
+    usage: m.usage ?? undefined,
+  };
+  return msg;
+};
+
+/**
+ * Replace the case's chat thread with a persisted conversation.
+ *
+ * Fetches the full message list, rebuilds the FE message shapes
+ * (assistant `calls` from `toolCalls`, settled streaming flags), and
+ * rehydrates any persisted `casePatchSuggestion` markers into
+ * `casesSlice.pendingPatches` so the review chips reappear without
+ * re-streaming. Aborts any in-flight stream on the same thread first.
+ */
+export const loadConversation =
+  (threadId: string, conversationId: string): AppThunkT<Promise<void>> =>
+  async (dispatch, getState) => {
+    const state = getState();
+    const existing = state.chat.threads[threadId];
+    if (existing?.running) abortCtrl?.abort();
+    if (existing?.conversationId === conversationId) return;
+
+    try {
+      const res = await conversationGet({
+        path: { id: conversationId },
+        throwOnError: true,
+      });
+      const messages = res.data.messages
+        .map((m) => mapConversationMessage(m))
+        .filter((m): m is MessageT => m !== null);
+
+      dispatch(
+        chatActions.loadMessages({ threadId, conversationId, messages }),
+      );
+
+      // Rehydrate persisted casePatchSuggestion markers (Phase 12). The
+      // pending tray is already cleared by setActiveCaseId / a chat
+      // reset; appending here is purely additive.
+      dispatch(casesActions.clearPendingPatches());
+      for (const m of res.data.messages) {
+        for (const s of m.casePatchSuggestions ?? []) {
+          if (s.patches.length > 0) {
+            dispatch(casesActions.pushPendingPatches(s.patches));
+          }
+        }
+      }
+    } catch (error) {
+      Sentry.captureException(error, {
+        tags: { source: "load-conversation" },
+        extra: { threadId, conversationId },
+      });
+    }
   };

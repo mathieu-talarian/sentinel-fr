@@ -177,6 +177,20 @@ export type CasePatchT = {
   } | null;
 };
 
+/**
+ * Persisted snapshot of one `casePatchSuggestion` SSE chunk. Shape
+ * mirrors what the FE renders as review chips; never auto-applied.
+ */
+export type CasePatchSuggestionViewT = {
+  patches: Array<CasePatchT>;
+  /**
+   * Always `"suggestion"` for now; reserved for future state
+   * (e.g. `"applied"` if we ever track which suggestions the
+   * user accepted in this same conversation row).
+   */
+  status: string;
+};
+
 export type CaseRulingViewT = {
   assignedHtsCodes: Array<string>;
   attachedAt: string;
@@ -461,6 +475,13 @@ export type ConversationListResponseT = {
 };
 
 export type ConversationMessageT = {
+  /**
+   * Persisted `casePatchSuggestion` markers (Phase 12). Lifted out
+   * of the `tool_calls` jsonb so the FE can rehydrate them
+   * without parsing the heterogeneous array. Empty when the turn
+   * produced no suggestions.
+   */
+  casePatchSuggestions?: Array<CasePatchSuggestionViewT>;
   content: string;
   id: string;
   role: string;

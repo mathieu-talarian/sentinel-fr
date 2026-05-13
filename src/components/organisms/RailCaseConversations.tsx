@@ -3,9 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 
 import { conversationsListOptions } from "@/lib/api/generated/@tanstack/react-query.gen";
 import { useActiveCaseId } from "@/lib/state/cases";
+import { loadConversation } from "@/lib/state/chatThunks";
+import { useAppDispatch, useAppSelector } from "@/lib/state/hooks";
 import { useTweaks } from "@/lib/state/tweaks";
 import { sx } from "@/lib/styles/sx";
-import { colors, fonts } from "@/lib/styles/tokens.stylex";
+import { borders, colors, fonts, radii } from "@/lib/styles/tokens.stylex";
 import { formatMonthDay, formatRelativeDays } from "@/lib/utils/intl";
 
 const ONE_DAY_MS = 86_400_000;
@@ -19,15 +21,21 @@ const formatWhen = (iso: string, lang: "en" | "fr"): string => {
 
 /**
  * Rail section listing the past conversations pinned to the active
- * import case. Hidden when there is no active case. Display-only for
- * now: clicking a row is a no-op until `loadConversation` + the
- * casePatchSuggestion rehydration path are wired (the backend's
- * `ToolCallView` deserializer doesn't surface the marker entries yet —
- * see plan doc §1.14).
+ * import case. Hidden when there is no active case. Clicking a row
+ * dispatches `loadConversation`, which replaces the case's in-memory
+ * thread with the persisted transcript and rehydrates any
+ * `casePatchSuggestion` markers (Phase 12).
  */
 export function RailCaseConversations() {
   const [tweaks] = useTweaks();
   const activeCaseId = useActiveCaseId();
+  const dispatch = useAppDispatch();
+  const activeConversationId = useAppSelector((s) =>
+    activeCaseId
+      ? (s.chat.threads[activeCaseId]?.conversationId ?? null)
+      : null,
+  );
+
   const q = useQuery({
     ...conversationsListOptions({ query: { caseId: activeCaseId ?? "" } }),
     enabled: activeCaseId !== null,
@@ -37,19 +45,33 @@ export function RailCaseConversations() {
   const conversations = q.data?.conversations ?? [];
   if (conversations.length === 0 && !q.isLoading) return null;
 
+  const onPick = (conversationId: string) => {
+    void dispatch(loadConversation(activeCaseId, conversationId));
+  };
+
   return (
     <>
       <div {...sx(s.section)}>Conversations on this case</div>
       <div {...sx(s.list)}>
         {q.isLoading && <div {...sx(s.note)}>Loading…</div>}
-        {conversations.map((c) => (
-          <div key={c.id} {...sx(s.row)}>
-            <div {...sx(s.title)}>{c.title}</div>
-            <div {...sx(s.when)}>
-              {formatWhen(c.lastMessageAt, tweaks.lang)}
-            </div>
-          </div>
-        ))}
+        {conversations.map((c) => {
+          const active = c.id === activeConversationId;
+          return (
+            <button
+              key={c.id}
+              type="button"
+              {...sx(s.row, active && s.rowActive)}
+              onClick={() => {
+                onPick(c.id);
+              }}
+            >
+              <span {...sx(s.title, active && s.titleActive)}>{c.title}</span>
+              <span {...sx(s.when)}>
+                {formatWhen(c.lastMessageAt, tweaks.lang)}
+              </span>
+            </button>
+          );
+        })}
         {q.isError && <div {...sx(s.error)}>Couldn't load conversations</div>}
       </div>
     </>
@@ -73,9 +95,24 @@ const s = stylex.create({
   },
   row: {
     padding: "6px 10px",
+    borderColor: "transparent",
+    borderRadius: radii.sm,
+    borderStyle: borders.solid,
+    borderWidth: borders.thin,
     gap: 2,
+    backgroundColor: {
+      default: "transparent",
+      ":hover": colors.paper3,
+    },
+    cursor: "pointer",
     display: "flex",
     flexDirection: "column",
+    textAlign: "left",
+    width: "100%",
+  },
+  rowActive: {
+    borderColor: colors.line,
+    backgroundColor: colors.paper3,
   },
   title: {
     overflow: "hidden",
@@ -84,6 +121,10 @@ const s = stylex.create({
     fontSize: 12.5,
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
+  },
+  titleActive: {
+    color: colors.ink,
+    fontWeight: 500,
   },
   when: {
     color: colors.ink4,
