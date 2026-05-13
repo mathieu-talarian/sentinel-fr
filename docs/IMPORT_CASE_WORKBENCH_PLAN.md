@@ -15,18 +15,19 @@ This doc is the frontend-side mirror: which existing files change, which new fil
 
 Snapshot of what's shipped against this plan. Tied to backend rollout.
 
-| Phase | Backend dep      | FE status   | Notes                                                                                                                                                        |
-| ----- | ---------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 0     | none             | **done**    | `FEATURE_CASE_WORKBENCH_ENV` defaults to **on**. Legacy chat surface deleted; the env var is preserved as a future rollback hook but is a runtime no-op now. |
-| 1     | Step 1 (fees)    | **done**    | Backend exposed structured surcharges (not fee-schedule metadata); FE renders them with source attribution. See §1.1 for what shipped vs plan.               |
-| 2     | Step 2 (cases)   | **done**    | Wire-type aliases, `casesSlice` (`activeCaseId` only), facade (`useCases`, `useActiveCase`, …), `selectCaseStatus` selector. See §1.2.                       |
-| 3     | Step 2           | **done**    | `/cases`, `/cases/new`, `/cases/$caseId` routes. `Rail` flag-aware. `RailCaseList` + `RailCaseItem` + `CaseStatusChip` + `NewCaseForm`. See §1.3.            |
-| 4     | + classify       | **done**    | `CaseInspector` (Radix Tabs) + `CaseFactsPanel` (PATCH-on-blur) + `CaseLinesPanel` (add/remove + per-line `importCaseLineClassify`). See §1.4.               |
-| 5     | Step 3 (quotes)  | **done**    | `CaseQuotePanel` (run / re-run / latest), `QuoteSummaryTable`, `QuoteLineRow` (expandable + surcharges + caveats), `FeeRow`. See §1.5.                       |
-| 6     | Step 4 (chat)    | **done**    | Keyed `chatSlice` (per-thread), `streamChat` `caseId` routing, `casePatchSuggestion` → `CasePatchTray`, `CaseChatSurface`. See §1.7.                         |
-| 7     | Step 5 (risk)    | **done**    | `CaseRiskPanel` (`importCaseRiskScreen*`), `RiskFlagRow` + severity tokens, "Cost estimate only" gate in `CaseQuotePanel`. See §1.8.                         |
-| 8     | Step 6 (rulings) | **done**    | `CaseEvidencePanel` (supports / conflicts / reference groups), `CaseRulingCard`, `RulingsSearchDialog` (Radix). See §1.9.                                    |
-| 9     | none             | **partial** | Workbench header now uses `selectCaseStatus(case, risk)` + Archive/Unarchive button. Sentry tags via `mutation.meta`. See §1.10 for ops deferrals.           |
+| Phase  | Backend dep      | FE status   | Notes                                                                                                                                                        |
+| ------ | ---------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 0      | none             | **done**    | `FEATURE_CASE_WORKBENCH_ENV` defaults to **on**. Legacy chat surface deleted; the env var is preserved as a future rollback hook but is a runtime no-op now. |
+| 1      | Step 1 (fees)    | **done**    | Backend exposed structured surcharges (not fee-schedule metadata); FE renders them with source attribution. See §1.1 for what shipped vs plan.               |
+| 2      | Step 2 (cases)   | **done**    | Wire-type aliases, `casesSlice` (`activeCaseId` only), facade (`useCases`, `useActiveCase`, …), `selectCaseStatus` selector. See §1.2.                       |
+| 3      | Step 2           | **done**    | `/cases`, `/cases/new`, `/cases/$caseId` routes. `Rail` flag-aware. `RailCaseList` + `RailCaseItem` + `CaseStatusChip` + `NewCaseForm`. See §1.3.            |
+| 4      | + classify       | **done**    | `CaseInspector` (Radix Tabs) + `CaseFactsPanel` (PATCH-on-blur) + `CaseLinesPanel` (add/remove + per-line `importCaseLineClassify`). See §1.4.               |
+| 5      | Step 3 (quotes)  | **done**    | `CaseQuotePanel` (run / re-run / latest), `QuoteSummaryTable`, `QuoteLineRow` (expandable + surcharges + caveats), `FeeRow`. See §1.5.                       |
+| 6      | Step 4 (chat)    | **done**    | Keyed `chatSlice` (per-thread), `streamChat` `caseId` routing, `casePatchSuggestion` → `CasePatchTray`, `CaseChatSurface`. See §1.7.                         |
+| 7      | Step 5 (risk)    | **done**    | `CaseRiskPanel` (`importCaseRiskScreen*`), `RiskFlagRow` + severity tokens, "Cost estimate only" gate in `CaseQuotePanel`. See §1.8.                         |
+| 8      | Step 6 (rulings) | **done**    | `CaseEvidencePanel` (supports / conflicts / reference groups), `CaseRulingCard`, `RulingsSearchDialog` (Radix). See §1.9.                                    |
+| 9      | none             | **partial** | Workbench header now uses `selectCaseStatus(case, risk)` + Archive/Unarchive button. Sentry tags via `mutation.meta`. See §1.10 for ops deferrals.           |
+| polish | none             | **done**    | Click-to-scroll missing-fact chips, ruling refresh, ruling attach pin+note, quote history dropdown. See §1.12.                                               |
 
 Cross-cutting work landed alongside Phase 1 (not tied to any single workbench phase):
 
@@ -261,11 +262,20 @@ Net: 18 deleted files, ~1500 fewer lines of FE code, single mounted chat path (c
 
 Smaller deferrals still pending across Phases 4-8 (intentionally not pulled into Phase 9):
 
-- `MissingFieldChip` click-to-scroll into the matching inspector field.
-- Quote history dropdown + "what changed since last quote" diff inside `CaseQuotePanel`.
 - `CaseTimeline` chronological merge in `CaseChatSurface`.
-- `RulingsSearchDialog`: line-item pin + match-note collection.
-- `importCaseRulingRefresh` button on `CaseRulingCard`.
+- "What changed since last quote" side-by-side quote diff inside `CaseQuotePanel` (the listing dropdown shipped in §1.12, but per-row diff did not).
+
+### 1.12 Polish batch — what shipped
+
+Small affordances that were carried as deferrals across Phases 4-8. Bundled together post-Phase 9 to keep the workbench feeling finished rather than functional:
+
+- **`MissingFieldChip` click-to-scroll.** `cases.$caseId.tsx` builds an `onMissingFieldClick` that navigates to the right inspector tab and, for case-level facts, calls `scrollMissingFact(field)` from `src/lib/utils/scrollMissingFact.ts`. The util waits two `requestAnimationFrame`s so a freshly-switched tab has mounted before we measure layout, then `scrollIntoView({ block: "center" })` + `.focus()` on the matching input. Field-id map (`case-transport`, `case-coo`, `case-value`) lives in the util; `lineItems` deficiencies just switch tabs.
+- **Ruling refresh button.** `CaseRulingCard` now exposes Refresh alongside Detach. `CaseEvidencePanel` wires it to `importCaseRulingRefreshMutation` with `meta.tags`; per-card `refreshingNumber` state mirrors the existing `detachingNumber` so only the in-flight card shows the spinner copy.
+- **Ruling attach: pin-to-line + match-note.** `RulingsSearchResult` grew a `<select>` of `case_.lineItems` (default "Case-level") and a `<Textarea>` for an optional match note. `RulingsSearchDialog` forwards both into `importCaseRulingAttachMutation`'s body. The card's existing "Pinned to line #N" / match-note rendering surfaces them on the attached side.
+- **Quote history dropdown.** `CaseQuotePanel` keeps a `selectedQuoteId` state and an `orderedQuotes` memo (desc by `createdAt`). When the case has more than one quote, `QuoteHistoryDropdown` (new molecule) renders a `<select>` labelled by `formatCaptured(...)` — choosing one swaps `activeId` and the existing `importCaseQuoteGetOptions` query refetches that quote. Running a new quote clears the selection so the user lands on the fresh one. A small banner ("Viewing a historical snapshot…") shows when `activeId` isn't the latest.
+- **CaseQuotePanel refactor.** Extracting the lines + entry-fees sections out (`QuoteLinesList`, `QuoteEntryFees`) kept the panel under the 250-line lint cap once the dropdown + banner landed.
+
+Side-by-side quote diff is the one piece of the original "quote history" polish that did not ship — the dropdown swaps which quote is rendered, but rendering two quotes simultaneously with per-row deltas needs more design and stays deferred.
 
 ## 2. Constraints
 

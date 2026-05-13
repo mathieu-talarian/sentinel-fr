@@ -11,8 +11,9 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/atoms/Button";
 import { CaveatsList } from "@/components/molecules/CaveatsList";
 import { ErrorBanner } from "@/components/molecules/ErrorBanner";
-import { FeeRow } from "@/components/molecules/FeeRow";
-import { QuoteLineRow } from "@/components/molecules/QuoteLineRow";
+import { QuoteEntryFees } from "@/components/molecules/QuoteEntryFees";
+import { QuoteHistoryDropdown } from "@/components/molecules/QuoteHistoryDropdown";
+import { QuoteLinesList } from "@/components/molecules/QuoteLinesList";
 import { QuoteSummaryTable } from "@/components/molecules/QuoteSummaryTable";
 import {
   importCaseGetQueryKey,
@@ -62,6 +63,7 @@ export function CaseQuotePanel(props: Readonly<CaseQuotePanelPropsT>) {
   const { case_, isReadOnly } = props;
   const [tweaks] = useTweaks();
   const [error, setError] = useState<string | null>(null);
+  const [selectedQuoteId, setSelectedQuoteId] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
   const status = selectCaseStatus(case_);
@@ -76,19 +78,23 @@ export function CaseQuotePanel(props: Readonly<CaseQuotePanelPropsT>) {
     ...importCaseQuoteListOptions({ path: { caseId: case_.id } }),
   });
 
-  const latestSummary = useMemo(() => {
+  const orderedQuotes = useMemo(() => {
     const items = quotesList.data?.quotes ?? [];
-    if (items.length === 0) return undefined;
-    return items.toSorted((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+    return items.toSorted((a, b) => b.createdAt.localeCompare(a.createdAt));
   }, [quotesList.data?.quotes]);
 
-  const latestId = latestSummary?.id ?? null;
+  const latestSummary = orderedQuotes.at(0);
+  const activeId =
+    selectedQuoteId && orderedQuotes.some((q) => q.id === selectedQuoteId)
+      ? selectedQuoteId
+      : (latestSummary?.id ?? null);
+  const isHistorical = activeId != null && activeId !== latestSummary?.id;
 
   const latestQuote = useQuery({
     ...importCaseQuoteGetOptions({
-      path: { caseId: case_.id, quoteId: latestId ?? "" },
+      path: { caseId: case_.id, quoteId: activeId ?? "" },
     }),
-    enabled: latestId !== null,
+    enabled: activeId !== null,
   });
 
   // Risk screen for the cost-estimate-only gate. 404 = "not run" — we
@@ -103,6 +109,7 @@ export function CaseQuotePanel(props: Readonly<CaseQuotePanelPropsT>) {
     meta: { tags: { "import_case.id": case_.id } },
     onSuccess: async () => {
       setError(null);
+      setSelectedQuoteId(null);
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: importCaseQuoteListQueryKey({
@@ -170,6 +177,24 @@ export function CaseQuotePanel(props: Readonly<CaseQuotePanelPropsT>) {
         </Button>
       </header>
 
+      {orderedQuotes.length > 1 && (
+        <QuoteHistoryDropdown
+          quotes={orderedQuotes}
+          activeId={activeId}
+          labelFor={(q) => formatCaptured(q.createdAt, tweaks.lang)}
+          onSelect={(next) => {
+            setSelectedQuoteId(next === latestSummary?.id ? null : next);
+          }}
+        />
+      )}
+
+      {isHistorical && (
+        <p {...sx(s.historicalNote)}>
+          Viewing a historical snapshot. Re-run the quote to capture a fresh
+          one.
+        </p>
+      )}
+
       {!canQuote && !quote && (
         <p {...sx(s.gate)}>
           Fill in the missing case facts and pick a selected HTS code for every
@@ -191,38 +216,13 @@ export function CaseQuotePanel(props: Readonly<CaseQuotePanelPropsT>) {
         <>
           <QuoteSummaryTable summary={quote.summary} showHmf={showHmf} />
 
-          <section {...sx(s.section)}>
-            <h3 {...sx(s.sectionTitle)}>Lines</h3>
-            <ul {...sx(s.list)}>
-              {quote.lines
-                .toSorted((a, b) => a.position - b.position)
-                .map((line) => (
-                  <QuoteLineRow key={line.id} line={line} lang={tweaks.lang} />
-                ))}
-            </ul>
-          </section>
+          <QuoteLinesList lines={quote.lines} lang={tweaks.lang} />
 
-          <section {...sx(s.section)}>
-            <h3 {...sx(s.sectionTitle)}>Entry fees</h3>
-            <div {...sx(s.fees)}>
-              <FeeRow
-                feeCode="mpf_formal"
-                amountUsd={quote.summary.mpfUsd}
-                schedule={quote.feeScheduleRefs.find(
-                  (f) => f.feeCode === "mpf_formal",
-                )}
-              />
-              {showHmf && (
-                <FeeRow
-                  feeCode="hmf_ocean"
-                  amountUsd={quote.summary.hmfUsd}
-                  schedule={quote.feeScheduleRefs.find(
-                    (f) => f.feeCode === "hmf_ocean",
-                  )}
-                />
-              )}
-            </div>
-          </section>
+          <QuoteEntryFees
+            summary={quote.summary}
+            feeScheduleRefs={quote.feeScheduleRefs}
+            showHmf={showHmf}
+          />
 
           <CaveatsList caveats={quote.caveats} />
         </>
@@ -260,22 +260,16 @@ const s = stylex.create({
     color: colors.ink3,
     fontSize: 12,
   },
-  section: { gap: 8, display: "flex", flexDirection: "column" },
-  sectionTitle: {
+  historicalNote: {
     margin: 0,
-    color: colors.ink4,
-    fontSize: 11,
-    fontWeight: 500,
-    letterSpacing: "0.04em",
-    textTransform: "uppercase",
+    padding: "6px 10px",
+    borderColor: colors.line,
+    borderRadius: radii.sm,
+    borderStyle: "dashed",
+    borderWidth: borders.thin,
+    backgroundColor: colors.paper2,
+    color: colors.ink3,
+    fontSize: 11.5,
+    fontStyle: "italic",
   },
-  list: {
-    margin: 0,
-    padding: 0,
-    gap: 6,
-    display: "flex",
-    flexDirection: "column",
-    listStyleType: "none",
-  },
-  fees: { gap: 8, display: "flex", flexDirection: "column" },
 });

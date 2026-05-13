@@ -23,8 +23,10 @@ interface CaseRulingCardPropsT {
   /** Resolves `ruling.lineItemId` → display position. */
   linePositionsById: Map<string, number>;
   detaching: boolean;
+  refreshing: boolean;
   isReadOnly: boolean;
   onDetach: () => void;
+  onRefresh: () => void;
 }
 
 /**
@@ -34,7 +36,8 @@ interface CaseRulingCardPropsT {
  * inside `CaseEvidencePanel`'s three groups.
  */
 export function CaseRulingCard(props: Readonly<CaseRulingCardPropsT>) {
-  const { ruling, detaching, isReadOnly } = props;
+  const { ruling, detaching, refreshing, isReadOnly } = props;
+  const busy = detaching || refreshing;
   const support = asSupportState(ruling.supportsSelectedCode);
   const position = ruling.lineItemId
     ? props.linePositionsById.get(ruling.lineItemId)
@@ -68,15 +71,26 @@ export function CaseRulingCard(props: Readonly<CaseRulingCardPropsT>) {
 
       <div {...sx(s.footer)}>
         <SourceLink label="View on CROSS" url={ruling.url} />
-        <button
-          type="button"
-          onClick={props.onDetach}
-          disabled={isReadOnly || detaching}
-          {...sx(s.detach)}
-          aria-label={`Detach ruling ${ruling.rulingNumber}`}
-        >
-          {detaching ? "Detaching…" : "Detach"}
-        </button>
+        <div {...sx(s.actions)}>
+          <button
+            type="button"
+            onClick={props.onRefresh}
+            disabled={busy}
+            {...sx(s.action)}
+            aria-label={`Refresh ruling ${ruling.rulingNumber}`}
+          >
+            {refreshing ? "Refreshing…" : "Refresh"}
+          </button>
+          <button
+            type="button"
+            onClick={props.onDetach}
+            disabled={isReadOnly || busy}
+            {...sx(s.detach)}
+            aria-label={`Detach ruling ${ruling.rulingNumber}`}
+          >
+            {detaching ? "Detaching…" : "Detach"}
+          </button>
+        </div>
       </div>
     </article>
   );
@@ -156,6 +170,32 @@ const s = stylex.create({
     alignItems: "baseline",
     display: "flex",
     justifyContent: "space-between",
+  },
+  actions: {
+    gap: 6,
+    alignItems: "center",
+    display: "flex",
+  },
+  action: {
+    padding: "2px 8px",
+    borderColor: "transparent",
+    borderRadius: radii.sm,
+    borderStyle: borders.solid,
+    borderWidth: borders.thin,
+    backgroundColor: {
+      default: "transparent",
+      ":hover:not(:disabled)": colors.paper3,
+    },
+    color: {
+      default: colors.ink4,
+      ":hover:not(:disabled)": colors.ink,
+    },
+    cursor: {
+      default: "pointer",
+      ":disabled": "not-allowed",
+    },
+    fontFamily: fonts.sans,
+    fontSize: 11,
   },
   detach: {
     padding: "2px 8px",

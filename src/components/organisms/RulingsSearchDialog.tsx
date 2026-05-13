@@ -1,3 +1,5 @@
+import type { ImportCaseLineItemResponseT } from "@/lib/api/generated/types.gen";
+
 import * as Sentry from "@sentry/react";
 import * as stylex from "@stylexjs/stylex";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -26,6 +28,8 @@ type VerdictT = "yes" | "no" | "unknown";
 
 interface RulingsSearchDialogPropsT {
   caseId: string;
+  /** Case's line items, sorted by position by the parent. */
+  lineItems: readonly ImportCaseLineItemResponseT[];
   open: boolean;
   isReadOnly: boolean;
   onOpenChange: (open: boolean) => void;
@@ -100,11 +104,20 @@ export function RulingsSearchDialog(
     setSubmittedQuery(next);
   };
 
-  const onAttach = (rulingNumber: string, verdict: VerdictT) => {
+  const onAttach = (
+    rulingNumber: string,
+    verdict: VerdictT,
+    opts: { lineItemId: string | null; matchNote: string | null },
+  ) => {
     setError(null);
     setBusyKey(`${rulingNumber}:${verdict}`);
     attachMut.mutate({
-      body: { rulingNumber, supportsSelectedCode: verdict },
+      body: {
+        rulingNumber,
+        supportsSelectedCode: verdict,
+        lineItemId: opts.lineItemId,
+        matchNote: opts.matchNote,
+      },
       path: { caseId },
     });
   };
@@ -160,8 +173,9 @@ export function RulingsSearchDialog(
                   busyVerdict={busyVerdict}
                   attached={attachedNumbers.has(r.rulingNumber)}
                   isReadOnly={isReadOnly}
-                  onAttach={(v) => {
-                    onAttach(r.rulingNumber, v);
+                  lineItems={props.lineItems}
+                  onAttach={(v, opts) => {
+                    onAttach(r.rulingNumber, v, opts);
                   }}
                 />
               );

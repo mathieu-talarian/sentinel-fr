@@ -15,6 +15,7 @@ import { RulingsSearchDialog } from "@/components/organisms/RulingsSearchDialog"
 import {
   importCaseGetQueryKey,
   importCaseRulingDetachMutation,
+  importCaseRulingRefreshMutation,
 } from "@/lib/api/generated/@tanstack/react-query.gen";
 import { sx } from "@/lib/styles/sx";
 import { borders, colors, fonts, radii } from "@/lib/styles/tokens.stylex";
@@ -69,16 +70,20 @@ export function CaseEvidencePanel(props: Readonly<CaseEvidencePanelPropsT>) {
   const queryClient = useQueryClient();
   const [searchOpen, setSearchOpen] = useState(false);
   const [detachingNumber, setDetachingNumber] = useState<string | null>(null);
+  const [refreshingNumber, setRefreshingNumber] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const invalidateCase = () =>
+    queryClient.invalidateQueries({
+      queryKey: importCaseGetQueryKey({ path: { caseId: case_.id } }),
+    });
 
   const detachMut = useMutation({
     ...importCaseRulingDetachMutation(),
     meta: { tags: { "import_case.id": case_.id } },
     onSuccess: async () => {
       setError(null);
-      await queryClient.invalidateQueries({
-        queryKey: importCaseGetQueryKey({ path: { caseId: case_.id } }),
-      });
+      await invalidateCase();
     },
     onError: (e) => {
       const msg = errorMessage(e);
@@ -95,6 +100,21 @@ export function CaseEvidencePanel(props: Readonly<CaseEvidencePanelPropsT>) {
     },
   });
 
+  const refreshMut = useMutation({
+    ...importCaseRulingRefreshMutation(),
+    meta: { tags: { "import_case.id": case_.id } },
+    onSuccess: async () => {
+      setError(null);
+      await invalidateCase();
+    },
+    onError: (e) => {
+      setError(errorMessage(e));
+    },
+    onSettled: () => {
+      setRefreshingNumber(null);
+    },
+  });
+
   const rulings = useMemo(() => case_.rulings ?? [], [case_.rulings]);
   const groups = useMemo(() => groupRulings(rulings), [rulings]);
 
@@ -108,6 +128,12 @@ export function CaseEvidencePanel(props: Readonly<CaseEvidencePanelPropsT>) {
     setError(null);
     setDetachingNumber(rulingNumber);
     detachMut.mutate({ path: { caseId: case_.id, rulingNumber } });
+  };
+
+  const onRefresh = (rulingNumber: string) => {
+    setError(null);
+    setRefreshingNumber(rulingNumber);
+    refreshMut.mutate({ path: { caseId: case_.id, rulingNumber } });
   };
 
   return (
@@ -153,9 +179,13 @@ export function CaseEvidencePanel(props: Readonly<CaseEvidencePanelPropsT>) {
                     ruling={r}
                     linePositionsById={linePositionsById}
                     detaching={detachingNumber === r.rulingNumber}
+                    refreshing={refreshingNumber === r.rulingNumber}
                     isReadOnly={isReadOnly}
                     onDetach={() => {
                       onDetach(r.rulingNumber);
+                    }}
+                    onRefresh={() => {
+                      onRefresh(r.rulingNumber);
                     }}
                   />
                 ))}
@@ -167,6 +197,7 @@ export function CaseEvidencePanel(props: Readonly<CaseEvidencePanelPropsT>) {
 
       <RulingsSearchDialog
         caseId={case_.id}
+        lineItems={case_.lineItems}
         open={searchOpen}
         isReadOnly={isReadOnly}
         onOpenChange={setSearchOpen}

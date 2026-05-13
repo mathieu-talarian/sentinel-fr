@@ -1,7 +1,12 @@
-import type { RulingViewT } from "@/lib/api/generated/types.gen";
+import type {
+  ImportCaseLineItemResponseT,
+  RulingViewT,
+} from "@/lib/api/generated/types.gen";
 
 import * as stylex from "@stylexjs/stylex";
+import { useState } from "react";
 
+import { Textarea } from "@/components/atoms/Textarea";
 import { HtsCodeBadge } from "@/components/molecules/HtsCodeBadge";
 import { SourceLink } from "@/components/molecules/SourceLink";
 import { sx } from "@/lib/styles/sx";
@@ -20,19 +25,34 @@ interface RulingsSearchResultPropsT {
   busyVerdict: VerdictT | null;
   attached: boolean;
   isReadOnly: boolean;
-  onAttach: (verdict: VerdictT) => void;
+  lineItems: readonly ImportCaseLineItemResponseT[];
+  onAttach: (
+    verdict: VerdictT,
+    opts: { lineItemId: string | null; matchNote: string | null },
+  ) => void;
 }
 
 /**
  * One row in the `RulingsSearchDialog` results list. Renders ruling
- * metadata plus three verdict buttons (Supports / Conflicts / Reference).
- * After a successful attach the row collapses to an "Attached" hint so
- * the user can keep attaching others from the same search.
+ * metadata plus an optional line-item picker and a match-note input,
+ * then three verdict buttons (Supports / Conflicts / Reference). After
+ * a successful attach the row collapses to an "Attached" hint so the
+ * user can keep attaching others from the same search.
  */
 export function RulingsSearchResult(
   props: Readonly<RulingsSearchResultPropsT>,
 ) {
   const { ruling, busyVerdict, attached, isReadOnly } = props;
+  const [lineItemId, setLineItemId] = useState<string>("");
+  const [matchNote, setMatchNote] = useState("");
+
+  const submitAttach = (verdict: VerdictT) => {
+    props.onAttach(verdict, {
+      lineItemId: lineItemId || null,
+      matchNote: matchNote.trim() || null,
+    });
+  };
+
   return (
     <div {...sx(s.result)}>
       <div {...sx(s.head)}>
@@ -51,21 +71,63 @@ export function RulingsSearchResult(
       {attached ? (
         <p {...sx(s.attached)}>Attached to case.</p>
       ) : (
-        <div {...sx(s.attachRow)}>
-          {(["yes", "no", "unknown"] as const).map((v) => (
-            <button
-              key={v}
-              type="button"
-              onClick={() => {
-                props.onAttach(v);
-              }}
-              disabled={isReadOnly || busyVerdict === v}
-              {...sx(s.verdict)}
+        <>
+          {props.lineItems.length > 0 && (
+            <div {...sx(s.optional)}>
+              <label
+                htmlFor={`pin-${ruling.rulingNumber}`}
+                {...sx(s.optionalLabel)}
+              >
+                Pin to line (optional)
+              </label>
+              <select
+                id={`pin-${ruling.rulingNumber}`}
+                value={lineItemId}
+                onChange={(e) => {
+                  setLineItemId(e.currentTarget.value);
+                }}
+                {...sx(s.select)}
+              >
+                <option value="">Case-level</option>
+                {props.lineItems.map((line) => (
+                  <option key={line.id} value={line.id}>
+                    #{line.position} · {line.description}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          <div {...sx(s.optional)}>
+            <label
+              htmlFor={`note-${ruling.rulingNumber}`}
+              {...sx(s.optionalLabel)}
             >
-              {busyVerdict === v ? "Attaching…" : LABELS[v]}
-            </button>
-          ))}
-        </div>
+              Match note (optional)
+            </label>
+            <Textarea
+              id={`note-${ruling.rulingNumber}`}
+              value={matchNote}
+              rows={2}
+              onValueChange={setMatchNote}
+              placeholder="Why this ruling fits the case…"
+            />
+          </div>
+          <div {...sx(s.attachRow)}>
+            {(["yes", "no", "unknown"] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => {
+                  submitAttach(v);
+                }}
+                disabled={isReadOnly || busyVerdict === v}
+                {...sx(s.verdict)}
+              >
+                {busyVerdict === v ? "Attaching…" : LABELS[v]}
+              </button>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
@@ -98,6 +160,26 @@ const s = stylex.create({
     lineHeight: 1.45,
   },
   codes: { gap: 4, display: "flex", flexWrap: "wrap" },
+  optional: { gap: 3, display: "flex", flexDirection: "column", marginTop: 2 },
+  optionalLabel: {
+    color: colors.ink4,
+    fontSize: 10.5,
+    fontWeight: 500,
+    letterSpacing: "0.04em",
+    textTransform: "uppercase",
+  },
+  select: {
+    padding: "6px 10px",
+    borderColor: colors.lineStrong,
+    borderRadius: radii.sm,
+    borderStyle: borders.solid,
+    borderWidth: borders.thin,
+    backgroundColor: colors.paper,
+    color: colors.ink,
+    fontFamily: fonts.sans,
+    fontSize: 12,
+    width: "100%",
+  },
   attachRow: {
     gap: 6,
     alignItems: "center",

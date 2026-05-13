@@ -2,6 +2,7 @@
    colocate the `Route` config alongside the route component. */
 import type { CaseInspectorTabT } from "@/components/organisms/CaseInspector";
 import type { ImportCaseResponseT } from "@/lib/api/generated/types.gen";
+import type { MissingCaseFactKeyT } from "@/lib/state/caseStatus";
 
 import * as Sentry from "@sentry/react";
 import * as stylex from "@stylexjs/stylex";
@@ -14,7 +15,7 @@ import { Button } from "@/components/atoms/Button";
 import { Heading } from "@/components/atoms/Heading";
 import { CaseStatusChip } from "@/components/molecules/CaseStatusChip";
 import { ErrorFallback } from "@/components/molecules/ErrorFallback";
-import { MissingFieldChip } from "@/components/molecules/MissingFieldChip";
+import { MissingFactsStrip } from "@/components/molecules/MissingFactsStrip";
 import { CaseChatSurface } from "@/components/organisms/CaseChatSurface";
 import {
   CaseInspector,
@@ -27,14 +28,12 @@ import {
   importCasePatchMutation,
   importCaseRiskScreenLatestOptions,
 } from "@/lib/api/generated/@tanstack/react-query.gen";
-import {
-  selectCaseStatus,
-  selectMissingCaseFacts,
-} from "@/lib/state/caseStatus";
+import { selectCaseStatus } from "@/lib/state/caseStatus";
 import { useActiveCase, useSetActiveCase } from "@/lib/state/cases";
 import { store } from "@/lib/state/store";
 import { sx } from "@/lib/styles/sx";
-import { borders, colors, fonts, radii } from "@/lib/styles/tokens.stylex";
+import { colors, fonts } from "@/lib/styles/tokens.stylex";
+import { scrollMissingFact } from "@/lib/utils/scrollMissingFact";
 
 const WorkbenchSearchSchema = z.object({
   tab: z.enum(["facts", "lines", "quote", "risks", "evidence"]).optional(),
@@ -95,6 +94,17 @@ function CaseWorkbenchPage() {
   const data = activeCase.data;
   const isReadOnly = data?.status === "archived";
 
+  const onMissingFieldClick = (field: MissingCaseFactKeyT) => {
+    const targetTab: CaseInspectorTabT =
+      field === "lineItems" ? "lines" : "facts";
+    void navigate({
+      to: "/cases/$caseId",
+      params: { caseId },
+      search: () => (targetTab === "facts" ? {} : { tab: targetTab }),
+    });
+    if (targetTab === "facts") scrollMissingFact(field);
+  };
+
   return (
     <Sentry.ErrorBoundary
       fallback={(p) => (
@@ -119,7 +129,10 @@ function CaseWorkbenchPage() {
               case_={data}
               riskScreen={riskScreenQ.data ?? null}
             />
-            <MissingFactsStrip case_={data} />
+            <MissingFactsStrip
+              case_={data}
+              onFieldClick={onMissingFieldClick}
+            />
             <CaseChatSurface case_={data} isReadOnly={isReadOnly} />
           </>
         )}
@@ -200,21 +213,6 @@ const pickArchiveLabel = (busy: boolean, archived: boolean): string => {
   return "Archive";
 };
 
-function MissingFactsStrip(
-  props: Readonly<{ case_: Parameters<typeof selectMissingCaseFacts>[0] }>,
-) {
-  const missing = selectMissingCaseFacts(props.case_);
-  if (missing.length === 0) return null;
-  return (
-    <div {...sx(s.missingStrip)}>
-      <span {...sx(s.missingLabel)}>Missing for quote</span>
-      {missing.map((f) => (
-        <MissingFieldChip key={f} field={f} />
-      ))}
-    </div>
-  );
-}
-
 const s = stylex.create({
   main: {
     padding: "24px 28px",
@@ -235,25 +233,6 @@ const s = stylex.create({
   titleCol: { gap: 6, display: "flex", flexDirection: "column" },
   subline: { gap: 10, alignItems: "center", display: "flex" },
   id: { color: colors.ink4, fontFamily: fonts.mono, fontSize: 11 },
-  missingStrip: {
-    padding: "8px 12px",
-    borderColor: colors.warnSoft,
-    borderRadius: radii.md,
-    borderStyle: borders.solid,
-    borderWidth: borders.thin,
-    gap: 6,
-    alignItems: "center",
-    backgroundColor: colors.warnSoft,
-    display: "flex",
-    flexWrap: "wrap",
-  },
-  missingLabel: {
-    color: colors.warn,
-    fontSize: 11,
-    fontWeight: 500,
-    letterSpacing: "0.04em",
-    textTransform: "uppercase",
-  },
   note: { color: colors.ink3, fontSize: 13, fontStyle: "italic" },
   error: { color: colors.err, fontFamily: fonts.mono, fontSize: 12 },
 });
