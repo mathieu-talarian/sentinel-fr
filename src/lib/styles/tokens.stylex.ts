@@ -51,3 +51,18 @@ export const borders = stylex.defineConsts({
   bold: "2px",
   solid: "solid",
 });
+
+/**
+ * Severity palette for risk flags (Phase 7) — kept as `defineConsts`
+ * because severity coloring is semantic, not themed: a blocking flag is
+ * red in light + dark. Per the FE doc, reserve red for blocking only;
+ * amber for review; neutral for info.
+ */
+export const risk = stylex.defineConsts({
+  fgBlocking: "oklch(0.58 0.16 25)",
+  bgBlocking: "oklch(0.95 0.03 30)",
+  fgReview: "oklch(0.55 0.13 60)",
+  bgReview: "oklch(0.96 0.04 80)",
+  fgInfo: "oklch(0.48 0.025 255)",
+  bgInfo: "oklch(0.94 0.008 80)",
+});

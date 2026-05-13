@@ -10,6 +10,7 @@ import { CaseFactsPanel } from "@/components/organisms/CaseFactsPanel";
 import { CaseLinesPanel } from "@/components/organisms/CaseLinesPanel";
 import { CasePlaceholderPanel } from "@/components/organisms/CasePlaceholderPanel";
 import { CaseQuotePanel } from "@/components/organisms/CaseQuotePanel";
+import { CaseRiskPanel } from "@/components/organisms/CaseRiskPanel";
 import { sx } from "@/lib/styles/sx";
 import { borders, colors, fonts, radii } from "@/lib/styles/tokens.stylex";
 
@@ -84,11 +85,7 @@ export function CaseInspector(props: Readonly<CaseInspectorPropsT>) {
             <CaseQuotePanel case_={props.case_} isReadOnly={props.isReadOnly} />
           </Tabs.Content>
           <Tabs.Content value="risks">
-            <CasePlaceholderPanel
-              title="Risk screen"
-              description="Trade-remedy and compliance flags grouped by severity, with affected line links."
-              phase="Phase 7"
-            />
+            <CaseRiskPanel case_={props.case_} isReadOnly={props.isReadOnly} />
           </Tabs.Content>
           <Tabs.Content value="evidence">
             <CasePlaceholderPanel

@@ -24,7 +24,8 @@ Snapshot of what's shipped against this plan. Tied to backend rollout.
 | 4     | + classify      | **done**    | `CaseInspector` (Radix Tabs) + `CaseFactsPanel` (PATCH-on-blur) + `CaseLinesPanel` (add/remove + per-line `importCaseLineClassify`). See §1.4.    |
 | 5     | Step 3 (quotes) | **done**    | `CaseQuotePanel` (run / re-run / latest), `QuoteSummaryTable`, `QuoteLineRow` (expandable + surcharges + caveats), `FeeRow`. See §1.5.            |
 | 6     | Step 4 (chat)   | **done**    | Keyed `chatSlice` (per-thread), `streamChat` `caseId` routing, `casePatchSuggestion` → `CasePatchTray`, `CaseChatSurface`. See §1.7.              |
-| 7-9   | per the table   | not started |                                                                                                                                                   |
+| 7     | Step 5 (risk)   | **done**    | `CaseRiskPanel` (`importCaseRiskScreen*`), `RiskFlagRow` + severity tokens, "Cost estimate only" gate in `CaseQuotePanel`. See §1.8.              |
+| 8-9   | per the table   | not started |                                                                                                                                                   |
 
 Cross-cutting work landed alongside Phase 1 (not tied to any single workbench phase):
 
@@ -165,6 +166,44 @@ Accept routes through the new `applyCasePatch` thunk: parses the JSON pointer `p
 - **`CaseTimeline` organism** — listed as a chronological merge of chat messages + tool calls + quote/risk/ruling events + accepted case-patch events. Phase 6 reuses the existing `ChatThread` rendering instead; the unified timeline UX is a polish task once we have data to merge.
 - **Tool-result-driven full case refetch.** The plan called for `sendChat` to invalidate Query keys when `quote_landed_cost` / `run_risk_screen` / `attach_ruling` tool results arrive. The quote panel already refetches via its own mutation `onSuccess`; risk + ruling tools don't exist yet (Phase 7/8 backend). Revisit when those land.
 - **Single-stream cross-thread aborts.** Today starting a chat in thread A while thread B is streaming is a no-op (`anyRunning` early-return). The plan's intent was abort-and-replace; we picked the simpler no-op for Phase 6.
+
+### 1.8 Phase 7 — what shipped vs the plan
+
+Backend Phase 5 shipped `POST /import-cases/{caseId}/risk-screen` + `GET /import-cases/{caseId}/risk-screen/latest` plus the wire shapes (`RiskFlagT`, `RiskFlagCodeT` 12-value union, `RiskScreenT` aka `RiskScreenResponseT`, `RiskScreenStatusT`, `RiskSeverityT`, `SourceRefT`). Aliased in `src/lib/types.ts`.
+
+Severity tokens (`tokens.stylex.ts`): `risk.bg.*` / `risk.fg.*` as `defineConsts` — severity coloring is semantic, not themed. Red is reserved for blocking only; review = amber; info = neutral.
+
+New molecules:
+
+- `RiskStatusChip` — header chip with `clear | needsReview | incomplete | notRun` tones.
+- `RiskFlagRow` — severity icon + title + "Affects line #N" link (resolved via a `Map<lineId, position>`) + reason + `Next:` action + `SourceLink`. Severity drives the left-rule color via the new `risk.*` tokens.
+
+`CaseRiskPanel` (replaces the `CasePlaceholderPanel` under the Risks tab):
+
+- Header: eyebrow + `RiskStatusChip` (or `"notRun"` chip when no screen) + "Ran <relative-date> at <HH:mm>" when present. "Run screen" / "Re-run screen" CTA on the right.
+- Empty: a short note explaining what the screen looks for (Chapter 99, Section 232/301, AD/CVD, quotas, PGA flags, missing facts) and that it's decision support, not a binding determination.
+- Cleared: green panel with the verbatim "Risk Clear" copy from the FE doc.
+- Flagged: groups by severity (blocking → review → info), each `RiskFlagRow` with its own left-rule color. `screen.summary` renders inline above the groups.
+- `importCaseRiskScreenRunMutation.onSuccess` invalidates both the latest-risk-screen query and the case-detail query so `lastRiskScreenedAt` ticks and any selector that reads it gets the fresh value.
+
+`CaseQuotePanel` — "cost estimate only" gate:
+
+- Adds a `useQuery({ ...importCaseRiskScreenLatestOptions() })` alongside the existing quote query. 404 is treated as "no screen yet" via `throwOnError: false`.
+- Banner shows when `quote != null` and `(screen == null || screen.status === "incomplete" || screen.createdAt < quote.createdAt)`. Copy varies — `needsReview` says "flagged items may change the final amount due"; otherwise "run the risk screen to confirm trade-remedy and compliance exposure".
+- A risk screen that ran AT or AFTER the quote's `createdAt` AND came back `clear` or `needsReview` settles the gate. Re-running a quote invalidates the gate again until the next risk run.
+
+`selectCaseStatus` refinement: now takes an optional `riskScreen?: RiskScreenT | null` second argument. When supplied:
+
+- `needsReview` → `"needsReview"`
+- `clear` → `"readyForBroker"`
+- `incomplete` → `"quoted"`
+
+Without the argument, the old `lastRiskScreenedAt` timestamp behaviour kicks in — every existing caller still works, the new behaviour is opt-in for surfaces that have the risk-latest query handy.
+
+**Deferred from the original plan:**
+
+- **Wiring `selectCaseStatus` to risk data in the workbench header.** The header still calls `selectCaseStatus(data)` (no risk arg), so the status chip stays timestamp-only for now. Plumb the latest risk query into the route component when the polish pass lands.
+- **`MissingFieldChip` click-to-scroll behaviour.** Still un-wired; risk flags' `lineItemId` linking would benefit too.
 
 ## 2. Constraints
 

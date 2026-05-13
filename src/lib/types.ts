@@ -38,8 +38,14 @@ import type {
   PatchCaseBodyT as PatchCaseBodyGen,
   PatchLineItemBodyT as PatchLineItemBodyGen,
   QuoteSummaryT as QuoteSummaryGen,
+  RiskFlagCodeT as RiskFlagCodeGen,
+  RiskFlagT as RiskFlagGen,
+  RiskScreenResponseT as RiskScreenResponseGen,
+  RiskScreenStatusT as RiskScreenStatusGen,
+  RiskSeverityT as RiskSeverityGen,
   SearchBodyT as SearchBodyGen,
   SearchCandidateT as SearchCandidateGen,
+  SourceRefT as SourceRefGen,
   UsageInfoT as UsageInfoGen,
   WatchSubscribeResponseT as WatchSubscribeResponseGen,
 } from "@/lib/api/generated/types.gen";
@@ -207,3 +213,12 @@ export type FeeScheduleRefT = FeeScheduleRefViewGen;
 /* ---------- Case-aware chat patch suggestions (backend Step 4) ---------- */
 
 export type CasePatchT = CasePatchGen;
+
+/* ---------- Risk screen (backend Step 5) ---------- */
+
+export type RiskFlagT = RiskFlagGen;
+export type RiskFlagCodeT = RiskFlagCodeGen;
+export type RiskScreenT = RiskScreenResponseGen;
+export type RiskScreenStatusT = RiskScreenStatusGen;
+export type RiskSeverityT = RiskSeverityGen;
+export type SourceRefT = SourceRefGen;

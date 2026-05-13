@@ -88,12 +88,30 @@ import type {
   ImportCaseQuoteListDataT,
   ImportCaseQuoteListErrorsT,
   ImportCaseQuoteListResponsesT,
+  ImportCaseRiskScreenLatestDataT,
+  ImportCaseRiskScreenLatestErrorsT,
+  ImportCaseRiskScreenLatestResponsesT,
+  ImportCaseRiskScreenRunDataT,
+  ImportCaseRiskScreenRunErrorsT,
+  ImportCaseRiskScreenRunResponsesT,
+  ImportCaseRulingAttachDataT,
+  ImportCaseRulingAttachErrorsT,
+  ImportCaseRulingAttachResponsesT,
+  ImportCaseRulingDetachDataT,
+  ImportCaseRulingDetachErrorsT,
+  ImportCaseRulingDetachResponsesT,
   LandedCostDataT,
   LandedCostErrorsT,
   LandedCostResponsesT,
   RefreshStatusDataT,
   RefreshStatusErrorsT,
   RefreshStatusResponsesT,
+  RulingsGetDataT,
+  RulingsGetErrorsT,
+  RulingsGetResponsesT,
+  RulingsSearchDataT,
+  RulingsSearchErrorsT,
+  RulingsSearchResponsesT,
   SearchDataT,
   SearchErrorsT,
   SearchResponsesT,
@@ -173,9 +191,22 @@ import {
   zImportCaseQuoteListPath,
   zImportCaseQuoteListQuery,
   zImportCaseQuoteListResponse,
+  zImportCaseRiskScreenLatestPath,
+  zImportCaseRiskScreenLatestResponse,
+  zImportCaseRiskScreenRunPath,
+  zImportCaseRiskScreenRunResponse,
+  zImportCaseRulingAttachBody,
+  zImportCaseRulingAttachPath,
+  zImportCaseRulingAttachResponse,
+  zImportCaseRulingDetachPath,
+  zImportCaseRulingDetachResponse,
   zLandedCostBody2,
   zLandedCostResponse2,
   zRefreshStatusResponse,
+  zRulingsGetPath,
+  zRulingsGetResponse,
+  zRulingsSearchQuery,
+  zRulingsSearchResponse2,
   zSearchBody2,
   zSearchResponse,
   zWatchAlertsResponse2,
@@ -1024,6 +1055,112 @@ export const importCaseLineClassify = <ThrowOnError extends boolean = false>(
   });
 
 /**
+ * Run the deterministic risk screen for a case and persist the result.
+ */
+export const importCaseRiskScreenRun = <ThrowOnError extends boolean = false>(
+  options: Options<ImportCaseRiskScreenRunDataT, ThrowOnError>,
+) =>
+  (options.client ?? client).post<
+    ImportCaseRiskScreenRunResponsesT,
+    ImportCaseRiskScreenRunErrorsT,
+    ThrowOnError
+  >({
+    requestValidator: async (data) =>
+      await z
+        .object({
+          body: z.never().optional(),
+          path: zImportCaseRiskScreenRunPath,
+          query: z.never().optional(),
+        })
+        .parseAsync(data),
+    responseValidator: async (data) =>
+      await zImportCaseRiskScreenRunResponse.parseAsync(data),
+    url: "/import-cases/{caseId}/risk-screen",
+    ...options,
+  });
+
+/**
+ * Fetch the most recent risk-screen run for a case.
+ */
+export const importCaseRiskScreenLatest = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<ImportCaseRiskScreenLatestDataT, ThrowOnError>,
+) =>
+  (options.client ?? client).get<
+    ImportCaseRiskScreenLatestResponsesT,
+    ImportCaseRiskScreenLatestErrorsT,
+    ThrowOnError
+  >({
+    requestValidator: async (data) =>
+      await z
+        .object({
+          body: z.never().optional(),
+          path: zImportCaseRiskScreenLatestPath,
+          query: z.never().optional(),
+        })
+        .parseAsync(data),
+    responseValidator: async (data) =>
+      await zImportCaseRiskScreenLatestResponse.parseAsync(data),
+    url: "/import-cases/{caseId}/risk-screen/latest",
+    ...options,
+  });
+
+/**
+ * Attach a CROSS ruling to an import case as evidence.
+ */
+export const importCaseRulingAttach = <ThrowOnError extends boolean = false>(
+  options: Options<ImportCaseRulingAttachDataT, ThrowOnError>,
+) =>
+  (options.client ?? client).post<
+    ImportCaseRulingAttachResponsesT,
+    ImportCaseRulingAttachErrorsT,
+    ThrowOnError
+  >({
+    requestValidator: async (data) =>
+      await z
+        .object({
+          body: zImportCaseRulingAttachBody,
+          path: zImportCaseRulingAttachPath,
+          query: z.never().optional(),
+        })
+        .parseAsync(data),
+    responseValidator: async (data) =>
+      await zImportCaseRulingAttachResponse.parseAsync(data),
+    url: "/import-cases/{caseId}/rulings",
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });
+
+/**
+ * Detach a CROSS ruling from an import case.
+ */
+export const importCaseRulingDetach = <ThrowOnError extends boolean = false>(
+  options: Options<ImportCaseRulingDetachDataT, ThrowOnError>,
+) =>
+  (options.client ?? client).delete<
+    ImportCaseRulingDetachResponsesT,
+    ImportCaseRulingDetachErrorsT,
+    ThrowOnError
+  >({
+    requestValidator: async (data) =>
+      await z
+        .object({
+          body: z.never().optional(),
+          path: zImportCaseRulingDetachPath,
+          query: z.never().optional(),
+        })
+        .parseAsync(data),
+    responseValidator: async (data) =>
+      await zImportCaseRulingDetachResponse.parseAsync(data),
+    url: "/import-cases/{caseId}/rulings/{rulingNumber}",
+    ...options,
+  });
+
+/**
  * Compute the landed cost for a 10-digit HTS code (Sentinel V1: FR origin → US destination).
  */
 export const landedCost = <ThrowOnError extends boolean = false>(
@@ -1050,6 +1187,50 @@ export const landedCost = <ThrowOnError extends boolean = false>(
       "Content-Type": "application/json",
       ...options.headers,
     },
+  });
+
+export const rulingsSearch = <ThrowOnError extends boolean = false>(
+  options: Options<RulingsSearchDataT, ThrowOnError>,
+) =>
+  (options.client ?? client).get<
+    RulingsSearchResponsesT,
+    RulingsSearchErrorsT,
+    ThrowOnError
+  >({
+    requestValidator: async (data) =>
+      await z
+        .object({
+          body: z.never().optional(),
+          path: z.never().optional(),
+          query: zRulingsSearchQuery,
+        })
+        .parseAsync(data),
+    responseValidator: async (data) =>
+      await zRulingsSearchResponse2.parseAsync(data),
+    url: "/rulings/search",
+    ...options,
+  });
+
+export const rulingsGet = <ThrowOnError extends boolean = false>(
+  options: Options<RulingsGetDataT, ThrowOnError>,
+) =>
+  (options.client ?? client).get<
+    RulingsGetResponsesT,
+    RulingsGetErrorsT,
+    ThrowOnError
+  >({
+    requestValidator: async (data) =>
+      await z
+        .object({
+          body: z.never().optional(),
+          path: zRulingsGetPath,
+          query: z.never().optional(),
+        })
+        .parseAsync(data),
+    responseValidator: async (data) =>
+      await zRulingsGetResponse.parseAsync(data),
+    url: "/rulings/{rulingNumber}",
+    ...options,
   });
 
 /**

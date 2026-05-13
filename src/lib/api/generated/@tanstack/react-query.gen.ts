@@ -38,9 +38,15 @@ import {
   importCaseQuoteCreate,
   importCaseQuoteGet,
   importCaseQuoteList,
+  importCaseRiskScreenLatest,
+  importCaseRiskScreenRun,
+  importCaseRulingAttach,
+  importCaseRulingDetach,
   landedCost,
   type Options,
   refreshStatus,
+  rulingsGet,
+  rulingsSearch,
   search,
   watchAlerts,
   watchCheck,
@@ -121,12 +127,30 @@ import type {
   ImportCaseQuoteListDataT,
   ImportCaseQuoteListErrorT,
   ImportCaseQuoteListResponseT,
+  ImportCaseRiskScreenLatestDataT,
+  ImportCaseRiskScreenLatestErrorT,
+  ImportCaseRiskScreenLatestResponseT,
+  ImportCaseRiskScreenRunDataT,
+  ImportCaseRiskScreenRunErrorT,
+  ImportCaseRiskScreenRunResponseT,
+  ImportCaseRulingAttachDataT,
+  ImportCaseRulingAttachErrorT,
+  ImportCaseRulingAttachResponseT,
+  ImportCaseRulingDetachDataT,
+  ImportCaseRulingDetachErrorT,
+  ImportCaseRulingDetachResponseT,
   LandedCostDataT,
   LandedCostErrorT,
   LandedCostResponseT2,
   RefreshStatusDataT,
   RefreshStatusErrorT,
   RefreshStatusResponseT,
+  RulingsGetDataT,
+  RulingsGetErrorT,
+  RulingsGetResponseT,
+  RulingsSearchDataT,
+  RulingsSearchErrorT,
+  RulingsSearchResponseT2,
   SearchDataT,
   SearchErrorT,
   SearchResponseT,
@@ -1118,6 +1142,115 @@ export const importCaseLineClassifyMutation = (
 };
 
 /**
+ * Run the deterministic risk screen for a case and persist the result.
+ */
+export const importCaseRiskScreenRunMutation = (
+  options?: Partial<Options<ImportCaseRiskScreenRunDataT>>,
+): UseMutationOptions<
+  ImportCaseRiskScreenRunResponseT,
+  ImportCaseRiskScreenRunErrorT,
+  Options<ImportCaseRiskScreenRunDataT>
+> => {
+  const mutationOptions: UseMutationOptions<
+    ImportCaseRiskScreenRunResponseT,
+    ImportCaseRiskScreenRunErrorT,
+    Options<ImportCaseRiskScreenRunDataT>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await importCaseRiskScreenRun({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+export const importCaseRiskScreenLatestQueryKey = (
+  options: Options<ImportCaseRiskScreenLatestDataT>,
+) => createQueryKey("importCaseRiskScreenLatest", options);
+
+/**
+ * Fetch the most recent risk-screen run for a case.
+ */
+export const importCaseRiskScreenLatestOptions = (
+  options: Options<ImportCaseRiskScreenLatestDataT>,
+) =>
+  queryOptions<
+    ImportCaseRiskScreenLatestResponseT,
+    ImportCaseRiskScreenLatestErrorT,
+    ImportCaseRiskScreenLatestResponseT,
+    ReturnType<typeof importCaseRiskScreenLatestQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await importCaseRiskScreenLatest({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: importCaseRiskScreenLatestQueryKey(options),
+  });
+
+/**
+ * Attach a CROSS ruling to an import case as evidence.
+ */
+export const importCaseRulingAttachMutation = (
+  options?: Partial<Options<ImportCaseRulingAttachDataT>>,
+): UseMutationOptions<
+  ImportCaseRulingAttachResponseT,
+  ImportCaseRulingAttachErrorT,
+  Options<ImportCaseRulingAttachDataT>
+> => {
+  const mutationOptions: UseMutationOptions<
+    ImportCaseRulingAttachResponseT,
+    ImportCaseRulingAttachErrorT,
+    Options<ImportCaseRulingAttachDataT>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await importCaseRulingAttach({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+/**
+ * Detach a CROSS ruling from an import case.
+ */
+export const importCaseRulingDetachMutation = (
+  options?: Partial<Options<ImportCaseRulingDetachDataT>>,
+): UseMutationOptions<
+  ImportCaseRulingDetachResponseT,
+  ImportCaseRulingDetachErrorT,
+  Options<ImportCaseRulingDetachDataT>
+> => {
+  const mutationOptions: UseMutationOptions<
+    ImportCaseRulingDetachResponseT,
+    ImportCaseRulingDetachErrorT,
+    Options<ImportCaseRulingDetachDataT>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await importCaseRulingDetach({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+/**
  * Compute the landed cost for a 10-digit HTS code (Sentinel V1: FR origin → US destination).
  */
 export const landedCostMutation = (
@@ -1143,6 +1276,50 @@ export const landedCostMutation = (
   };
   return mutationOptions;
 };
+
+export const rulingsSearchQueryKey = (options: Options<RulingsSearchDataT>) =>
+  createQueryKey("rulingsSearch", options);
+
+export const rulingsSearchOptions = (options: Options<RulingsSearchDataT>) =>
+  queryOptions<
+    RulingsSearchResponseT2,
+    RulingsSearchErrorT,
+    RulingsSearchResponseT2,
+    ReturnType<typeof rulingsSearchQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await rulingsSearch({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: rulingsSearchQueryKey(options),
+  });
+
+export const rulingsGetQueryKey = (options: Options<RulingsGetDataT>) =>
+  createQueryKey("rulingsGet", options);
+
+export const rulingsGetOptions = (options: Options<RulingsGetDataT>) =>
+  queryOptions<
+    RulingsGetResponseT,
+    RulingsGetErrorT,
+    RulingsGetResponseT,
+    ReturnType<typeof rulingsGetQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await rulingsGet({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: rulingsGetQueryKey(options),
+  });
 
 /**
  * Hybrid lexical + vector search over the HTS catalog.

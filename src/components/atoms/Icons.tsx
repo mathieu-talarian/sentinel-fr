@@ -1,6 +1,8 @@
 import type { Icon as TablerIconCmpT } from "@tabler/icons-react";
 
 import {
+  IconAlertOctagon,
+  IconAlertTriangle,
   IconArrowRight,
   IconBell,
   IconBook,
@@ -12,6 +14,7 @@ import {
   IconCopy,
   IconFileDescription,
   IconHash,
+  IconInfoCircle,
   IconLayoutSidebarRight,
   IconPaperclip,
   IconPlus,
@@ -19,6 +22,7 @@ import {
   IconSearch,
   IconSend,
   IconSettings,
+  IconShieldCheck,
   IconSparkles,
   IconSquareFilled,
   IconThumbDown,
@@ -62,6 +66,10 @@ export const Icon = {
   ThumbDown: wrap(IconThumbDown),
   Arrow: wrap(IconArrowRight),
   Customs: wrap(IconBuildingBank),
+  Blocking: wrap(IconAlertOctagon),
+  Warn: wrap(IconAlertTriangle),
+  Info: wrap(IconInfoCircle),
+  Shield: wrap(IconShieldCheck),
 };
 
 export type IconKeyT = keyof typeof Icon;

@@ -37,6 +37,27 @@ export type AppliedSurchargeT = {
   specific_unit?: string | null;
 };
 
+export type AttachRulingBodyT = {
+  /**
+   * Optional pin to a specific line item; omit to attach the ruling
+   * at the case level.
+   */
+  lineItemId?: string | null;
+  /**
+   * Short user-facing rationale rendered on the evidence card.
+   */
+  matchNote?: string | null;
+  /**
+   * CROSS ruling number, e.g. `"N304101"`.
+   */
+  rulingNumber: string;
+  /**
+   * One of `yes | no | unknown` — the user's verdict on whether
+   * this ruling supports the line's `selectedHtsCode`.
+   */
+  supportsSelectedCode: string;
+};
+
 /**
  * One entry in a `casePatchSuggestion` event.
  *
@@ -66,6 +87,19 @@ export type CasePatchT = {
   value?: {
     [key: string]: unknown;
   } | null;
+};
+
+export type CaseRulingViewT = {
+  assignedHtsCodes: Array<string>;
+  attachedAt: string;
+  attachedBy?: string | null;
+  lineItemId?: string | null;
+  matchNote?: string | null;
+  rulingDate?: string | null;
+  rulingNumber: string;
+  subject?: string | null;
+  supportsSelectedCode: string;
+  url: string;
 };
 
 export type CatalogStatsResponseT = {
@@ -455,6 +489,21 @@ export type HealthBodyT = {
   status: string;
 };
 
+/**
+ * Both forms of an HTS code so the FE can match against
+ * `selected_hts_code` without re-parsing.
+ *
+ * `digits` is the digits-only form (matches `selected_hts_code`'s
+ * canonical 10-digit shape); `dotted` is the human-readable form;
+ * `original` is whatever CROSS returned, kept verbatim so callers
+ * can audit a normalization mismatch.
+ */
+export type HtsCodeFormsT = {
+  digits: string;
+  dotted: string;
+  original: string;
+};
+
 export type ImportCaseLineItemResponseT = {
   caseId: string;
   classificationState: string;
@@ -495,6 +544,13 @@ export type ImportCaseResponseT = {
   notes?: string | null;
   originCountry?: string | null;
   referenceDate: string;
+  /**
+   * CROSS rulings attached to this case as evidence. Empty by
+   * default; populated only by the `get` handler (the list / patch
+   * / create handlers omit this field to keep response sizes flat).
+   * PR 7.3 — see `handlers::case_rulings::CaseRulingView`.
+   */
+  rulings?: Array<CaseRulingViewT>;
   status: string;
   title: string;
   transport?: string | null;
@@ -760,6 +816,70 @@ export type RefreshTriggerResponseT = {
   status: string;
 };
 
+/**
+ * One risk-screen finding. Mirrors the `RiskFlag` shape in the
+ * frontend contract (`docs/FRONTEND_IMPORT_CASE_WORKBENCH.md`).
+ */
+export type RiskFlagT = {
+  code: RiskFlagCodeT;
+  lineItemId?: string | null;
+  nextAction: string;
+  reason: string;
+  severity: RiskSeverityT;
+  source: SourceRefT;
+  title: string;
+};
+
+/**
+ * The vocabulary the frontend's `RiskFlag.code` union expects.
+ */
+export type RiskFlagCodeT =
+  | "chapter99Possible"
+  | "section232Possible"
+  | "section301Possible"
+  | "adCvdPossible"
+  | "tariffRateQuotaPossible"
+  | "deMinimisIssue"
+  | "entryTypeIssue"
+  | "participatingGovernmentAgencyFlag"
+  | "missingQuantityForSpecificRate"
+  | "missingOriginForSurcharge"
+  | "manualRateLookupRequired"
+  | "missingHtsCode";
+
+export type RiskScreenResponseT = {
+  caseId: string;
+  createdAt: string;
+  createdBy?: string | null;
+  flags: Array<RiskFlagT>;
+  id: string;
+  status: RiskScreenStatusT;
+  summary: string;
+};
+
+/**
+ * Overall verdict for a screen run.
+ */
+export type RiskScreenStatusT = "clear" | "needsReview" | "incomplete";
+
+export type RiskSeverityT = "info" | "review" | "blocking";
+
+/**
+ * Single ruling, formatted for the workbench's evidence panel.
+ */
+export type RulingViewT = {
+  collection?: string | null;
+  rulingDate?: string | null;
+  rulingNumber: string;
+  subject: string;
+  tariffs: Array<HtsCodeFormsT>;
+  url: string;
+};
+
+export type RulingsSearchResponseT = {
+  rulings: Array<RulingViewT>;
+};
+
 export type SearchBodyT = {
   candidates: Array<SearchCandidateT>;
 };
@@ -792,6 +912,11 @@ export type SelectedClassificationT = {
   confidence: number;
   description: string;
   rateText?: string | null;
+};
+
+export type SourceRefT = {
+  label: string;
+  url: string;
 };
 
 export type SourceStateT = {
@@ -1901,6 +2026,150 @@ export type ImportCaseLineClassifyResponsesT = {
 export type ImportCaseLineClassifyResponseT =
   ImportCaseLineClassifyResponsesT[keyof ImportCaseLineClassifyResponsesT];
 
+export type ImportCaseRiskScreenRunDataT = {
+  body?: never;
+  path: {
+    /**
+     * Case id
+     */
+    caseId: string;
+  };
+  query?: never;
+  url: "/import-cases/{caseId}/risk-screen";
+};
+
+export type ImportCaseRiskScreenRunErrorsT = {
+  /**
+   * Case not found
+   */
+  404: ProblemT;
+};
+
+export type ImportCaseRiskScreenRunErrorT =
+  ImportCaseRiskScreenRunErrorsT[keyof ImportCaseRiskScreenRunErrorsT];
+
+export type ImportCaseRiskScreenRunResponsesT = {
+  /**
+   * Risk-screen result
+   */
+  201: RiskScreenResponseT;
+};
+
+export type ImportCaseRiskScreenRunResponseT =
+  ImportCaseRiskScreenRunResponsesT[keyof ImportCaseRiskScreenRunResponsesT];
+
+export type ImportCaseRiskScreenLatestDataT = {
+  body?: never;
+  path: {
+    /**
+     * Case id
+     */
+    caseId: string;
+  };
+  query?: never;
+  url: "/import-cases/{caseId}/risk-screen/latest";
+};
+
+export type ImportCaseRiskScreenLatestErrorsT = {
+  /**
+   * Case or risk screen not found
+   */
+  404: ProblemT;
+};
+
+export type ImportCaseRiskScreenLatestErrorT =
+  ImportCaseRiskScreenLatestErrorsT[keyof ImportCaseRiskScreenLatestErrorsT];
+
+export type ImportCaseRiskScreenLatestResponsesT = {
+  /**
+   * Latest risk-screen run
+   */
+  200: RiskScreenResponseT;
+};
+
+export type ImportCaseRiskScreenLatestResponseT =
+  ImportCaseRiskScreenLatestResponsesT[keyof ImportCaseRiskScreenLatestResponsesT];
+
+export type ImportCaseRulingAttachDataT = {
+  body: AttachRulingBodyT;
+  path: {
+    /**
+     * Case id
+     */
+    caseId: string;
+  };
+  query?: never;
+  url: "/import-cases/{caseId}/rulings";
+};
+
+export type ImportCaseRulingAttachErrorsT = {
+  /**
+   * Case, line item, or ruling not found
+   */
+  404: ProblemT;
+  /**
+   * Validation failed (e.g. already attached)
+   */
+  422: ProblemT;
+  /**
+   * CROSS upstream failed
+   */
+  502: ProblemT;
+  /**
+   * CROSS client not configured
+   */
+  503: ProblemT;
+};
+
+export type ImportCaseRulingAttachErrorT =
+  ImportCaseRulingAttachErrorsT[keyof ImportCaseRulingAttachErrorsT];
+
+export type ImportCaseRulingAttachResponsesT = {
+  /**
+   * Ruling attached
+   */
+  201: CaseRulingViewT;
+};
+
+export type ImportCaseRulingAttachResponseT =
+  ImportCaseRulingAttachResponsesT[keyof ImportCaseRulingAttachResponsesT];
+
+export type ImportCaseRulingDetachDataT = {
+  body?: never;
+  path: {
+    /**
+     * Case id
+     */
+    caseId: string;
+    /**
+     * CROSS ruling number
+     */
+    rulingNumber: string;
+  };
+  query?: never;
+  url: "/import-cases/{caseId}/rulings/{rulingNumber}";
+};
+
+export type ImportCaseRulingDetachErrorsT = {
+  /**
+   * Case or attachment not found
+   */
+  404: ProblemT;
+};
+
+export type ImportCaseRulingDetachErrorT =
+  ImportCaseRulingDetachErrorsT[keyof ImportCaseRulingDetachErrorsT];
+
+export type ImportCaseRulingDetachResponsesT = {
+  /**
+   * Ruling detached
+   */
+  204: void;
+};
+
+export type ImportCaseRulingDetachResponseT =
+  ImportCaseRulingDetachResponsesT[keyof ImportCaseRulingDetachResponsesT];
+
 export type LandedCostDataT = {
   body: LandedCostBodyT;
   path?: never;
@@ -1930,6 +2199,91 @@ export type LandedCostResponsesT = {
 
 export type LandedCostResponseT2 =
   LandedCostResponsesT[keyof LandedCostResponsesT];
+
+export type RulingsSearchDataT = {
+  body?: never;
+  path?: never;
+  query: {
+    /**
+     * Free-text search term, e.g. `"men's cotton t-shirts"` or
+     * `"9018.31"`. The CROSS API treats this as a full-text query
+     * against the ruling subject + body.
+     */
+    q: string;
+    /**
+     * 1-25; defaults to 10.
+     */
+    limit?: number | null;
+  };
+  url: "/rulings/search";
+};
+
+export type RulingsSearchErrorsT = {
+  /**
+   * Validation failed
+   */
+  422: ProblemT;
+  /**
+   * CROSS upstream failed
+   */
+  502: ProblemT;
+  /**
+   * CROSS client not configured
+   */
+  503: ProblemT;
+};
+
+export type RulingsSearchErrorT =
+  RulingsSearchErrorsT[keyof RulingsSearchErrorsT];
+
+export type RulingsSearchResponsesT = {
+  /**
+   * Matching CROSS rulings
+   */
+  200: RulingsSearchResponseT;
+};
+
+export type RulingsSearchResponseT2 =
+  RulingsSearchResponsesT[keyof RulingsSearchResponsesT];
+
+export type RulingsGetDataT = {
+  body?: never;
+  path: {
+    /**
+     * CROSS ruling number, e.g. N304101 or HQ H123456
+     */
+    rulingNumber: string;
+  };
+  query?: never;
+  url: "/rulings/{rulingNumber}";
+};
+
+export type RulingsGetErrorsT = {
+  /**
+   * Ruling not found
+   */
+  404: ProblemT;
+  /**
+   * CROSS upstream failed
+   */
+  502: ProblemT;
+  /**
+   * CROSS client not configured
+   */
+  503: ProblemT;
+};
+
+export type RulingsGetErrorT = RulingsGetErrorsT[keyof RulingsGetErrorsT];
+
+export type RulingsGetResponsesT = {
+  /**
+   * Ruling
+   */
+  200: RulingViewT;
+};
+
+export type RulingsGetResponseT =
+  RulingsGetResponsesT[keyof RulingsGetResponsesT];
 
 export type SearchDataT = {
   body: SearchRequestT;

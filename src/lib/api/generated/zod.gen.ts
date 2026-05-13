@@ -32,6 +32,13 @@ export const zAppliedSurcharge = z.object({
   specific_unit: z.string().nullish(),
 });
 
+export const zAttachRulingBody = z.object({
+  lineItemId: z.string().nullish(),
+  matchNote: z.string().nullish(),
+  rulingNumber: z.string(),
+  supportsSelectedCode: z.string(),
+});
+
 /**
  * One entry in a `casePatchSuggestion` event.
  *
@@ -46,6 +53,19 @@ export const zCasePatch = z.object({
   path: z.string(),
   reason: z.string(),
   value: z.record(z.string(), z.unknown()).nullish(),
+});
+
+export const zCaseRulingView = z.object({
+  assignedHtsCodes: z.array(z.string()),
+  attachedAt: z.iso.datetime(),
+  attachedBy: z.string().nullish(),
+  lineItemId: z.string().nullish(),
+  matchNote: z.string().nullish(),
+  rulingDate: z.iso.date().nullish(),
+  rulingNumber: z.string(),
+  subject: z.string().nullish(),
+  supportsSelectedCode: z.string(),
+  url: z.string(),
 });
 
 export const zCatalogStatsResponse = z.object({
@@ -237,6 +257,21 @@ export const zHealthBody = z.object({
   status: z.string(),
 });
 
+/**
+ * Both forms of an HTS code so the FE can match against
+ * `selected_hts_code` without re-parsing.
+ *
+ * `digits` is the digits-only form (matches `selected_hts_code`'s
+ * canonical 10-digit shape); `dotted` is the human-readable form;
+ * `original` is whatever CROSS returned, kept verbatim so callers
+ * can audit a normalization mismatch.
+ */
+export const zHtsCodeForms = z.object({
+  digits: z.string(),
+  dotted: z.string(),
+  original: z.string(),
+});
+
 export const zImportCaseLineItemResponse = z.object({
   caseId: z.string(),
   classificationState: z.string(),
@@ -279,6 +314,7 @@ export const zImportCaseResponse = z.object({
   notes: z.string().nullish(),
   originCountry: z.string().nullish(),
   referenceDate: z.iso.date(),
+  rulings: z.array(zCaseRulingView).optional(),
   status: z.string(),
   title: z.string(),
   transport: z.string().nullish(),
@@ -467,6 +503,47 @@ export const zRefreshTriggerResponse = z.object({
   status: z.string(),
 });
 
+/**
+ * The vocabulary the frontend's `RiskFlag.code` union expects.
+ */
+export const zRiskFlagCode = z.enum([
+  "chapter99Possible",
+  "section232Possible",
+  "section301Possible",
+  "adCvdPossible",
+  "tariffRateQuotaPossible",
+  "deMinimisIssue",
+  "entryTypeIssue",
+  "participatingGovernmentAgencyFlag",
+  "missingQuantityForSpecificRate",
+  "missingOriginForSurcharge",
+  "manualRateLookupRequired",
+  "missingHtsCode",
+]);
+
+/**
+ * Overall verdict for a screen run.
+ */
+export const zRiskScreenStatus = z.enum(["clear", "needsReview", "incomplete"]);
+
+export const zRiskSeverity = z.enum(["info", "review", "blocking"]);
+
+/**
+ * Single ruling, formatted for the workbench's evidence panel.
+ */
+export const zRulingView = z.object({
+  collection: z.string().nullish(),
+  rulingDate: z.string().nullish(),
+  rulingNumber: z.string(),
+  subject: z.string(),
+  tariffs: z.array(zHtsCodeForms),
+  url: z.string(),
+});
+
+export const zRulingsSearchResponse = z.object({
+  rulings: z.array(zRulingView),
+});
+
 export const zSearchCandidate = z.object({
   code: z.string(),
   description: zLocalizedDescription,
@@ -500,6 +577,35 @@ export const zClassifyLineResponse = z.object({
   lineItemId: z.string(),
   provider: z.string(),
   selected: zSelectedClassification,
+});
+
+export const zSourceRef = z.object({
+  label: z.string(),
+  url: z.string(),
+});
+
+/**
+ * One risk-screen finding. Mirrors the `RiskFlag` shape in the
+ * frontend contract (`docs/FRONTEND_IMPORT_CASE_WORKBENCH.md`).
+ */
+export const zRiskFlag = z.object({
+  code: zRiskFlagCode,
+  lineItemId: z.string().nullish(),
+  nextAction: z.string(),
+  reason: z.string(),
+  severity: zRiskSeverity,
+  source: zSourceRef,
+  title: z.string(),
+});
+
+export const zRiskScreenResponse = z.object({
+  caseId: z.string(),
+  createdAt: z.iso.datetime(),
+  createdBy: z.string().nullish(),
+  flags: z.array(zRiskFlag),
+  id: z.string(),
+  status: zRiskScreenStatus,
+  summary: z.string(),
 });
 
 export const zSourceState = z.object({
@@ -1143,12 +1249,70 @@ export const zImportCaseLineClassifyPath = z.object({
  */
 export const zImportCaseLineClassifyResponse = zClassifyLineResponse;
 
+export const zImportCaseRiskScreenRunPath = z.object({
+  caseId: z.string(),
+});
+
+/**
+ * Risk-screen result
+ */
+export const zImportCaseRiskScreenRunResponse = zRiskScreenResponse;
+
+export const zImportCaseRiskScreenLatestPath = z.object({
+  caseId: z.string(),
+});
+
+/**
+ * Latest risk-screen run
+ */
+export const zImportCaseRiskScreenLatestResponse = zRiskScreenResponse;
+
+export const zImportCaseRulingAttachBody = zAttachRulingBody;
+
+export const zImportCaseRulingAttachPath = z.object({
+  caseId: z.string(),
+});
+
+/**
+ * Ruling attached
+ */
+export const zImportCaseRulingAttachResponse = zCaseRulingView;
+
+export const zImportCaseRulingDetachPath = z.object({
+  caseId: z.string(),
+  rulingNumber: z.string(),
+});
+
+/**
+ * Ruling detached
+ */
+export const zImportCaseRulingDetachResponse = z.void();
+
 export const zLandedCostBody2 = zLandedCostBody;
 
 /**
  * Landed cost breakdown
  */
 export const zLandedCostResponse2 = zLandedCostResponse;
+
+export const zRulingsSearchQuery = z.object({
+  q: z.string(),
+  limit: z.int().gte(0).nullish(),
+});
+
+/**
+ * Matching CROSS rulings
+ */
+export const zRulingsSearchResponse2 = zRulingsSearchResponse;
+
+export const zRulingsGetPath = z.object({
+  rulingNumber: z.string(),
+});
+
+/**
+ * Ruling
+ */
+export const zRulingsGetResponse = zRulingView;
 
 export const zSearchBody2 = zSearchRequest;
 

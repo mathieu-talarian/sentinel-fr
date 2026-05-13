@@ -2,6 +2,7 @@ import type {
   ImportCaseLineItemT,
   ImportCaseStatusT,
   ImportCaseT,
+  RiskScreenT,
 } from "@/lib/types";
 
 /**
@@ -76,7 +77,10 @@ export function selectMissingLineFacts(
 const isMissingCaseFacts = (c: ImportCaseT): boolean =>
   selectMissingCaseFacts(c).length > 0;
 
-export function selectCaseStatus(c: ImportCaseT): ImportCaseStatusT {
+export function selectCaseStatus(
+  c: ImportCaseT,
+  riskScreen?: RiskScreenT | null,
+): ImportCaseStatusT {
   // Persisted "archived" always wins — case is read-only regardless of data.
   // Other persisted values (`draft`, `ready_for_review`) are informational;
   // archive affordances read the raw `c.status` separately.
@@ -92,6 +96,16 @@ export function selectCaseStatus(c: ImportCaseT): ImportCaseStatusT {
   // From here all quoted lines have selected HTS + value. Quote/risk
   // progression decides the next state.
   if (!c.lastQuotedAt) return "readyForQuote";
+
+  // Phase 7: when the caller passes in the latest risk screen we use its
+  // verdict directly. Otherwise fall back to the timestamp-only check —
+  // older call sites and selectors that only have access to the case
+  // shape don't need to know.
+  if (riskScreen) {
+    if (riskScreen.status === "needsReview") return "needsReview";
+    if (riskScreen.status === "clear") return "readyForBroker";
+    return "quoted";
+  }
   if (!c.lastRiskScreenedAt) return "quoted";
 
   // Risk screen has run and quote exists. Whether the risk result returned

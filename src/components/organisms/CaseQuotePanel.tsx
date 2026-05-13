@@ -17,6 +17,7 @@ import {
   importCaseQuoteGetOptions,
   importCaseQuoteListOptions,
   importCaseQuoteListQueryKey,
+  importCaseRiskScreenLatestOptions,
 } from "@/lib/api/generated/@tanstack/react-query.gen";
 import { selectCaseStatus } from "@/lib/state/caseStatus";
 import { useTweaks } from "@/lib/state/tweaks";
@@ -87,6 +88,13 @@ export function CaseQuotePanel(props: Readonly<CaseQuotePanelPropsT>) {
     enabled: latestId !== null,
   });
 
+  // Risk screen for the cost-estimate-only gate. 404 = "not run" — we
+  // suppress the error and treat it as no data.
+  const riskScreen = useQuery({
+    ...importCaseRiskScreenLatestOptions({ path: { caseId: case_.id } }),
+    throwOnError: false,
+  });
+
   const runQuote = useMutation({
     ...importCaseQuoteCreateMutation(),
     onSuccess: async () => {
@@ -122,6 +130,18 @@ export function CaseQuotePanel(props: Readonly<CaseQuotePanelPropsT>) {
 
   const quote: LandedCostQuoteT | undefined = latestQuote.data;
   const buttonLabel = pickButtonLabel(runQuote.isPending, quote != null);
+  const screen = riskScreen.data;
+
+  // Cost-estimate-only banner. Per the FE doc, the quote should never read
+  // as "complete" until the risk screen has run on the current quote (a
+  // screen older than the quote is also stale). Phase 7 minimum: only
+  // suppress the banner when the risk screen exists AND ran at or after
+  // the quote's `createdAt`. Status `incomplete` keeps the banner.
+  const screenSettlesQuote =
+    quote != null &&
+    screen != null &&
+    screen.status !== "incomplete" &&
+    screen.createdAt >= quote.createdAt;
 
   return (
     <div {...sx(s.panel)}>
@@ -154,6 +174,14 @@ export function CaseQuotePanel(props: Readonly<CaseQuotePanelPropsT>) {
       )}
 
       {error && <ErrorBanner message={error} />}
+
+      {quote && !screenSettlesQuote && (
+        <p {...sx(s.gate)}>
+          {screen?.status === "needsReview"
+            ? "Cost estimate only — the risk screen flagged items that may change the final amount due at entry."
+            : "Cost estimate only — run the risk screen to confirm trade-remedy and compliance exposure before broker handoff."}
+        </p>
+      )}
 
       {quote && (
         <>
