@@ -30,6 +30,16 @@
 - Lib layout: `src/lib/{api,state,styles,utils}/` — api (auth/queries/chatStream), state (chatStore/tweaks), styles (sx/tokens/animations/themes), utils (format/suggestions). `src/lib/types.ts` holds **only** UI-side shapes (`MessageT`, `ToolCallT`), FE-only narrowed enums (`ImportCaseStatusT`, `LineItemClassificationStateT`), and types with no spec mirror (`CrossRulingsContentT`). Wire types live at `@/lib/api/generated/types.gen` and consumers use the generated T-suffixed names (`ImportCaseResponseT`, `LandedCostQuoteResponseT`, `WatchSubscribeResponseT`, …) verbatim
 - Atom contract: `extends Omit<ComponentProps<"div">, "style">` (from `react`), add `style?: StyleXStyles` (from `@stylexjs/stylex`), pass `style` as the LAST arg to `sx(...)` so callers override. Destructure own props off `props` and spread the rest as `<el {...rest} {...sx(...)} />` — stylex's `className`/`style` win over rest. No manual `className` merge; if a caller wants extra styling, that's what `style?: StyleXStyles` is for
 - React event handlers for value-bearing inputs use `ChangeEvent<HTMLInputElement>`/`ChangeEvent<HTMLTextAreaElement>` from `react`. Atoms expose an `onValueChange?: (v: string) => void` convenience and forward the original `onChange` so callers can still hook in
+- **Story-eligibility rule** (atoms/molecules): no app-state hooks (`useAppSelector`/`useAppDispatch`/`useQuery`/`useMutation`/`useQueryClient`/`useNavigate`/`useParams`/`useChatStore`/`useTweaks`) and no imports from `@/lib/api/generated/sdk.gen` or `@sentry/react`. Pure UI hooks (local `useState`, DOM-only `useEffect`) and `@/lib/state/caseStatus.ts` (pure derivation helpers, not Redux selectors) are fine
+- When an organism's JSX outgrows its wiring, extract a pure `<FooView>` (or `<FooBody>` for dialog interiors) into `molecules/` and keep the hooks in `organisms/<Foo>Container` — see `BulkClassifyBarContainer`/`BulkClassifyBar` for the pattern
+
+## Component Workbench (Storybook 10)
+
+- `yarn storybook` (port 61000) serves a CSF v3 catalog of every atom + molecule via `src/components/{atoms,molecules}/**/*.stories.tsx`. Organisms/templates stay out — they need Redux/Query/Router decorators we haven't built
+- Story shape: `satisfies Meta<typeof Component>` + `StoryObj<typeof meta>` + `tags: ["autodocs"]`. Closed-enum props (`tone`, `size`, `state`) need explicit `argTypes.options` to render as radios/selects — `react-docgen-typescript` doesn't infer enum members from TS unions
+- `.storybook/main.ts` runs its own Vite via `viteFinal` and re-injects `@stylexjs/unplugin/vite` + the `@` alias. App-only plugins (`tanstackRouter`, `mkcert`, `sentryVitePlugin`) are intentionally NOT re-injected. **Drift risk**: keep the StyleX options in sync between `vite.config.ts` and `.storybook/main.ts`
+- `.storybook/preview.tsx` mirrors `__root.tsx`'s theme application — applies `darkTheme` to `<html>` so Radix portals inherit tokens. The toolbar exposes a `theme` global (dark/light)
+- Shared wire-type fixtures live in `src/stories/quoteFixtures.ts` (`sampleSummary`, `sampleQuote`, `sampleQuoteLine`, …). Other stories use inline fixtures
 
 ## API (OpenAPI codegen via @hey-api/openapi-ts)
 
@@ -39,6 +49,9 @@
 - Consumer pattern: components import `*Options` / `*Mutation` directly from `@/lib/api/generated/@tanstack/react-query.gen` and drop them straight into `useQuery({ ...optionsFn() })` / `useMutation({ ...mutationFn(), onSuccess })`. ESLint's `no-barrel-files` blocks pure re-exports, so don't try to forward them through `src/lib/api/queries.ts`
 - The one wrapped option is `meQueryOptions` in `src/lib/api/queries.ts`: the generated `authMeOptions` throws on 401, but routes need `null` to mean "not signed in" so route guards in `__root.tsx`/`login.tsx`/`index.tsx` can redirect cleanly. The wrapper also unwraps `SessionEnvelope` → `SessionView | null` so consumers see a flat shape
 - Mutations: pass body via `mutate({ body: { ... } })` and read responses via `onSuccess: (envelope) => { ... }`. Errors come back as RFC 9457 `Problem` (`detail` / `title` / `code` / `requestId` extension) — extract a user-facing string with a typeof-guarded helper (`problemMessage` in `queries.ts`, `signInErrorMessage` in `SignInForm.tsx`)
+- When the deployed cloud spec lags the backend repo (e.g. a backend PR just merged), regen against the local snapshot: `OPENAPI_URL=file:///Users/mathieumoullec/work/sentinel/crates/server/tests/openapi.snapshot.json yarn run gen:api`. The Rust backend workspace is the sibling repo at `~/work/sentinel` — handy for cross-checking persistence shapes (e.g. `crates/server/src/handlers/conversations.rs`)
+- Every case-scoped `useMutation` sets `meta: { tags: { "import_case.id": case_.id } }`; `main.tsx`'s mutation cache merges those into Sentry tags so failures surface the case id without each panel touching Sentry directly. New case-aware mutations should follow the same shape
+- AbortController + the generated SDK: pass `signal` directly on the SDK call (`importCaseClassifyBulk({ ..., signal: controller.signal, throwOnError: true })`) and store the controller in a `useRef`; no TanStack `useMutation` wrapping needed for the cancel case. See `BulkClassifyBar` for the full pattern
 
 ## State (Redux Toolkit)
 
@@ -54,6 +67,11 @@
 - macOS APFS is case-insensitive: renaming a directory `Foo` → `foo` is a no-op. Two-step it: `mv Foo __tmp && mv __tmp foo`
 - Paths starting with `-` (e.g. TanStack Router's `-private` folders) need `--` to disambiguate from flags: `git mv -- src/routes/-login/foo ...`. Without `--`, the command fails silently in an `&&` chain
 - jsx-a11y rules are on. `<label htmlFor>` and other a11y attrs must be statically on the JSX — a `{...rest}` spread is opaque to the linter, so destructure and pass them explicitly. `<div onClick>` → `<button type="button">` with the stylex reset pattern used by `QuoteLineRow.head` / `Inspector.callButton` (borderStyle "none" + borderWidth 0 + backgroundColor "transparent" + color/font "inherit" + textAlign "left" + width "100%" + padding 0). For unavoidable `autoFocus`, put `// eslint-disable-next-line jsx-a11y/no-autofocus -- rationale` on the line directly above the prop; multi-line `//` comments inside a JSX attribute list get reflowed by `yarn run format` and the directive loses its anchor
+- File-length lint cap is **250 lines** (`max-lines`), not 500. When an organism creeps over, extract a molecule or a `useX` hook — see `BulkClassifyBar`, `useCandidateReviewActions`, `QuoteBody` for examples
+- Recurring lint nits with mechanical fixes: `sonarjs/no-nested-conditional` → extract to a `pickX(...)` helper; `unicorn/no-array-reduce` → `for…of` loop; `unicorn/no-array-callback-reference` → wrap as `(x) => fn(x)` (no bare `.map(fn)`); `@eslint-react/unsupported-syntax` → no IIFE inside JSX, lift to a helper above
+- `noUncheckedIndexedAccess` is **off**, so `arr[0]` is typed `T` not `T | undefined`. When you legitimately want `T | undefined` (e.g. "first or none"), use `.at(0)` — otherwise the optional-chain becomes an "unnecessary conditional" lint error
+- `yarn run type` (tsgo) is the source of truth for type errors; the IDE TS LSP can show stale diagnostics after edits/installs (and occasionally tsgo's incremental cache misses real errors too). When the two disagree, bust tsgo's cache via `rm node_modules/.tmp/tsconfig.app.tsbuildinfo` and re-run
+- Wire types in `@/lib/api/generated/types.gen.ts` are occasionally narrower than the runtime contract (e.g. `CasePatchT.value` is typed `Record<string, unknown> | null` even though `formatValue` accepts primitives). Cast through `unknown` in story/test fixtures when this bites — don't widen the codegen
 
 ---
 
