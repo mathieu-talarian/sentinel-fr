@@ -1,4 +1,4 @@
-import type { LocalizedDescription } from "@/lib/api/generated/types.gen";
+import type { LocalizedDescriptionT } from "@/lib/api/generated/types.gen";
 import type { SearchCodesContentT } from "@/lib/types";
 
 import * as stylex from "@stylexjs/stylex";
@@ -8,7 +8,7 @@ import { sx } from "@/lib/styles/sx";
 import { borders, colors, fonts } from "@/lib/styles/tokens.stylex";
 import { formatHtsCode } from "@/lib/utils/format";
 
-const localized = (d: LocalizedDescription, lang: "en" | "fr"): string =>
+const localized = (d: LocalizedDescriptionT, lang: "en" | "fr"): string =>
   d[lang] ?? d.en ?? d.fr ?? "";
 
 export function SearchResult(props: Readonly<{ result: SearchCodesContentT }>) {

@@ -10,7 +10,7 @@ export const API_BASE_URL =
   "https://sentinel-server-356994978667.europe-west1.run.app/api";
 
 /**
- * Bootstrap for the generated `@hey-api/client-fetch` runtime.
+ * Bootstrap for the generated `@hey-api/client-ky` runtime.
  *
  * The generated `client.gen.ts` is auto-overwritten on every `yarn run gen:api`,
  * so we re-configure the singleton from here at app boot rather than editing

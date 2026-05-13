@@ -21,7 +21,7 @@
   "dependencies": {
     "@hey-api/client-fetch": "0.13.1",
     "@reduxjs/toolkit": "2.11.2",
-    "@sentry/react": "10.52.0",
+    "@sentry/react": "10.53.1",
     "@stylexjs/stylex": "0.18.3",
     "@tabler/icons-react": "3.44.0",
     "@tanstack/react-form": "1.32.0",
@@ -31,6 +31,7 @@
     "es-toolkit": "1.46.1",
     "eventsource-parser": "3.0.8",
     "firebase": "12.13.0",
+    "ky": "2.0.2",
     "radix-ui": "1.4.3",
     "react": "19.2.6",
     "react-dom": "19.2.6",

@@ -16,28 +16,28 @@
  */
 
 import type {
-  AlertItem,
-  AlertsResponse,
-  AppliedSurcharge,
-  ChatChunk,
-  CommodityBody,
-  CommodityHierarchyEntry,
-  CreateCaseBody,
-  CreateLineItemBody,
-  ImportCaseLineItemResponse,
-  ImportCaseResponse,
-  ImportCaseSummary,
-  LandedCostResponse,
-  LandedCostRow,
-  PatchCaseBody,
-  PatchLineItemBody,
-  SearchBody,
-  SearchCandidate,
-  UsageInfo,
-  WatchSubscribeResponse,
+  AlertItemT as AlertItemGen,
+  AlertsResponseT as AlertsResponseGen,
+  AppliedSurchargeT as AppliedSurchargeGen,
+  ChatChunkT as ChatChunkGen,
+  CommodityBodyT as CommodityBodyGen,
+  CommodityHierarchyEntryT as CommodityHierarchyEntryGen,
+  CreateCaseBodyT as CreateCaseBodyGen,
+  CreateLineItemBodyT as CreateLineItemBodyGen,
+  ImportCaseLineItemResponseT as ImportCaseLineItemResponseGen,
+  ImportCaseResponseT as ImportCaseResponseGen,
+  ImportCaseSummaryT as ImportCaseSummaryGen,
+  LandedCostResponseT as LandedCostResponseGen,
+  LandedCostRowT as LandedCostRowGen,
+  PatchCaseBodyT as PatchCaseBodyGen,
+  PatchLineItemBodyT as PatchLineItemBodyGen,
+  SearchBodyT as SearchBodyGen,
+  SearchCandidateT as SearchCandidateGen,
+  UsageInfoT as UsageInfoGen,
+  WatchSubscribeResponseT as WatchSubscribeResponseGen,
 } from "@/lib/api/generated/types.gen";
 
-export type UsageT = UsageInfo;
+export type UsageT = UsageInfoGen;
 
 export type ToolNameT =
   | "search_codes"
@@ -47,7 +47,7 @@ export type ToolNameT =
   | "subscribe_watch"
   | "list_alerts";
 
-export type ChatChunkT = ChatChunk;
+export type ChatChunkT = ChatChunkGen;
 
 export interface ChatTurnT {
   role: "user" | "assistant";
@@ -110,20 +110,20 @@ export type MessageT = UserMessageDataT | AssistantMessageDataT;
  * rule that blocks pure `export … from` re-exports.
  */
 
-export type SearchCandidateT = SearchCandidate;
-export type SearchCodesContentT = SearchBody;
+export type SearchCandidateT = SearchCandidateGen;
+export type SearchCodesContentT = SearchBodyGen;
 
-export type HierarchyNodeT = CommodityHierarchyEntry;
-export type CodeDetailsContentT = CommodityBody;
+export type HierarchyNodeT = CommodityHierarchyEntryGen;
+export type CodeDetailsContentT = CommodityBodyGen;
 
-export type LandedCostContentT = LandedCostResponse;
-export type LandedCostRowT = LandedCostRow;
-export type AppliedSurchargeT = AppliedSurcharge;
+export type LandedCostContentT = LandedCostResponseGen;
+export type LandedCostRowT = LandedCostRowGen;
+export type AppliedSurchargeT = AppliedSurchargeGen;
 
-export type AlertItemT = AlertItem;
-export type AlertsContentT = AlertsResponse;
+export type AlertItemT = AlertItemGen;
+export type AlertsContentT = AlertsResponseGen;
 
-export type SubscribeWatchContentT = WatchSubscribeResponse;
+export type SubscribeWatchContentT = WatchSubscribeResponseGen;
 
 /* ---------- Tool-result shapes not yet in the OpenAPI spec ---------- */
 
@@ -141,13 +141,13 @@ export interface CrossRulingsContentT {
 
 /* ---------- Import-case shapes (backend Phase 2) ---------- */
 
-export type ImportCaseSummaryT = ImportCaseSummary;
-export type ImportCaseT = ImportCaseResponse;
-export type ImportCaseLineItemT = ImportCaseLineItemResponse;
-export type CreateCaseBodyT = CreateCaseBody;
-export type PatchCaseBodyT = PatchCaseBody;
-export type CreateLineItemBodyT = CreateLineItemBody;
-export type PatchLineItemBodyT = PatchLineItemBody;
+export type ImportCaseSummaryT = ImportCaseSummaryGen;
+export type ImportCaseT = ImportCaseResponseGen;
+export type ImportCaseLineItemT = ImportCaseLineItemResponseGen;
+export type CreateCaseBodyT = CreateCaseBodyGen;
+export type PatchCaseBodyT = PatchCaseBodyGen;
+export type CreateLineItemBodyT = CreateLineItemBodyGen;
+export type PatchLineItemBodyT = PatchLineItemBodyGen;
 
 /**
  * Server-persisted case status (backend spec §4.2). This is the user's

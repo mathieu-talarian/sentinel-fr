@@ -49,6 +49,10 @@ export default defineConfig([
     "eslint.config.js",
     "src/**/*.js",
     "src/**/*.d.ts",
-    "src/lib/api/generated/**",
+    // `client.gen.ts` is the plugin-emitted entry-point wrapper for the
+    // chosen `@hey-api/client-*` plugin. The codegen does NOT honor
+    // `output.header`'s `/* eslint-disable */` prefix for this single
+    // file (other generated files do — see `openapi-ts.config.ts`).
+    "src/lib/api/generated/client.gen.ts",
   ]),
 ]);

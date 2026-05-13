@@ -1,4 +1,4 @@
-import type { LocalizedDescription } from "@/lib/api/generated/types.gen";
+import type { LocalizedDescriptionT } from "@/lib/api/generated/types.gen";
 import type { CodeDetailsContentT } from "@/lib/types";
 
 import * as stylex from "@stylexjs/stylex";
@@ -9,7 +9,7 @@ import { colors, fonts } from "@/lib/styles/tokens.stylex";
 import { formatHtsCode } from "@/lib/utils/format";
 
 const localized = (
-  d: LocalizedDescription | null | undefined,
+  d: LocalizedDescriptionT | null | undefined,
   lang: "en" | "fr",
 ): string => d?.[lang] ?? d?.en ?? d?.fr ?? "";
 

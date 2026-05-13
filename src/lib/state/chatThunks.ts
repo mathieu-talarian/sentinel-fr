@@ -1,6 +1,6 @@
 import type {
-  ConversationMessage,
-  ToolCallView,
+  ConversationMessageT,
+  ToolCallViewT,
 } from "@/lib/api/generated/types.gen";
 import type { AppThunkT } from "@/lib/state/store";
 import type {
@@ -149,7 +149,7 @@ const callStatus = (s: string): ToolCallStatusT => {
   return "complete";
 };
 
-const toFECall = (c: ToolCallView): ToolCallT => ({
+const toFECall = (c: ToolCallViewT): ToolCallT => ({
   id: c.id,
   tool: c.tool,
   args: c.args,
@@ -163,7 +163,7 @@ const toFECall = (c: ToolCallView): ToolCallT => ({
   errorMessage: c.message ?? undefined,
 });
 
-const toFEMessage = (m: ConversationMessage): MessageT => {
+const toFEMessage = (m: ConversationMessageT): MessageT => {
   if (m.role === "user") {
     return { id: m.id, role: "user", text: m.content };
   }
